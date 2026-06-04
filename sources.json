@@ -1,6 +1,14 @@
 {
   "description": "市场机会发现系统 - 买方研究员视角，发现全市场预期差和投资机会",
   "sources": {
+    "rsshub_instances": [
+      "https://rsshub.app",
+      "https://rsshub.pseudoyu.com",
+      "https://rsshub.rssforever.com",
+      "https://rss.datuan.dev",
+      "https://rsshub.rss.tips",
+      "https://rsshub.ktachibana.party"
+    ],
     "twitter": [
       {"handle": "TJ_Research", "category": "macro", "note": "宏观研究"},
       {"handle": "maitian99", "category": "macro", "note": "麦田，宏观策略"},
@@ -107,7 +115,7 @@
         {"id": "TOTALSL", "name": "消费信贷", "freq": "monthly"},
         {"id": "BOPGSTB", "name": "贸易差额", "freq": "monthly"},
         {"id": "DCOILWTICO", "name": "WTI原油价格", "freq": "daily"},
-        {"id": "GOLDAMGBD228NLBR", "name": "黄金价格", "freq": "daily"}
+        {"id": "GOLDAMGBD228NLBM", "name": "黄金价格(London Fix)", "freq": "daily"}
       ]
     },
     "akshare": {

@@ -94,13 +94,26 @@ def build_rss_urls(config: Dict) -> List[Dict]:
                           "category": rd.get("category", "other"), "note": rd.get("note", ""),
                           "extra_headers": {"User-Agent": "MarketRadar/1.0"}})
 
-    # 中国 RSS 源（通过 RSSHub）
+    # 中国 RSS 源（通过 RSSHub，多实例自动降级）
+    rsshub_instances = sources.get("rsshub_instances", ["https://rsshub.app"])
     for cn in sources.get("rss_cn", []):
         url = cn.get("url", "")
         if url:
-            tasks.append({"url": url, "platform": "rss_cn", "source_name": cn["name"],
-                          "category": cn.get("category", "other"), "note": cn.get("note", ""),
-                          "optional": True})
+            # 解析 RSSHub 路由，生成多实例降级 URL
+            parsed_url = url if "://" in url else "https://" + url
+            from urllib.parse import urlparse as _up
+            p = _up(parsed_url)
+            route = p.path + ("?" + p.query if p.query else "")
+            alt_urls = [f"{ins.rstrip('/')}{route}" for ins in rsshub_instances]
+            tasks.append({
+                "url": alt_urls[0],
+                "alt_urls": alt_urls[1:],
+                "platform": "rss_cn",
+                "source_name": cn["name"],
+                "category": cn.get("category", "other"),
+                "note": cn.get("note", ""),
+                "optional": True
+            })
 
     # 国际 RSS 源
     for gb in sources.get("rss_global", []):
@@ -117,24 +130,29 @@ def build_rss_urls(config: Dict) -> List[Dict]:
 # ============================================================
 
 def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
-    url = task["url"]
+    urls = [task["url"]] + task.get("alt_urls", [])
     headers = {"User-Agent": "MarketRadar/1.0"}
     headers.update(task.get("extra_headers", {}))
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-            if resp.status_code == 200:
-                feed = feedparser.parse(resp.content)
-                if feed.entries: return feed
-                return None
-            elif resp.status_code in (429,):
-                time.sleep((attempt + 1) * 5); continue
-            elif resp.status_code in (403, 404):
-                return None
-            else:
+    for url in urls:
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+                if resp.status_code == 200:
+                    feed = feedparser.parse(resp.content)
+                    if feed.entries:
+                        if url != task["url"]:
+                            task["_used_fallback"] = url
+                        return feed
+                    return None
+                elif resp.status_code in (429,):
+                    time.sleep((attempt + 1) * 5); continue
+                elif resp.status_code in (403, 404):
+                    break  # 这个实例挂了，试下一个
+                else:
+                    time.sleep(REQUEST_DELAY); continue
+            except Exception:
                 time.sleep(REQUEST_DELAY); continue
-        except Exception:
-            time.sleep(REQUEST_DELAY); continue
+        # 这个 URL 的所有重试都失败了，继续试下一个 fallback
     return None
 
 
@@ -180,7 +198,12 @@ def fetch_all(tasks: List[Dict]) -> List[Dict]:
                 all_items.append(item)
                 added += 1
         ok += 1
-        if added: log(f"   [{i+1}/{len(tasks)}] {task['platform']}:{task['source_name']} ✅ {added}")
+        if added:
+            fb_tag = ""
+            if task.get("_used_fallback"):
+                fb_host = task["_used_fallback"].split("/")[2] if "://" in task["_used_fallback"] else task["_used_fallback"]
+                fb_tag = f" [↪{fb_host}]"
+            log(f"   [{i+1}/{len(tasks)}] {task['platform']}:{task['source_name']} ✅ {added}{fb_tag}")
         time.sleep(REQUEST_DELAY)
     log(f"\n📊 {ok}成功 {fail}失败 {opt_fail}可选跳过 → {len(all_items)}条")
     return all_items
