@@ -1,0 +1,38 @@
+name: 市场机会日报
+
+on:
+  schedule:
+    # 北京时间 15:00 = UTC 07:00
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 生成市场机会日报
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TWITTER_COOKIES: ${{ secrets.TWITTER_COOKIES }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python main.py
+
+      - name: 失败通知
+        if: failure()
+        run: |
+          echo "日报生成失败，请检查 GitHub Actions 日志。"

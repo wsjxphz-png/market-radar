@@ -1,0 +1,122 @@
+{
+  "description": "市场机会发现系统 - 买方研究员视角，发现全市场预期差和投资机会",
+  "sources": {
+    "twitter": [
+      {"handle": "TJ_Research", "category": "macro", "note": "宏观研究"},
+      {"handle": "maitian99", "category": "macro", "note": "麦田，宏观策略"},
+      {"handle": "yuyy614893671", "category": "macro", "note": "宏观分析"},
+      {"handle": "MacroMargin", "category": "macro", "note": "宏观边际变化"},
+      {"handle": "CausMoney", "category": "macro", "note": "因果投资，宏观+市场"},
+      {"handle": "wangwatchworld", "category": "macro", "note": "全球宏观观察"},
+      {"handle": "raycat2021", "category": "industry", "note": "行业研究"},
+      {"handle": "Cato_KT", "category": "industry", "note": "Cato，行业分析"},
+      {"handle": "cyrilxuq", "category": "macro", "note": "宏观+策略"},
+      {"handle": "chenreason", "category": "value", "note": "陈理，价值投资"},
+      {"handle": "PhyrexNi", "category": "macro", "note": "Phyrex，宏观+交易"},
+      {"handle": "HenryinvestX", "category": "value", "note": "Henry，投资研究"},
+      {"handle": "tychozzz", "category": "macro", "note": "宏观+市场"},
+      {"handle": "xiaomustock", "category": "industry", "note": "小木股票，A股研究"},
+      {"handle": "tig88411109", "category": "macro", "note": "宏观+策略"},
+      {"handle": "xzzzjpl", "category": "industry", "note": "行业研究"},
+      {"handle": "Hoyooyoo", "category": "macro", "note": "宏观+市场"},
+      {"handle": "lexfridman", "category": "macro", "note": "Lex Fridman，深度访谈"},
+      {"handle": "maojietrading", "category": "trading", "note": "猫姐交易，技术+策略"},
+      {"handle": "darrencao2024", "category": "macro", "note": "宏观+投资"},
+      {"handle": "qinbafrank", "category": "value", "note": "秦巴，价值投资"},
+      {"handle": "turingou", "category": "tech", "note": "AI+科技投资"},
+      {"handle": "ooeli_eth", "category": "crypto", "note": "加密货币"},
+      {"handle": "david_perell", "category": "macro", "note": "David Perell，写作+投资思考"},
+      {"handle": "naval", "category": "value", "note": "Naval Ravikant，投资哲学"},
+      {"handle": "MindHaste", "category": "macro", "note": "宏观+市场"},
+      {"handle": "wise_chimp", "category": "value", "note": "投资智慧+行为金融"},
+      {"handle": "heydave7", "category": "macro", "note": "宏观+市场"},
+      {"handle": "DAMNXUN", "category": "macro", "note": "宏观分析"},
+      {"handle": "Dali_Yang", "category": "macro", "note": "宏观+策略"},
+      {"handle": "aiwangupiao", "category": "industry", "note": "AI+股票研究"},
+      {"handle": "shufen46250836", "category": "industry", "note": "行业研究"},
+      {"handle": "markoinny", "category": "macro", "note": "宏观+投资"},
+      {"handle": "joely7758521", "category": "trading", "note": "交易策略"},
+      {"handle": "Murphychen888", "category": "macro", "note": "宏观研究"},
+      {"handle": "TiezhuCrypto", "category": "crypto", "note": "加密货币研究"},
+      {"handle": "erchenlu1", "category": "industry", "note": "行业+公司研究"},
+      {"handle": "fundstra", "category": "macro", "note": "基金策略"},
+      {"handle": "Mimiwftt", "category": "macro", "note": "宏观+市场"}
+    ],
+    "reddit": [
+      {"subreddit": "investing", "category": "macro", "note": "最大投资社区，散户+机构混合"},
+      {"subreddit": "stocks", "category": "equity", "note": "个股讨论，催化剂发现"},
+      {"subreddit": "SecurityAnalysis", "category": "value", "note": "价值投资，基本面深度分析"},
+      {"subreddit": "Economics", "category": "macro", "note": "经济学讨论，政策分析"},
+      {"subreddit": "ValueInvesting", "category": "value", "note": "价值投资方法论+案例"},
+      {"subreddit": "wallstreetbets", "category": "sentiment", "note": "散户情绪指标，极端情绪反向信号"},
+      {"subreddit": "dividends", "category": "income", "note": "股息投资，防御策略"}
+    ],
+    "rss_cn": [
+      {"name": "财联社电报", "url": "https://rsshub.app/cls/telegraph", "category": "news_cn", "note": "中国实时财经快讯，政策+公司+市场"},
+      {"name": "金十数据", "url": "https://rsshub.app/jin10", "category": "news_cn", "note": "全球宏观快讯，利率+外汇+商品"},
+      {"name": "华尔街见闻-最新", "url": "https://rsshub.app/wallstreetcn/news/global", "category": "news_cn", "note": "全球财经深度文章"},
+      {"name": "格隆汇快讯", "url": "https://rsshub.app/gelonghui/live", "category": "news_cn", "note": "港股+A股实时快讯"},
+      {"name": "东方财富-策略研报", "url": "https://rsshub.app/eastmoney/report/strategyreport", "category": "research_cn", "note": "券商策略研报汇总"},
+      {"name": "东方财富-宏观研报", "url": "https://rsshub.app/eastmoney/report/macresearch", "category": "research_cn", "note": "券商宏观研究汇总"},
+      {"name": "东方财富-行业研报", "url": "https://rsshub.app/eastmoney/report/industry", "category": "research_cn", "note": "券商行业研究汇总"},
+      {"name": "中国央行公开市场操作", "url": "https://rsshub.app/gov/pbc/tradeAnnouncement", "category": "policy", "note": "央行逆回购/MLF/LPR操作"},
+      {"name": "雪球热帖", "url": "https://rsshub.app/xueqiu/hots", "category": "community_cn", "note": "雪球热门讨论，散户+专业投资者混合"}
+    ],
+    "rss_global": [
+      {"name": "CNBC Top News", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "category": "news_global", "note": "美国财经头条，覆盖全市场"},
+      {"name": "MarketWatch Top Stories", "url": "https://feeds.marketwatch.com/marketwatch/topstories", "category": "news_global", "note": "市场深度报道+数据"},
+      {"name": "Bloomberg Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "category": "news_global", "note": "彭博市场新闻，机构视角"},
+      {"name": "Yahoo Finance", "url": "https://finance.yahoo.com/news/rssindex", "category": "news_global", "note": "综合财经新闻，覆盖美股+全球"},
+      {"name": "Investopedia", "url": "https://www.investopedia.com/feed-builder/feed/rss", "category": "education", "note": "投资教育+市场分析"},
+      {"name": "美联储新闻发布", "url": "https://www.federalreserve.gov/feeds/press_all.xml", "category": "policy", "note": "Fed政策声明+FOMC+监管变化"},
+      {"name": "美联储褐皮书", "url": "https://www.federalreserve.gov/feeds/beige_book.xml", "category": "policy", "note": "12个联储区经济状况汇总"},
+      {"name": "美联储演讲", "url": "https://www.federalreserve.gov/feeds/speech.xml", "category": "policy", "note": "联储官员讲话，政策信号"},
+      {"name": "ECB新闻发布", "url": "https://www.ecb.europa.eu/rss/news.html", "category": "policy", "note": "欧洲央行政策声明+发布会"},
+      {"name": "SEC 8-K 文件", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "美国公司重大事件披露（CEO变更/并购/诉讼）"}
+    ],
+    "youtube": [
+      {"name": "Patrick Boyle", "channel_id": "UCY1kMZp36IQ2N3zG0ZljkNw", "category": "macro", "note": "投资分析+市场历史+行为金融"},
+      {"name": "Bloomberg Podcasts", "channel_id": "UCIALMKvObZNtJ6AmdCLP7Lg", "category": "macro", "note": "彭博市场深度分析"},
+      {"name": "Real Vision Finance", "channel_id": "UC2JykWmBz6B4RFQPhxdikMA", "category": "macro", "note": "顶级投资人访谈+宏观分析"},
+      {"name": "CNBC Television", "channel_id": "UCrp_UI8XtuYfpiqluWLD7Lw", "category": "news_global", "note": "CNBC市场直播+采访"},
+      {"name": "Joseph Carlson", "channel_id": "UCGmHqEJv5hN2AokyHG7c3PA", "category": "equity", "note": "股息投资组合+个股深度分析"},
+      {"name": "Ben Felix", "channel_id": "UCDXTQ8nWmx_EhZ2v-kp7QxA", "category": "value", "note": "学术证据驱动的投资策略"},
+      {"name": "The Plain Bagel", "channel_id": "UCFQ4VhkQHtHyVmPqey5CRbw", "category": "education", "note": "投资基础+市场教育"},
+      {"name": "Sven Carlin", "channel_id": "UC9GZ5_iHBJmQqEh7UONlVqg", "category": "value", "note": "价值投资+个股研究"}
+    ],
+    "fred": {
+      "enabled": true,
+      "api_key_env": "FRED_API_KEY",
+      "indicators": [
+        {"id": "GDP", "name": "美国GDP", "freq": "quarterly"},
+        {"id": "UNRATE", "name": "失业率", "freq": "monthly"},
+        {"id": "CPIAUCSL", "name": "CPI同比", "freq": "monthly"},
+        {"id": "CPILFESL", "name": "核心CPI", "freq": "monthly"},
+        {"id": "PCEPI", "name": "PCE物价指数", "freq": "monthly"},
+        {"id": "FEDFUNDS", "name": "联邦基金利率", "freq": "daily"},
+        {"id": "DGS10", "name": "10年国债收益率", "freq": "daily"},
+        {"id": "DGS2", "name": "2年国债收益率", "freq": "daily"},
+        {"id": "T10Y2Y", "name": "10Y-2Y利差", "freq": "daily"},
+        {"id": "T10YIE", "name": "10年盈亏平衡通胀", "freq": "daily"},
+        {"id": "M2SL", "name": "M2货币供应量", "freq": "monthly"},
+        {"id": "UMCSENT", "name": "密歇根消费者信心", "freq": "monthly"},
+        {"id": "PAYEMS", "name": "非农就业", "freq": "monthly"},
+        {"id": "ICSA", "name": "初请失业金", "freq": "weekly"},
+        {"id": "HOUST", "name": "新屋开工", "freq": "monthly"},
+        {"id": "INDPRO", "name": "工业生产指数", "freq": "monthly"},
+        {"id": "TOTALSL", "name": "消费信贷", "freq": "monthly"},
+        {"id": "BOPGSTB", "name": "贸易差额", "freq": "monthly"},
+        {"id": "DCOILWTICO", "name": "WTI原油价格", "freq": "daily"},
+        {"id": "GOLDAMGBD228NLBR", "name": "黄金价格", "freq": "daily"}
+      ]
+    },
+    "akshare": {
+      "enabled": true,
+      "note": "A股/中国宏观数据，免费无需API Key",
+      "data_points": [
+        "stock_zh_a_spot_em", "stock_sse_summary", "macro_china_gdp",
+        "macro_china_cpi_monthly", "macro_china_pmi", "macro_china_money_supply"
+      ]
+    }
+  }
+}
