@@ -48,7 +48,22 @@
       {"handle": "TiezhuCrypto", "category": "crypto", "note": "加密货币研究"},
       {"handle": "erchenlu1", "category": "industry", "note": "行业+公司研究"},
       {"handle": "fundstra", "category": "macro", "note": "基金策略"},
-      {"handle": "Mimiwftt", "category": "macro", "note": "宏观+市场"}
+      {"handle": "Mimiwftt", "category": "macro", "note": "宏观+市场"},
+      {"handle": "elerianm", "category": "macro", "note": "Mohamed El-Erian，Allianz首席经济顾问，全球宏观"},
+      {"handle": "biancoresearch", "category": "macro", "note": "Jim Bianco，宏观数据研究，利率+通胀"},
+      {"handle": "LynAldenContact", "category": "macro", "note": "Lyn Alden，宏观+价值投资，全球流动性分析"},
+      {"handle": "KobeissiLetter", "category": "macro", "note": "全球宏观+市场评论，数据驱动"},
+      {"handle": "jsblokland", "category": "macro", "note": "宏观数据可视化，多资产类别研究"},
+      {"handle": "dollarsanddata", "category": "macro", "note": "数据驱动的市场分析，长期趋势"},
+      {"handle": "BobEUnlimited", "category": "equity", "note": "深度财报分析，管理层讨论+基本面"},
+      {"handle": "chigrl", "category": "equity", "note": "财报+基本面研究，个股深度"},
+      {"handle": "GappyPack", "category": "equity", "note": "财报分析+管理层措辞解读"},
+      {"handle": "SJosephBurns", "category": "value", "note": "价值投资+深度研究，行业分析"},
+      {"handle": "dampedspring", "category": "macro", "note": "宏观交易，全球资产配置"},
+      {"handle": "hmeisler", "category": "trading", "note": "技术分析+宏观，市场择时"},
+      {"handle": "darrinschwindt", "category": "macro", "note": "宏观策略，利率+外汇"},
+      {"handle": "fundstrat", "category": "macro", "note": "Tom Lee，Fundstrat策略师，美股策略"},
+      {"handle": "shawngorius", "category": "macro", "note": "宏观策略，多资产配置"}
     ],
     "reddit": [
       {"subreddit": "investing", "category": "macro", "note": "最大投资社区，散户+机构混合"},
@@ -57,7 +72,10 @@
       {"subreddit": "Economics", "category": "macro", "note": "经济学讨论，政策分析"},
       {"subreddit": "ValueInvesting", "category": "value", "note": "价值投资方法论+案例"},
       {"subreddit": "wallstreetbets", "category": "sentiment", "note": "散户情绪指标，极端情绪反向信号"},
-      {"subreddit": "dividends", "category": "income", "note": "股息投资，防御策略"}
+      {"subreddit": "dividends", "category": "income", "note": "股息投资，防御策略"},
+      {"subreddit": "biotech", "category": "industry", "note": "生物医药投资，管线+FDA+临床试验"},
+      {"subreddit": "SPACs", "category": "corporate", "note": "SPAC上市+并购，新公司进入市场的管道"},
+      {"subreddit": "options", "category": "trading", "note": "期权交易，异常合约活动可能暗示重大事件"}
     ],
     "rss_cn": [
       {"name": "财联社电报", "url": "https://rsshub.app/cls/telegraph", "category": "news_cn", "note": "中国实时财经快讯，政策+公司+市场"},
@@ -80,7 +98,15 @@
       {"name": "美联储褐皮书", "url": "https://www.federalreserve.gov/feeds/beige_book.xml", "category": "policy", "note": "12个联储区经济状况汇总"},
       {"name": "美联储演讲", "url": "https://www.federalreserve.gov/feeds/speech.xml", "category": "policy", "note": "联储官员讲话，政策信号"},
       {"name": "ECB新闻发布", "url": "https://www.ecb.europa.eu/rss/news.html", "category": "policy", "note": "欧洲央行政策声明+发布会"},
-      {"name": "SEC 8-K 文件", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "美国公司重大事件披露（CEO变更/并购/诉讼）"}
+      {"name": "SEC 8-K 文件", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "美国公司重大事件披露（CEO变更/并购/诉讼）"},
+      {"name": "SEC 10-K 年报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "年度报告，管理层讨论+风险披露+完整财务"},
+      {"name": "SEC 10-Q 季报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-Q&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "季度报告，经营变化+收入结构+利润率趋势"},
+      {"name": "SEC 13F 机构持仓", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=13F-HR&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "机构每季度持仓披露，看聪明钱方向"},
+      {"name": "SEC Form 4 内部人交易", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "CEO/CFO/Director买卖自己股票，最强信号"},
+      {"name": "SEC S-1 IPO申请", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=S-1&company=&dateb=&owner=exclude&start=0&count=20&output=atom", "category": "corporate", "note": "新上市公司最详细信息披露"},
+      {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "industry", "note": "科技行业一手动态，创业+融资+产品"},
+      {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "category": "industry", "note": "科技+消费电子，产品战略+竞争格局"},
+      {"name": "FierceBiotech", "url": "https://www.fiercebiotech.com/feed", "category": "industry", "note": "生物医药行业，管线进展+FDA审批+并购"}
     ],
     "youtube": [
       {"name": "Patrick Boyle", "channel_id": "UCY1kMZp36IQ2N3zG0ZljkNw", "category": "macro", "note": "投资分析+市场历史+行为金融"},

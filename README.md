@@ -13,17 +13,18 @@ GitHub Actions (每天 15:00 北京时间)
   → Twitter GraphQL API（39 个金融账号）
   → FRED 经济数据 / AKShare A股数据
   → 预过滤
-  → DeepSeek AI 7层分析
+  → DeepSeek AI 8层分析（含跨公司模式识别）
   → 飞书 Bot API 推送（内部群）
   → 飞书 Webhook 推送（外部群）
 ```
 
 ## 信息源
 
-- **Twitter**: 39 个金融/宏观/行业研究账号
-- **Reddit**: 7 个投资社区（r/investing, r/stocks, r/SecurityAnalysis 等）
+- **Twitter**: 55 个金融/宏观/行业研究账号（中英文混合，含美股一线分析师）
+- **Reddit**: 10 个投资社区（r/investing, r/stocks, r/SecurityAnalysis, r/biotech 等）
+- **SEC EDGAR**: 10-K/10-Q/13F/Form 4/S-1/8-K 一手公司文件
 - **中国金融 RSS**: 财联社、金十数据、华尔街见闻、格隆汇、东方财富研报、雪球
-- **国际金融 RSS**: CNBC、MarketWatch、Bloomberg、Yahoo Finance、美联储、ECB
+- **国际金融 RSS**: CNBC、MarketWatch、Bloomberg、Yahoo Finance、TechCrunch、FierceBiotech、美联储、ECB
 - **YouTube**: Bloomberg、CNBC、Real Vision、Patrick Boyle 等财经频道
 - **FRED**: 20 个美国经济核心指标
 - **AKShare**: A股行情+中国宏观数据
@@ -63,7 +64,7 @@ python main.py
 
 ## 分析框架
 
-7层分析体系：
+8层分析体系：
 1. 变化扫描器（全市场变化类型识别）
 2. 预期差扫描器（市场共识 vs 现实）
 3. 投资推理引擎（事实→共识→多阶影响→验证）
@@ -71,3 +72,4 @@ python main.py
 5. 杠铃分析（进攻端+防守端+环境判断）
 6. 资金与赔率分析
 7. 机会评分系统（100分制）
+8. 跨公司模式识别（多公司同向共振→提升胜率，所有行业同等对待）
