@@ -456,7 +456,7 @@ def pre_filter(items: List[Dict]) -> Tuple[List[Dict], int, int]:
 
 
 # ============================================================
-# 第四步：DeepSeek AI 分析 —— 7层分析 Prompt
+# 第四步：DeepSeek AI 分析 —— 8层分析 Prompt
 # ============================================================
 
 SYSTEM_PROMPT = """你是世界顶级买方基金研究员、产业分析师和机会猎手。
@@ -690,7 +690,7 @@ def build_ai_input(items: List[Dict], fred_items: List[Dict], akshare_text: str)
         "education": "投资教育"
     }
 
-    parts = ["以下是从全网信息中筛选的待分析条目。请以「买方基金研究员」视角进行7层分析。\n"]
+    parts = ["以下是从全网信息中筛选的待分析条目。请以「买方基金研究员」视角进行8层分析。\n"]
 
     # 经济数据优先
     if fred_items:

@@ -20,7 +20,7 @@ GitHub Actions (每天 15:00 北京时间)
 
 ## 信息源
 
-- **Twitter**: 55 个金融/宏观/行业研究账号（中英文混合，含美股一线分析师）
+- **Twitter**: 53 个金融/宏观/行业研究账号（中英文混合，含美股一线分析师）
 - **Reddit**: 10 个投资社区（r/investing, r/stocks, r/SecurityAnalysis, r/biotech 等）
 - **SEC EDGAR**: 10-K/10-Q/13F/Form 4/S-1/8-K 一手公司文件
 - **中国金融 RSS**: 财联社、金十数据、华尔街见闻、格隆汇、东方财富研报、雪球
