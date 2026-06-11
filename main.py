@@ -27,6 +27,7 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "oc_94e85ee81df40d0ac71c358861427b06")
+FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 TIMEZONE_OFFSET = 8
@@ -742,6 +743,28 @@ def send_feishu_card(card: Dict) -> bool:
     return False
 
 
+def send_feishu_webhook(card: Dict) -> bool:
+    """通过飞书 Webhook 机器人发送消息到外部群"""
+    url = FEISHU_WEBHOOK_URL
+    if not url:
+        log("ℹ️ FEISHU_WEBHOOK_URL 未设置，跳过 webhook 推送"); return False
+    log("\n📤 推送飞书 Webhook（外部群）...")
+    payload = {
+        "msg_type": "interactive",
+        "card": card.get("card", card)
+    }
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = requests.post(url, json=payload, timeout=30)
+            if resp.status_code == 200 and resp.json().get("code") == 0:
+                log("   ✅ Webhook 推送成功"); return True
+            log(f"   ⚠️ Webhook 推送失败: {resp.text[:200]}")
+            time.sleep(2)
+        except Exception as e:
+            log(f"   ⚠️ {e}"); time.sleep(2)
+    return False
+
+
 # ============================================================
 # 日报格式化
 # ============================================================
@@ -899,8 +922,10 @@ def main():
 
     if args.test_feishu:
         test_card = {"msg_type":"interactive","card":{"header":{"template":"red","title":{"tag":"plain_text","content":"🧪 市场机会发现系统 · 测试"}},"elements":[{"tag":"markdown","content":"✅ 飞书 Bot API 推送测试成功！\n\n系统已就绪，明天 15:00 你将收到第一份市场机会日报。"}]}}
-        ok = send_feishu_card(test_card)
-        log("✅ 测试成功" if ok else "❌ 失败")
+        ok1 = send_feishu_card(test_card)
+        ok2 = send_feishu_webhook(test_card)
+        log("✅ 测试成功" if ok1 else "❌ Bot API 失败")
+        log("✅ Webhook 测试成功" if ok2 else "ℹ️ Webhook 未配置或失败")
         return
 
     with open(args.sources, "r", encoding="utf-8") as f:
@@ -954,6 +979,7 @@ def main():
         card = format_feishu(ai_result, stats)
 
     send_feishu_card(card)
+    send_feishu_webhook(card)
     log("\n"+"="*50)
     log("✅ 完成")
     log("="*50)

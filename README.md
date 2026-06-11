@@ -14,7 +14,8 @@ GitHub Actions (每天 15:00 北京时间)
   → FRED 经济数据 / AKShare A股数据
   → 预过滤
   → DeepSeek AI 7层分析
-  → 飞书 Bot API 推送
+  → 飞书 Bot API 推送（内部群）
+  → 飞书 Webhook 推送（外部群）
 ```
 
 ## 信息源
@@ -37,6 +38,7 @@ GitHub Actions (每天 15:00 北京时间)
 | `TWITTER_COOKIES` | Twitter auth_token + ct0（JSON 格式） |
 | `FEISHU_APP_ID` | 飞书 Bot App ID |
 | `FEISHU_APP_SECRET` | 飞书 Bot App Secret |
+| `FEISHU_WEBHOOK_URL` | 飞书 Webhook 机器人地址（推送到外部群） |
 | `FRED_API_KEY` | FRED API 密钥（可选，从 fred.stlouisfed.org 免费获取） |
 
 ## 本地测试
