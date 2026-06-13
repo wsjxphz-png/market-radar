@@ -3,3 +3,4 @@ requests==2.32.3
 fredapi>=0.5.0
 akshare>=1.16.0
 pandas>=2.2.0
+yfinance>=0.2.40
