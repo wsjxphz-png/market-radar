@@ -13,7 +13,7 @@
   不要做信息搬运工，要做机会发现者。
 """
 
-import os, sys, re, json, time, hashlib, argparse
+import os, sys, re, json, time, hashlib, argparse, tempfile
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Tuple
 
@@ -35,6 +35,12 @@ REQUEST_TIMEOUT = 30
 REQUEST_DELAY = 0.5
 MAX_RETRIES = 2
 CARD_MAX_CHARS = 28000
+
+try:
+    from playwright.sync_api import sync_playwright
+    RENDER_AVAILABLE = True
+except ImportError:
+    RENDER_AVAILABLE = False
 
 _log_lines: List[str] = []
 def log(msg: str):
@@ -1238,6 +1244,347 @@ def send_feishu_webhook(card: Dict) -> bool:
     return False
 
 
+def _upload_image_feishu(image_path: str) -> Optional[str]:
+    """通过 Bot API 上传图片，返回 image_key"""
+    token = _get_feishu_token()
+    if not token:
+        return None
+    try:
+        with open(image_path, "rb") as f:
+            resp = requests.post(
+                "https://open.feishu.cn/open-apis/im/v1/images",
+                headers={"Authorization": f"Bearer {token}"},
+                files={"image": ("report.png", f, "image/png")},
+                data={"image_type": "message"},
+                timeout=60
+            )
+        if resp.status_code == 200 and resp.json().get("code") == 0:
+            return resp.json()["data"]["image_key"]
+        log(f"   ⚠️ 图片上传失败: {resp.text[:150]}")
+    except Exception as e:
+        log(f"   ⚠️ 图片上传异常: {e}")
+    return None
+
+
+def send_feishu_image(image_key: str, chat_id: str) -> bool:
+    """通过 Bot API 发送图片消息到指定群聊"""
+    token = _get_feishu_token()
+    if not token:
+        return False
+    payload = {
+        "receive_id": chat_id,
+        "msg_type": "image",
+        "content": json.dumps({"image_key": image_key}, ensure_ascii=False)
+    }
+    try:
+        resp = requests.post(
+            "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+            json=payload,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=30
+        )
+        return resp.status_code == 200 and resp.json().get("code") == 0
+    except Exception as e:
+        log(f"   ⚠️ 图片发送异常: {e}")
+    return False
+
+
+def send_feishu_webhook_image(image_key: str) -> bool:
+    """通过 Webhook 发送图片消息到外部群"""
+    url = FEISHU_WEBHOOK_URL
+    if not url:
+        log("ℹ️ FEISHU_WEBHOOK_URL 未设置，跳过 webhook 图片推送")
+        return False
+    payload = {"msg_type": "image", "content": {"image_key": image_key}}
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            resp = requests.post(url, json=payload, timeout=30)
+            if resp.status_code == 200 and resp.json().get("code") == 0:
+                log("   ✅ Webhook 图片推送成功")
+                return True
+            log(f"   ⚠️ Webhook 图片推送失败: {resp.text[:200]}")
+            time.sleep(2)
+        except Exception as e:
+            log(f"   ⚠️ {e}"); time.sleep(2)
+    return False
+
+
+# ============================================================
+# 长图渲染（Playwright HTML → PNG）
+# ============================================================
+
+LONG_IMAGE_WIDTH = 750
+
+
+def _esc(text):
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def render_report_html(ai: Dict, date_str: str, weekday: str, stats: Dict) -> str:
+    """将 AI 分析结果渲染为适合长图的 HTML"""
+    secs = []
+
+    # ── 头部 ──
+    secs.append(f"""
+    <div class="hdr">
+        <div class="hdr-t">📊 市场机会发现系统</div>
+        <div class="hdr-s">{date_str} 周{weekday}  ·  从 {stats.get('filtered','?')} 条信息中发现机会</div>
+    </div>""")
+
+    # ── 一、市场最重要的变化 ──
+    kc = ai.get("key_changes", [])
+    if kc:
+        items = ""
+        for c in kc[:5]:
+            items += f"""<div class="chg">
+                <div class="chg-t">{_esc(c.get('change',''))}</div>
+                <div class="chg-m"><span class="bdg b-type">{_esc(c.get('type',''))}</span> <span class="bdg b-sector">{_esc(c.get('sector',''))}</span> <span class="imp imp-{_esc(c.get('importance','中'))}">{_esc(c.get('importance','?'))}</span></div>
+                <div class="chg-w">{_esc(c.get('why_matters',''))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">一</span>市场最重要的变化</div>{items}</div>""")
+
+    # ── 二、预期差排行榜 ──
+    eg = ai.get("expectation_gaps", [])
+    if eg:
+        items = ""
+        for e in eg[:5]:
+            gd = "gap-w" if e.get("gap") == "扩大" else "gap-n" if e.get("gap") == "缩小" else ""
+            gl = "📈 差距在扩大" if e.get("gap") == "扩大" else ("📉 差距在缩小" if e.get("gap") == "缩小" else "→ 持平")
+            items += f"""<div class="gap">
+                <div class="gap-t">{_esc(e.get('topic',''))}</div>
+                <div class="{gd}">{gl}</div>
+                <div class="gap-r"><span>市场共识</span><span>{_esc(e.get('market_consensus',''))}</span></div>
+                <div class="gap-r"><span>现实情况</span><span>{_esc(e.get('reality',''))}</span></div>
+                <div class="gap-v">📅 {_esc(e.get('verification_event',''))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">二</span>预期差排行榜</div>{items}</div>""")
+
+    # ── 三、全市场机会排行榜 ──
+    ranking = ai.get("opportunity_ranking", [])
+    if ranking:
+        items = ""
+        for r in ranking[:10]:
+            sig = r.get("signal_strength", "?")
+            sc = {"强":("🟢","s-strong"),"中":("🟡","s-medium"),"弱":("🔴","s-weak")}.get(sig,("⚪",""))
+            items += f"""<div class="opp {sc[1]}">
+                <div class="opp-h"><span class="opp-rk">#{r.get('rank','?')}</span><span class="opp-nm">{_esc(r.get('name',''))}</span><span class="bdg b-cat">{_esc(r.get('category','?'))}</span><span class="sig">{sc[0]} {sig}信号</span></div>
+                <div class="opp-lg"><b>核心逻辑:</b> {_esc(r.get('core_logic',''))}</div>
+                <div class="opp-mt"><span>🎯 {_esc(r.get('expectation_gap',''))}</span><span>⏱ {_esc(r.get('time_horizon','?'))}</span><span>⚖️ {_esc(r.get('risk_reward','?'))}</span></div>
+                <div class="opp-fc">⚠️ {_esc(r.get('falsification_condition',''))}</div>
+                <div class="opp-cp">📅 {' | '.join(f"{v.get('date','?')} {v.get('event','?')}" for v in r.get('verification_checkpoints',[])[:3])}</div>
+                <div class="opp-tk">🏷 {_esc(r.get('benchmark_ticker','未指定'))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">三</span>全市场机会排行榜</div>{items}</div>""")
+
+    # ── 跨公司模式 ──
+    csp = ai.get("cross_sectional_patterns", [])
+    if csp:
+        items = ""
+        for p in csp:
+            items += f"""<div class="pat">
+                <div class="pat-t">🔍 {_esc(p.get('pattern_type',''))}  |  胜率提升: {_esc(p.get('conviction','?'))}</div>
+                <div class="pat-s">{_esc(p.get('signal',''))}</div>
+                <div class="pat-c">涉及: {_esc('、'.join(p.get('companies',[])[:6]))}  |  行业: {_esc('、'.join(p.get('sectors',[])[:4]))}</div>
+                <div class="pat-w">{_esc(p.get('what_makes_it_compelling',''))}</div>
+                <div class="pat-f">失效: {_esc(p.get('failure_condition',''))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">🔍</span>跨公司模式发现</div><div class="sec-d">多源交叉验证，独立信源越多，胜率越高</div>{items}</div>""")
+
+    # ── 四、深度研究 ──
+    deep = ai.get("deep_dives", ai.get("top3_deep_dives", []))
+    if deep:
+        items = ""
+        for t in deep:
+            fc2 = t.get("falsification_condition","")
+            items += f"""<div class="dp">
+                <div class="dp-t">🔬 {_esc(t.get('name',''))} <span class="bdg b-cat">{_esc(t.get('category','?'))}</span></div>
+                <div class="dp-r"><b>为什么:</b> {_esc(t.get('why_worth_studying',''))}</div>
+                <div class="dp-r"><b>核心逻辑:</b> {_esc(t.get('core_logic',''))}</div>
+                <div class="dp-r"><b>市场可能错在哪:</b> {_esc(t.get('what_market_misses',''))}</div>
+                <div class="dp-r"><b>催化剂:</b> {_esc(t.get('catalyst',''))}</div>
+                <div class="dp-r"><b>失效:</b> {_esc(t.get('failure_condition',''))}{' | 可证伪: ' + _esc(fc2) if fc2 and fc2 != t.get('failure_condition','') else ''}</div>
+                <div class="dp-r"><b>一年回报:</b> {_esc(t.get('one_year_return_potential',''))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">四</span>深度研究机会</div>{items}</div>""")
+
+    # ── 五、杠铃配置 ──
+    bb = ai.get("barbell", {})
+    if bb:
+        off = bb.get("offense", [])
+        deff = bb.get("defense", [])
+        items = ""
+        if off: items += f'<div class="bb-r"><b>⚔️ 进攻端:</b> {_esc(" | ".join(off))}</div>'
+        if deff: items += f'<div class="bb-r"><b>🛡️ 防守端:</b> {_esc(" | ".join(deff))}</div>'
+        items += f'<div class="bb-r"><b>🎯 环境:</b> {_esc(bb.get("environment_judgment",""))}</div>'
+        items += f'<div class="bb-bi">倾向: {_esc(bb.get("bias","?"))} — {_esc(bb.get("rationale",""))}</div>'
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">五</span>杠铃配置观察</div>{items}</div>""")
+
+    # ── 六、活跃判断追踪 ──
+    lt = ai.get("logic_tracker", {})
+    if lt:
+        still = lt.get("still_active", [])
+        fals = lt.get("newly_falsified", [])
+        items = ""
+        if still:
+            items += '<div class="tr-sub">📌 仍在追踪</div>'
+            for it in still:
+                sm = {"加强":("✅","#27ae60"),"削弱":("⚠️","#f39c12"),"不变":("➡️","#888")}
+                icon,color = sm.get(it.get("status",""),("📌","#888"))
+                items += f"""<div class="tr-it" style="border-left-color:{color}">
+                    <div>{icon} <b>{_esc(it.get('status',''))}:</b> {_esc(it.get('name',''))}</div>
+                    <div class="tr-ev">{_esc(it.get('evidence',''))}</div>
+                    <div class="tr-nx">→ {_esc(it.get('next_checkpoint',''))}</div>
+                </div>"""
+        if fals:
+            items += '<div class="tr-sub" style="margin-top:12px">❌ 已证伪</div>'
+            for it in fals:
+                items += f"""<div class="tr-it" style="border-left-color:#e74c3c">
+                    <div>❌ <b>证伪:</b> {_esc(it.get('name',''))}</div>
+                    <div class="tr-ev">{_esc(it.get('why_falsified',''))}</div>
+                </div>"""
+        if items:
+            secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">六</span>活跃判断追踪</div>{items}</div>""")
+
+    # ── 七、30天观察清单 ──
+    wl = ai.get("watchlist_30d", [])
+    if wl:
+        items = ""
+        for w in wl[:5]:
+            items += f"""<div class="wl">
+                <div class="wl-d">📅 {_esc(w.get('date','?'))}</div>
+                <div class="wl-e">{_esc(w.get('event',''))}</div>
+                <div class="wl-w">为什么重要: {_esc(w.get('why_important',''))}</div>
+                <div class="wl-f">观察重点: {_esc(w.get('what_to_watch',''))}</div>
+            </div>"""
+        secs.append(f"""<div class="sec"><div class="sec-t"><span class="sec-n">七</span>未来30天观察清单</div>{items}</div>""")
+
+    # ── 最终建议 ──
+    fa = ai.get("final_advice", {})
+    if fa and fa.get("top_priority"):
+        secs.append(f"""<div class="fin">
+            <div class="fin-l">💡 如果今天只能研究一件事</div>
+            <div class="fin-p">{_esc(fa.get('top_priority',''))} <span class="bdg b-cat">{_esc(fa.get('category','?'))}</span></div>
+            <div class="fin-r"><b>核心逻辑:</b> {_esc(fa.get('core_logic',''))}</div>
+            <div class="fin-r"><b>预期差:</b> {_esc(fa.get('expectation_gap',''))}</div>
+            <div class="fin-r"><b>催化剂:</b> {_esc(fa.get('catalyst',''))}</div>
+            <div class="fin-r"><b>验证:</b> {_esc(fa.get('verification',''))}</div>
+            <div class="fin-r"><b>失效:</b> {_esc(fa.get('failure_condition',''))}</div>
+        </div>""")
+
+    # ── 校准 + 尾部 ──
+    d = datetime.now()
+    cal = stats.get("calibration", {})
+    cal_text = ""
+    if cal and cal.get("total_verified", 0) >= 3:
+        overall = round(cal["correct"] / cal["total_verified"] * 100)
+        cal_text = f'<div style="text-align:center;margin-top:8px;font-size:13px;opacity:0.7;">🎯 历史命中率: {overall}% ({cal["correct"]}/{cal["total_verified"]})</div>'
+
+    secs.append(f"""<div class="ftr">
+        <div>📊 市场机会发现系统 · 每日 {d.strftime('%H:%M')} 自动生成</div>
+        <div class="ftr-d">AI: DeepSeek · 本报告不构成投资建议 · 仅供研究参考</div>{cal_text}
+    </div>""")
+
+    body = "\n".join(secs)
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{width:{LONG_IMAGE_WIDTH}px;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC","WenQuanYi Micro Hei",sans-serif;font-size:15px;line-height:1.7;color:#1a1a2e;background:#fff;-webkit-font-smoothing:antialiased}}
+.hdr{{background:linear-gradient(135deg,#16213e 0%,#0f3460 100%);color:#fff;padding:32px 36px;text-align:center}}
+.hdr-t{{font-size:24px;font-weight:700;letter-spacing:2px;margin-bottom:6px}}
+.hdr-s{{font-size:14px;opacity:0.8}}
+.sec{{padding:28px 36px 12px 36px;border-bottom:1px solid #f0f0f0}}
+.sec-t{{font-size:20px;font-weight:700;color:#0f3460;margin-bottom:16px;padding-bottom:8px;border-bottom:3px solid #e94560;display:flex;align-items:center;gap:10px}}
+.sec-n{{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e94560;color:#fff;border-radius:8px;font-size:16px;font-weight:700}}
+.sec-d{{font-size:13px;color:#888;margin-bottom:12px;margin-top:-8px}}
+.chg{{background:#f8f9ff;border-left:4px solid #0f3460;padding:14px 18px;margin-bottom:12px;border-radius:0 8px 8px 0}}
+.chg-t{{font-size:16px;font-weight:600;color:#16213e;margin-bottom:6px;line-height:1.6}}
+.chg-m{{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:13px}}
+.bdg{{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500}}
+.b-type{{background:#e8f0fe;color:#1a73e8}}
+.b-sector{{background:#fce4ec;color:#c62828}}
+.b-cat{{background:#e0f2f1;color:#00695c;font-size:12px}}
+.imp{{font-weight:600}}
+.imp-高{{color:#c62828}}
+.imp-中{{color:#e65100}}
+.chg-w{{font-size:14px;color:#444;line-height:1.6}}
+.gap{{background:#fffbf0;border:1px solid #ffe082;border-radius:8px;padding:14px 18px;margin-bottom:12px}}
+.gap-t{{font-size:16px;font-weight:600;color:#16213e;margin-bottom:4px}}
+.gap-w{{font-size:13px;font-weight:600;color:#c62828;margin-bottom:8px}}
+.gap-n{{font-size:13px;font-weight:600;color:#2e7d32;margin-bottom:8px}}
+.gap-r{{display:flex;margin-bottom:4px;font-size:14px;line-height:1.5}}
+.gap-r span:first-child{{flex:0 0 80px;font-weight:600;color:#555}}
+.gap-r span:last-child{{flex:1;color:#333}}
+.gap-v{{font-size:13px;color:#888;margin-top:6px}}
+.opp{{padding:16px 18px;margin-bottom:14px;border-radius:10px;border:1px solid #e8e8e8}}
+.opp.s-strong{{border-left:4px solid #27ae60;background:#f6fef6}}
+.opp.s-medium{{border-left:4px solid #f39c12;background:#fffef5}}
+.opp.s-weak{{border-left:4px solid #e74c3c;background:#fffafa}}
+.opp-h{{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}}
+.opp-rk{{font-size:18px;font-weight:800;color:#e94560}}
+.opp-nm{{font-size:16px;font-weight:600;color:#16213e;flex:1}}
+.sig{{font-size:13px;font-weight:600}}
+.opp-lg{{font-size:14px;color:#333;line-height:1.7;margin-bottom:8px}}
+.opp-mt{{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:#555;margin-bottom:6px}}
+.opp-fc{{font-size:13px;color:#c62828;border-top:1px dashed #e0e0e0;padding-top:6px;margin-top:4px}}
+.opp-cp{{font-size:13px;color:#1a73e8;margin-top:4px}}
+.opp-tk{{font-size:13px;color:#888;margin-top:4px}}
+.pat{{background:linear-gradient(135deg,#f3e5f5 0%,#ede7f6 100%);border-radius:10px;padding:16px 18px;margin-bottom:12px}}
+.pat-t{{font-size:16px;font-weight:700;color:#4a148c;margin-bottom:6px}}
+.pat-s{{font-size:15px;color:#333;font-weight:500;margin-bottom:6px;line-height:1.6}}
+.pat-c{{font-size:13px;color:#555;margin-bottom:4px}}
+.pat-w{{font-size:14px;color:#444;margin-top:4px;line-height:1.6}}
+.pat-f{{font-size:13px;color:#888;margin-top:6px;border-top:1px dashed #d1c4e9;padding-top:6px}}
+.dp{{background:#f5f5f5;border-radius:10px;padding:18px 20px;margin-bottom:14px;border:1px solid #e0e0e0}}
+.dp-t{{font-size:17px;font-weight:700;color:#16213e;margin-bottom:10px}}
+.dp-r{{font-size:14px;color:#444;margin-bottom:4px;line-height:1.6}}
+.bb-r{{font-size:15px;margin-bottom:6px;line-height:1.6}}
+.bb-bi{{font-size:14px;color:#333;background:#f5f5f5;padding:10px 14px;border-radius:6px;margin-top:8px;line-height:1.6}}
+.tr-sub{{font-size:15px;font-weight:600;color:#333;margin-bottom:8px}}
+.tr-it{{background:#fafafa;border-left:3px solid #ccc;padding:10px 14px;margin-bottom:8px;border-radius:0 6px 6px 0;font-size:14px;line-height:1.6}}
+.tr-ev{{font-size:13px;color:#666;margin-top:2px}}
+.tr-nx{{font-size:13px;color:#1a73e8;margin-top:2px}}
+.wl{{background:#fafafa;border-radius:8px;padding:12px 16px;margin-bottom:10px}}
+.wl-d{{font-size:13px;color:#888;margin-bottom:2px}}
+.wl-e{{font-size:15px;font-weight:600;color:#16213e;margin-bottom:4px}}
+.wl-w{{font-size:13px;color:#555;margin-bottom:2px;line-height:1.5}}
+.wl-f{{font-size:13px;color:#1a73e8}}
+.fin{{background:linear-gradient(135deg,#0f3460 0%,#16213e 100%);color:#fff;padding:28px 36px}}
+.fin-l{{font-size:18px;font-weight:700;margin-bottom:10px;color:#e94560}}
+.fin-p{{font-size:18px;font-weight:700;margin-bottom:14px;line-height:1.5}}
+.fin-r{{font-size:14px;margin-bottom:5px;line-height:1.6;opacity:0.9}}
+.ftr{{text-align:center;padding:24px 36px;background:#f8f8f8;font-size:13px;color:#999;line-height:1.8}}
+.ftr-d{{font-size:12px;color:#bbb}}
+</style></head>
+<body>{body}</body></html>"""
+
+
+def render_to_png(html: str, output_path: str) -> bool:
+    """用 Playwright 将 HTML 渲染为长图 PNG"""
+    if not RENDER_AVAILABLE:
+        log("⚠️ Playwright 不可用，跳过长图渲染")
+        return False
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": LONG_IMAGE_WIDTH, "height": 800})
+            page.set_content(html, timeout=30000)
+            page.wait_for_timeout(1000)
+            height = page.evaluate("() => document.body.scrollHeight")
+            page.set_viewport_size({"width": LONG_IMAGE_WIDTH, "height": height + 20})
+            page.screenshot(path=output_path, full_page=True, type="png")
+            browser.close()
+        size_kb = os.path.getsize(output_path) / 1024
+        log(f"🖼️ 长图: {height}px, {size_kb:.0f}KB → {output_path}")
+        return True
+    except Exception as e:
+        log(f"⚠️ 长图渲染失败: {e}")
+        return False
+
+
 # ============================================================
 # 日报格式化
 # ============================================================
@@ -1502,6 +1849,26 @@ def main():
 
     send_feishu_card(card)
     send_feishu_webhook(card)
+
+    # ── 长图渲染 + 推送（仅外部群 webhook）──
+    if ai_result and RENDER_AVAILABLE:
+        try:
+            d = datetime.now()
+            date_str = d.strftime("%Y.%m.%d")
+            weekday = ["一","二","三","四","五","六","日"][d.weekday()]
+            html = render_report_html(ai_result, date_str, weekday, stats)
+            img_path = os.path.join(tempfile.gettempdir(), f"market_radar_{date_str}.png")
+            if render_to_png(html, img_path):
+                image_key = _upload_image_feishu(img_path)
+                if image_key:
+                    send_feishu_webhook_image(image_key)
+                try:
+                    os.remove(img_path)
+                except Exception:
+                    pass
+        except Exception as e:
+            log(f"⚠️ 长图流程异常: {e}")
+
     log("\n"+"="*50)
     log("✅ 完成")
     log("="*50)
