@@ -143,6 +143,20 @@
         {"id": "GOLDAMGBD228NLBM", "name": "黄金价格(London Fix)", "freq": "daily"}
       ]
     },
+    "tavily": {
+      "enabled": true,
+      "api_key_env": "TAVILY_API_KEY",
+      "max_results_per_query": 5,
+      "queries": [
+        {"query": "stock market moving events today 2026", "category": "market"},
+        {"query": "Federal Reserve interest rate policy June 2026", "category": "macro"},
+        {"query": "major corporate earnings surprises revenue guidance 2026", "category": "equity"},
+        {"query": "geopolitical risk trade war tariffs affecting markets 2026", "category": "macro"},
+        {"query": "sector rotation unusual market activity this week", "category": "market"},
+        {"query": "China stock market A-share policy stimulus 2026", "category": "news_cn"},
+        {"query": "commodity prices oil gold copper moves this week", "category": "macro"}
+      ]
+    },
     "akshare": {
       "enabled": true,
       "note": "A股/中国宏观数据，免费无需API Key",
