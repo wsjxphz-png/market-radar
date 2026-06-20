@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
-FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "oc_94e85ee81df40d0ac71c358861427b06")
+FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID") or "oc_94e85ee81df40d0ac71c358861427b06"
 REQUEST_TIMEOUT = 30
 
 # 阈值 — 基于经济学逻辑，不是数据挖掘
