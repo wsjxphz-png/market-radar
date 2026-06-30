@@ -164,6 +164,12 @@
         "stock_zh_a_spot_em", "stock_sse_summary", "macro_china_gdp",
         "macro_china_cpi_monthly", "macro_china_pmi", "macro_china_money_supply"
       ]
+    },
+    "sector_monitor": {
+      "enabled": true,
+      "note": "A股板块异动监测，基于2026-06-29会议交易框架，拉取板块K线+资金流向+技术指标",
+      "lookback_days": 60,
+      "fund_flow_indicators": ["5日", "10日"]
     }
   }
 }
