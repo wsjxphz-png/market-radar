@@ -5,6 +5,7 @@ A股板块异动监测模块
 
 import json
 import time
+import random
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -12,6 +13,59 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+# ============================================================
+# 反爬加固：替换 AKShare 默认 User-Agent + 增加超时
+# ============================================================
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
+_original_request_with_retry = None
+
+
+def _install_ua_patch():
+    """给 AKShare 内部的 requests.Session 注入浏览器 User-Agent"""
+    global _original_request_with_retry
+    try:
+        from akshare.utils import request as _akreq
+        _original_request_with_retry = _akreq.request_with_retry
+
+        def patched_request(url, params=None, timeout=15, max_retries=3,
+                            base_delay=1.0, random_delay_range=(0.5, 1.5)):
+            import requests
+            from requests.adapters import HTTPAdapter
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    with requests.Session() as session:
+                        adapter = HTTPAdapter(pool_connections=1, pool_maxsize=1)
+                        session.mount("http://", adapter)
+                        session.mount("https://", adapter)
+                        session.headers.update({
+                            "User-Agent": _BROWSER_UA,
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                            "Accept-Encoding": "gzip, deflate, br",
+                        })
+                        resp = session.get(url, params=params, timeout=timeout)
+                        resp.raise_for_status()
+                        return resp
+                except (requests.RequestException, ValueError) as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt) + random.uniform(*random_delay_range)
+                        time.sleep(delay)
+            raise last_exception
+
+        _akreq.request_with_retry = patched_request
+        logger.info("AKShare UA patch installed")
+    except Exception:
+        pass  # 静默失败，不影响主流程
+
+
+_install_ua_patch()
 
 # ============================================================
 # 板块规则配置（来源：6.29 会议）
@@ -114,7 +168,10 @@ KEY_STOCKS = {
 # 数据获取（AKShare）
 # ============================================================
 
-REQUEST_INTERVAL = 0.4  # AKShare 请求间隔，防限流
+REQUEST_INTERVAL_MIN = 0.8   # AKShare 最小请求间隔
+REQUEST_INTERVAL_MAX = 2.0   # AKShare 最大请求间隔
+BATCH_PAUSE_EVERY = 5        # 每 N 个请求暂停一次
+BATCH_PAUSE_SECS = 3.0       # 批次间暂停秒数
 LOOKBACK_DAYS = 120     # 历史K线回溯天数（需覆盖周线计算）
 FUND_FLOW_DAYS = 20     # 资金流向历史回溯天数
 
@@ -965,13 +1022,13 @@ def fetch_sector_monitor_data() -> Dict:
     board_df = fetch_industry_board_overview()
     if board_df is not None:
         logger.info(f"   行业板块概况: {len(board_df)} 个板块")
-    time.sleep(REQUEST_INTERVAL)
+    time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 2. 获取资金流向
     fund_5d_df = fetch_sector_fund_flow_5d()
-    time.sleep(REQUEST_INTERVAL)
+    time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
     fund_10d_df = fetch_sector_fund_flow_10d()
-    time.sleep(REQUEST_INTERVAL)
+    time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 3. 获取三大指数K线
     for idx_cfg in MARKET_INDICES:
@@ -984,7 +1041,7 @@ def fetch_sector_monitor_data() -> Dict:
                 "ma5_direction": tech.get("ma5_direction"),
                 "vol_price": tech.get("vol_price"),
             }
-        time.sleep(REQUEST_INTERVAL)
+        time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 4. 逐个板块拉K线+计算信号
     total = len(SECTOR_RULES)
@@ -992,9 +1049,15 @@ def fetch_sector_monitor_data() -> Dict:
         board_name = rule_cfg["name"]
         logger.info(f"   [{i+1}/{total}] {board_name} ...")
 
+        # 分批停顿：每 BATCH_PAUSE_EVERY 个请求暂停一下
+        if i > 0 and i % BATCH_PAUSE_EVERY == 0:
+            pause = BATCH_PAUSE_SECS + random.uniform(0, 2)
+            logger.info(f"   ⏸ 批次暂停 {pause:.1f}s ...")
+            time.sleep(pause)
+
         # 4a. K线和技术指标
         df_kl = fetch_board_kline(board_name)
-        time.sleep(REQUEST_INTERVAL)
+        time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
         tech = calc_technical_indicators(df_kl) if df_kl is not None else {}
 
