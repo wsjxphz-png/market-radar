@@ -45,9 +45,6 @@ SECTOR_RULES = [
     {"name": "半导体", "category": "科技", "status": "hold",
      "rule": "uptrend_selective",
      "note": "趋势完好但不可追，选底部未翻倍个股短线参与，下半年存储IPO有持续性"},
-    {"name": "科创50", "category": "指数", "status": "hold",
-     "rule": "no_new_entry",
-     "note": "单边上涨趋势未破，但不可开新仓，等周线级回调至1900附近"},
 
     # ---- WATCH: 观察中，需要确认信号 ----
     {"name": "食品饮料", "category": "消费", "status": "watch",
@@ -65,9 +62,6 @@ SECTOR_RULES = [
     {"name": "证券", "category": "金融", "status": "watch",
      "rule": "5week_ma_dip",
      "note": "打到压力，与科技跷跷板，等5周线低吸不追"},
-    {"name": "创业板", "category": "指数", "status": "hold",
-     "rule": "uptrend_hold",
-     "note": "主升浪中，7月若量能不萎缩还会逼空，但不可开新仓"},
     {"name": "保险", "category": "金融", "status": "watch",
      "rule": "consolidating",
      "note": "在这个位置横住了，等方向选择"},
@@ -91,7 +85,7 @@ SECTOR_RULES = [
     {"name": "新能源", "category": "新能源", "status": "avoid",
      "rule": "trend_broken",
      "note": "同电气设备，走势不好"},
-    {"name": "互联网", "category": "科技", "status": "avoid",
+    {"name": "互联网服务", "category": "科技", "status": "avoid",
      "rule": "multi_month_adjustment",
      "note": "太弱，还需3-5个月调整，熬不到那个时候"},
     {"name": "电力行业", "category": "公用事业", "status": "avoid",
@@ -174,14 +168,17 @@ def fetch_sector_fund_flow_10d() -> Optional[pd.DataFrame]:
     import akshare as ak
     df = _safe_call(ak.stock_sector_fund_flow_rank, indicator="10日", sector_type="行业资金流")
     if df is not None and len(df) > 0:
-        cols_map = {}
-        for c in df.columns:
-            if "10日" in str(c):
-                cols_map[c] = c.replace("10日", "").strip()
-            elif c == "名称":
-                cols_map[c] = "board_name"
-        if cols_map:
-            df = df.rename(columns=cols_map)
+        df = df.rename(columns={
+            "名称": "board_name",
+            "10日涨跌幅": "chg_10d",
+            "10日主力净流入-净额": "main_inflow_10d",
+            "10日主力净流入-净占比": "main_inflow_pct_10d",
+            "10日超大单净流入-净额": "super_large_inflow_10d",
+            "10日大单净流入-净额": "large_inflow_10d",
+            "10日中单净流入-净额": "mid_inflow_10d",
+            "10日小单净流入-净额": "small_inflow_10d",
+            "10日主力净流入最大股": "top_inflow_stock_10d",
+        })
     return df
 
 
@@ -536,13 +533,29 @@ def calc_technical_indicators(df: pd.DataFrame) -> Dict:
 # 信号生成
 # ============================================================
 
-def generate_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_overview: Optional[Dict]) -> Dict:
+def generate_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_today: Optional[Dict]) -> Dict:
     """对照会议规则 + 全量技术指标生成板块信号"""
     status = rule_cfg["status"]
     rule = rule_cfg["rule"]
 
     signal = {"type": "unknown", "label": "❓ 未知", "detail": ""}
     risk_flags = []
+
+    # 数据不可用 → 降级为纯规则判断
+    if tech.get("error"):
+        no_data_msg = f"数据不可用({tech.get('available_days',0)}日)，基于会议规则判断"
+        if status == "entry":
+            return {"type": "entry_no_data", "label": "🟡 等数据",
+                    "detail": f"{no_data_msg}：{rule_cfg['note'][:30]}", "risk_flags": [no_data_msg]}
+        elif status == "avoid":
+            return {"type": "avoid_no_data", "label": "🔴 回避",
+                    "detail": f"{no_data_msg}，维持回避", "risk_flags": []}
+        elif status == "watch":
+            return {"type": "watch_no_data", "label": "🟡 观察",
+                    "detail": f"{no_data_msg}，等待确认", "risk_flags": []}
+        else:
+            return {"type": "hold_no_data", "label": "🟡 谨慎",
+                    "detail": f"{no_data_msg}", "risk_flags": []}
 
     # ========== 公共风险检测（所有板块共用） ==========
     if tech.get("vol_price") == "distribution":
@@ -560,28 +573,29 @@ def generate_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_overview: Opti
     if tech.get("top_fractal") and tech.get("vol_price") == "distribution":
         risk_flags.append("顶分型+放量下跌：可能阶段性见顶")
 
-    # ========== ENTRY 板块 ==========
+    # ========== 分类信号 ==========
     if status == "entry":
-        signal = _entry_signal(rule_cfg, tech, fund, risk_flags)
+        signal = _entry_signal(rule_cfg, tech, fund, board_today, risk_flags)
     elif status == "hold":
-        signal = _hold_signal(rule_cfg, tech, fund, risk_flags)
+        signal = _hold_signal(rule_cfg, tech, fund, board_today, risk_flags)
     elif status == "watch":
-        signal = _watch_signal(rule_cfg, tech, fund, risk_flags)
+        signal = _watch_signal(rule_cfg, tech, fund, board_today, risk_flags)
     elif status == "avoid":
-        signal = _avoid_signal(rule_cfg, tech, fund, risk_flags)
+        signal = _avoid_signal(rule_cfg, tech, fund, board_today, risk_flags)
 
     return {"type": signal["type"], "label": signal["label"], "detail": signal["detail"],
             "risk_flags": risk_flags}
 
 
-def _entry_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str]) -> Dict:
+def _entry_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_today: Optional[Dict],
+                  risk_flags: List[str]) -> Dict:
     """ENTRY 板块：可低吸入场"""
     rule = rule_cfg["rule"]
     name = rule_cfg["name"]
+    chg_today = board_today.get("change_pct", 0) if board_today else 0
 
     if rule == "dip_buy_oscillation":
         # 机器人方向：震荡中枢低吸
-        # 会议原文：在做一个震荡中枢，还没有拉过主升，上涨趋势中可低吸
         if tech.get("trend_phase") == "rally" and tech.get("above_ma5") and tech.get("weekly_trend") == "bullish":
             return {"type": "hold_uptrend", "label": "🟢 趋势向上",
                     "detail": "已出中枢进入单边，持仓持有不追，等中枢回踩再入"}
@@ -609,13 +623,11 @@ def _entry_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str])
                 "detail": "等待震荡中枢下沿放量企稳信号"}
 
     elif rule == "bottom_fishing_pullback":
-        # 农林牧渔：底部资金抄底等回踩
-        # 会议原文：连续三天底部阳线→等回踩买入，机构票当天涨超3%不追
-        chg_today = tech.get("chg_5d_pct", 0) / 5  # 近似当日涨幅
+        # 农林牧渔：连续3天底部阳线→等回踩买入，机构票当天涨超3%不追
         if tech.get("consecutive_yang", 0) >= 3 and tech.get("above_ma5"):
             if abs(chg_today) > 3:
                 return {"type": "entry_wait", "label": "🟡 等回踩",
-                        "detail": f"今日涨幅约{chg_today:.1f}%，超3%不追，等回踩5日线"}
+                        "detail": f"今日涨幅{chg_today:+.1f}%，超3%不追，等回踩5日线"}
             if tech.get("bias_ma5_pct", 0) > 3:
                 return {"type": "entry_pullback", "label": "🟡 等回踩",
                         "detail": "连阳已拉但乖离偏高，等回踩5日线"}
@@ -630,51 +642,74 @@ def _entry_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str])
         return {"type": "watch_wait", "label": "🟡 等待",
                 "detail": "底部尚未确认，等连续阳线+放量信号"}
 
-    elif rule in ("bottom_fishing", "support_rebound", "double_bottom"):
-        # 家电/煤炭/船舶：底部/支撑/双底
-        if tech.get("bottom_fractal") and tech.get("vol_price") == "healthy_up":
-            if tech.get("any_golden_cross"):
-                return {"type": "entry_confirm", "label": "✅ 多重确认",
-                        "detail": "底分型+放量+金叉三重确认，可入场"}
-            return {"type": "entry_confirm", "label": "✅ 信号确认",
-                    "detail": "底部放量阳线确认，可入场"}
-        if tech.get("above_ma5") and fund.get("main_inflow_5d", 0) > 0 and tech.get("weekly_trend") != "bearish":
-            return {"type": "entry_confirm", "label": "✅ 可入场",
-                    "detail": "站上5日线+资金流入+周线未走坏，逢低布局"}
+    elif rule == "double_bottom":
+        # 船舶：做双底，拉上去就好
+        # 双底特征：两次探底价格接近（10%内），时间间隔2-6周，第二次缩量企稳
+        if tech.get("at_support") and tech.get("bottom_fractal") and tech.get("vol_price") == "healthy_up":
+            return {"type": "entry_confirm", "label": "✅ 双底突破",
+                    "detail": "支撑位+底分型+放量，双底形态可能完成"}
+        if tech.get("above_ma5") and fund.get("main_inflow_5d", 0) > 0:
+            return {"type": "entry_dip", "label": "✅ 可入场",
+                    "detail": "站上5日线+资金流入，逢低布局"}
         if tech.get("at_support"):
-            if tech.get("bottom_fractal"):
-                return {"type": "entry_dip", "label": "✅ 支撑+底分",
-                        "detail": "触碰支撑位+底分型，可轻仓试探"}
             return {"type": "entry_dip", "label": "🟡 近支撑",
-                    "detail": "接近20日支撑位，观察能否企稳反弹"}
+                    "detail": "接近支撑位，观察能否形成双底"}
         if tech.get("suppressed_by_ma"):
-            risk_flags.append("均线压制中，可能还需横盘磨底")
-            return {"type": "watch_wait", "label": "🟡 等消化",
-                    "detail": "均线压制未消，需时间磨掉上方套牢盘"}
+            return {"type": "watch_wait", "label": "🟡 等突破",
+                    "detail": "均线压制中，等双底颈线突破确认"}
+        return {"type": "watch_wait", "label": "🟡 等待", "detail": "等双底形态确认"}
+
+    elif rule == "support_rebound":
+        # 煤炭：跌到位到支撑，可加仓等反弹降成本
+        if tech.get("at_support") and tech.get("bottom_fractal"):
+            return {"type": "entry_dip", "label": "✅ 支撑+底分",
+                    "detail": "跌到支撑位+底分型，可加仓等反弹降成本"}
+        if tech.get("at_support"):
+            return {"type": "entry_dip", "label": "🟡 近支撑",
+                    "detail": "接近支撑位，观察能否企稳反弹"}
+        if tech.get("bias_ma5_pct", 0) < -5:
+            return {"type": "entry_dip", "label": "🟡 超跌",
+                    "detail": "短线超跌，可左侧轻仓试探"}
+        if tech.get("suppressed_by_ma"):
+            risk_flags.append("均线压制中，反弹空间有限")
+        return {"type": "watch_wait", "label": "🟡 等待",
+                "detail": "等跌到支撑位再考虑加仓"}
+
+    elif rule == "bottom_fishing":
+        # 家电：主力抄底，机构票买超跌不追涨
+        if abs(chg_today) > 3:
+            return {"type": "entry_wait", "label": "🟡 不追",
+                    "detail": f"今日涨{chg_today:+.1f}%，机构票超3%不追，等回踩"}
+        if tech.get("bottom_fractal") and tech.get("vol_price") == "healthy_up":
+            return {"type": "entry_confirm", "label": "✅ 底部确认",
+                    "detail": "底分型+放量，机构票可逢低布局"}
+        if tech.get("above_ma5") and fund.get("main_inflow_5d", 0) > 0:
+            return {"type": "entry_dip", "label": "✅ 可入场",
+                    "detail": "站上5日线+资金流入，机构票低吸机会"}
+        if tech.get("at_support"):
+            return {"type": "entry_dip", "label": "🟡 近支撑",
+                    "detail": "接近支撑位，等企稳信号"}
         return {"type": "watch_wait", "label": "🟡 等待",
                 "detail": "等底部放量确认或回踩支撑位"}
 
     return {"type": "watch_wait", "label": "🟡 等待", "detail": ""}
 
 
-def _hold_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str]) -> Dict:
+def _hold_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_today: Optional[Dict],
+                  risk_flags: List[str]) -> Dict:
     """HOLD 板块：趋势完好但不可开新仓"""
     name = rule_cfg["name"]
+    rule = rule_cfg["rule"]
 
-    # 科创50 特殊逻辑
-    if "科创" in name:
-        close_now = tech.get("close", 0)
-        if close_now and close_now < 1950:
-            risk_flags.append("跌破1900附近支撑区，需止损离场")
-            return {"type": "exit_confirm", "label": "🔴 跌破关键位",
-                    "detail": "科创50跌破1900支撑区，按纪律止损"}
+    # 半导体特殊逻辑：选底部未翻倍个股短线参与
+    if rule == "uptrend_selective":
+        if tech.get("is_doubled"):
+            risk_flags.append("板块已整体翻倍，选股需谨慎，只选底部未大涨个股")
         if tech.get("persistent_divergence"):
-            risk_flags.append("持续量价背离，可能冲高回落")
-            return {"type": "hold_caution", "label": "🟡 警惕见顶",
-                    "detail": "单边上涨但持续量价背离，7月第三周起需防冲高回落"}
-        if tech.get("bias_ma5_pct", 0) > 6:
-            return {"type": "hold_caution", "label": "🟡 乖离偏高",
-                    "detail": "乖离率较高，短线勿追，持仓者可沿5日线持有"}
+            risk_flags.append("持续量价背离，可能见顶，不宜追高")
+        if tech.get("trend_phase") == "topping":
+            return {"type": "hold_caution", "label": "🟡 警惕筑顶",
+                    "detail": "出现筑顶信号，只出不进"}
 
     # 通用 HOLD 逻辑
     if tech.get("dead_cross_5_20"):
@@ -703,7 +738,8 @@ def _hold_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str]) 
             "detail": "跌破5日线但缩量，观察能否收回"}
 
 
-def _watch_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str]) -> Dict:
+def _watch_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_today: Optional[Dict],
+                  risk_flags: List[str]) -> Dict:
     """WATCH 板块：观察等确认"""
     name = rule_cfg["name"]
     rule = rule_cfg["rule"]
@@ -719,6 +755,20 @@ def _watch_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str])
         if tech.get("trend_phase") == "oscillation":
             return {"type": "watch_hold", "label": "🟡 调整中",
                     "detail": "与科技跷跷板，等科技休息时证券可能有机会"}
+
+    # 保险：横住了，等方向选择
+    if rule == "consolidating":
+        if tech.get("ma_alignment") == "converging" and tech.get("any_golden_cross"):
+            return {"type": "watch_upgrade", "label": "⬆️ 可能突破",
+                    "detail": "均线粘合+金叉，横盘后可能选择向上"}
+        if tech.get("bottom_fractal") and tech.get("vol_price") == "healthy_up":
+            return {"type": "watch_upgrade", "label": "⬆️ 底部异动",
+                    "detail": "横盘中出现底分+放量，关注方向选择"}
+        if tech.get("ma_alignment") == "converging":
+            return {"type": "watch_hold", "label": "🟡 横盘整理",
+                    "detail": "均线粘合横盘，等方向选择后再行动"}
+        return {"type": "watch_hold", "label": "🟡 横盘观察",
+                "detail": "持续横盘整理，等待放量突破方向"}
 
     # 医疗/医药：打到压力位看能否放量突破
     if rule == "resistance_test":
@@ -761,17 +811,51 @@ def _watch_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str])
             "detail": "尚未满足确认条件，继续等待"}
 
 
-def _avoid_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str]) -> Dict:
+def _avoid_signal(rule_cfg: Dict, tech: Dict, fund: Dict, board_today: Optional[Dict],
+                  risk_flags: List[str]) -> Dict:
     """AVOID 板块：回避"""
     rule = rule_cfg["rule"]
 
-    # 下降趋势线压制的板块
+    # 下降趋势线压制的板块（有色金属）
     if rule == "downtrend_line":
         if not tech.get("has_downtrend") and tech.get("above_ma20"):
             return {"type": "avoid_surprise", "label": "⚠️ 趋势可能反转",
                     "detail": "下降趋势线被突破+站上20日线，关注是否假突破"}
+        if tech.get("has_downtrend"):
+            return {"type": "avoid_confirm", "label": "🔴 继续回避",
+                    "detail": "下降趋势线压制确认，未突破前不参与"}
+        return {"type": "avoid_confirm", "label": "🔴 继续回避",
+                "detail": "趋势未改，维持回避判断"}
 
-    # 弱势筑底的板块（电气设备/新能源/电力）
+    # 文教休闲/旅游：弱势板块刚止跌，下影线只是止跌信号
+    if rule == "just_stopped_falling":
+        if tech.get("any_golden_cross") and tech.get("above_ma20") and tech.get("vol_price") == "healthy_up":
+            return {"type": "avoid_surprise", "label": "⚠️ 可能反转",
+                    "detail": "刚止跌即出现金叉+放量站上月线，关注是否趋势反转"}
+        if tech.get("bottom_fractal") and tech.get("consecutive_yang", 0) >= 3:
+            return {"type": "avoid_surprise", "label": "⚠️ 持续走强",
+                    "detail": "底分+连阳，止跌信号在增强，注意跟踪"}
+        if tech.get("bottom_fractal"):
+            return {"type": "avoid_confirm", "label": "🔴 刚止跌",
+                    "detail": "下影线止跌信号出现，但还需更多确认，暂不入场"}
+        return {"type": "avoid_confirm", "label": "🔴 继续回避",
+                "detail": "弱势板块，止跌≠反转，需要时间和量能确认"}
+
+    # 酿酒：大级别支撑但需长时间横盘震荡
+    if rule == "prolonged_consolidation":
+        if tech.get("ma_alignment") == "converging" and tech.get("any_golden_cross"):
+            return {"type": "avoid_surprise", "label": "⚠️ 横盘末端",
+                    "detail": "均线粘合+金叉，横盘可能接近尾声，关注突破方向"}
+        if tech.get("at_support") and tech.get("bottom_fractal"):
+            return {"type": "avoid_surprise", "label": "⚠️ 支撑企稳",
+                    "detail": "大级别支撑位+底分，可能正在筑底"}
+        if tech.get("ma_alignment") == "converging":
+            return {"type": "avoid_confirm", "label": "🔴 横盘中",
+                    "detail": "均线粘合横盘，横多久不确定，继续回避"}
+        return {"type": "avoid_confirm", "label": "🔴 继续回避",
+                "detail": "大级别支撑但需长时间震荡，暂时不是机会"}
+
+    # 电气设备/新能源/电力：走势不好，缓慢筑底
     if rule in ("trend_broken", "multi_month_consolidation"):
         if tech.get("any_golden_cross") and tech.get("above_ma20") and tech.get("weekly_trend") == "bullish":
             return {"type": "avoid_surprise", "label": "⚠️ 可能反转",
@@ -779,12 +863,18 @@ def _avoid_signal(rule_cfg: Dict, tech: Dict, fund: Dict, risk_flags: List[str])
         if tech.get("bottom_fractal") and tech.get("vol_price") == "healthy_up":
             return {"type": "avoid_surprise", "label": "⚠️ 底部异动",
                     "detail": "底分+放量，开始筑底但立刻反转不太可能，持续跟踪"}
+        if tech.get("bias_ma5_pct", 0) < -8:
+            return {"type": "avoid_confirm", "label": "🔴 弱势超跌",
+                    "detail": "跌幅较大但无反转信号，反弹后仍可能继续探底"}
 
-    # 互联网：大周期二浪回踩，3-5个月调整
+    # 互联网服务：大周期二浪回踩，3-5个月调整
     if rule == "multi_month_adjustment":
         if tech.get("ma_alignment") == "converging" and tech.get("any_golden_cross"):
             return {"type": "avoid_surprise", "label": "⚠️ 提前见底？",
                     "detail": "均线粘合+金叉，可能提前结束调整，跟踪"}
+        if tech.get("suppressed_by_ma"):
+            return {"type": "avoid_confirm", "label": "🔴 均线压制",
+                    "detail": "均线仍在压制，调整时间未到，继续等"}
 
     # 通用 AVOID 确认
     if tech.get("vol_price") == "healthy_up" and fund.get("main_inflow_5d", 0) > 0 and tech.get("any_golden_cross"):
