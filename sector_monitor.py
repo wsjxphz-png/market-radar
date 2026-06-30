@@ -68,6 +68,15 @@ SECTOR_RULES = [
     {"name": "创业板", "category": "指数", "status": "hold",
      "rule": "uptrend_hold",
      "note": "主升浪中，7月若量能不萎缩还会逼空，但不可开新仓"},
+    {"name": "保险", "category": "金融", "status": "watch",
+     "rule": "consolidating",
+     "note": "在这个位置横住了，等方向选择"},
+    {"name": "文教休闲", "category": "消费", "status": "avoid",
+     "rule": "just_stopped_falling",
+     "note": "弱势板块刚止跌，下影线只是止跌信号，还没到入场时机"},
+    {"name": "旅游酒店", "category": "消费", "status": "avoid",
+     "rule": "just_stopped_falling",
+     "note": "同文教休闲，弱势板块刚止跌，需要更多确认信号"},
 
     # ---- AVOID: 回避，不入场 ----
     {"name": "酿酒行业", "category": "消费", "status": "avoid",
