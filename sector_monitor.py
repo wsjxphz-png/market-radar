@@ -1018,10 +1018,28 @@ def fetch_sector_monitor_data() -> Dict:
 
     logger.info("📊 板块监测：开始拉取数据...")
 
-    # 1. 获取全行业板块概况
+    # 1. 获取全行业板块概况 + 自检板块名匹配
     board_df = fetch_industry_board_overview()
+    name_map = {}  # 我们的名字 → AKShare 真实名字
     if board_df is not None:
         logger.info(f"   行业板块概况: {len(board_df)} 个板块")
+        real_names = set(board_df["board_name"].values)
+        our_names = [r["name"] for r in SECTOR_RULES]
+        for name in our_names:
+            if name in real_names:
+                name_map[name] = name  # 精确匹配
+            else:
+                # 模糊匹配：找包含关系
+                candidates = [n for n in real_names if name[:2] in n or n[:2] in name]
+                if len(candidates) == 1:
+                    name_map[name] = candidates[0]
+                    logger.warning(f"   ⚠️ 板块名修正: '{name}' → '{candidates[0]}'")
+                elif len(candidates) > 1:
+                    logger.warning(f"   ⚠️ '{name}' 模糊匹配多个: {candidates[:4]}，使用原名")
+                    name_map[name] = name
+                else:
+                    logger.warning(f"   ❌ '{name}' 在 {len(real_names)} 个板块中未找到！可能需要修正名称")
+                    name_map[name] = name
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 2. 获取资金流向
@@ -1047,27 +1065,29 @@ def fetch_sector_monitor_data() -> Dict:
     total = len(SECTOR_RULES)
     for i, rule_cfg in enumerate(SECTOR_RULES):
         board_name = rule_cfg["name"]
-        logger.info(f"   [{i+1}/{total}] {board_name} ...")
+        lookup_name = name_map.get(board_name, board_name)  # 修正后的名称
+        mismatch_hint = f" (→{lookup_name})" if lookup_name != board_name else ""
+        logger.info(f"   [{i+1}/{total}] {board_name}{mismatch_hint} ...")
 
-        # 分批停顿：每 BATCH_PAUSE_EVERY 个请求暂停一下
+        # 分批停顿
         if i > 0 and i % BATCH_PAUSE_EVERY == 0:
             pause = BATCH_PAUSE_SECS + random.uniform(0, 2)
             logger.info(f"   ⏸ 批次暂停 {pause:.1f}s ...")
             time.sleep(pause)
 
         # 4a. K线和技术指标
-        df_kl = fetch_board_kline(board_name)
+        df_kl = fetch_board_kline(lookup_name)
         time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
         tech = calc_technical_indicators(df_kl) if df_kl is not None else {}
 
-        # 4b. 资金流向
-        fund = analyze_fund_flow(board_name, fund_5d_df, fund_10d_df, None)
+        # 4b. 资金流向（用修正后的名称查）
+        fund = analyze_fund_flow(lookup_name, fund_5d_df, fund_10d_df, None)
 
-        # 4c. 板块当日行情（从board_df取）
+        # 4c. 板块当日行情
         board_today = {}
         if board_df is not None:
-            row = board_df[board_df["board_name"] == board_name]
+            row = board_df[board_df["board_name"] == lookup_name]
             if len(row) > 0:
                 board_today = {
                     "change_pct": float(row.iloc[0].get("change_pct", 0) or 0),
