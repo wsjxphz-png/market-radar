@@ -23,6 +23,12 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
+try:
+    from sector_monitor import fetch_sector_monitor_data, format_sector_for_prompt
+    _HAS_SECTOR_MONITOR = True
+except Exception:
+    _HAS_SECTOR_MONITOR = False
+
 # ============================================================
 # 配置
 # ============================================================
@@ -354,7 +360,7 @@ def send_feishu(content: str) -> bool:
 # 格式化输出
 # ============================================================
 
-def format_message(assessment: Dict, ai_text: Optional[str], idx: pd.DataFrame) -> str:
+def format_message(assessment: Dict, ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "") -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     weekday = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -402,6 +408,15 @@ def format_message(assessment: Dict, ai_text: Optional[str], idx: pd.DataFrame) 
     for w in assessment.get("key_watch", []):
         lines.append(f"- {w}")
 
+    # 板块异动监测
+    if sector_text:
+        lines.append("")
+        lines.append("━━━━━━━━━━━━━━━━━━━")
+        lines.append("")
+        lines.append("**📊 板块异动监测（基于会议交易框架）**")
+        lines.append("")
+        lines.append(sector_text)
+
     lines.append("")
     lines.append("━━━━━━━━━━━━━━━━━━━")
     lines.append("*本监测不构成投资建议 | 每日收盘后自动生成*")
@@ -445,12 +460,26 @@ def main():
     indicators = compute_indicators(idx, m1)
     assessment = assess_rally_health(indicators)
 
+    # 板块异动监测
+    sector_data = None
+    sector_text = ""
+    if _HAS_SECTOR_MONITOR:
+        print("[>] Sector monitor...")
+        try:
+            sector_data = fetch_sector_monitor_data()
+            sector_text = format_sector_for_prompt(sector_data)
+            s = sector_data.get("summary", {})
+            print(f"    板块监测: {s.get('entry_count',0)}入场 "
+                  f"{s.get('avoid_count',0)}回避")
+        except Exception as e:
+            print(f"    [!!] Sector monitor failed: {e}")
+
     # AI 解读
     print("[>] AI interpretation...")
     ai_text = ai_interpret(assessment, idx)
 
     # 格式化
-    msg = format_message(assessment, ai_text, idx)
+    msg = format_message(assessment, ai_text, idx, sector_text)
     print("\n" + msg)
 
     if args.dry_run:
