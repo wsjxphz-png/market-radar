@@ -133,10 +133,12 @@ def _resample_m(df):
 
 @dataclass
 class Signal:
-    """一个监测信号"""
-    name: str; value: str; status: str  # healthy/caution/danger
-    meaning: str  # 对小白：这个信号意味着什么
-    rule: str     # 来自书/推文的规则原文
+    """一个监测信号 — 理论+当前+含义 三位一体"""
+    name: str; value: str; status: str  # healthy/caution/danger (必填)
+    meaning: str = ""  # 理论×当前：综合含义 (旧接口的第四个参数)
+    rule: str = ""     # 原文引用 (旧接口的第五个参数)
+    theory: str = ""   # 趋势交易论里这个指标怎么说的 (新字段，keyword-only)
+    current: str = ""  # 当前数据是什么 (新字段，keyword-only)
 
 def compute_signals(df: pd.DataFrame, m1_df: Optional[pd.DataFrame]) -> List[Signal]:
     close = df["close"].values; high = df["high"].values; low = df["low"].values
@@ -762,11 +764,15 @@ def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 # ═══════════════════════════════════════════════════════════
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
-                     ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "") -> str:
+                     ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
+                     tweet_alerts: dict = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
     close = idx["close"].iloc[-1]; chg = (close/idx["close"].iloc[-2]-1) if len(idx)>=2 else 0
+
+    icon = {"healthy":"🟢","caution":"🟡","danger":"🔴"}
+    sig_map = {s.name: s for s in signals}
 
     lines = [
         f"**{date_str} 周{wd}**  上证 {close:.0f} ({chg:+.2%})",
@@ -774,51 +780,82 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         "",
         "---",
         "",
-        "## 📊 大盘信号",
+        "## 📖 理论框架 × 当前数据",
         "",
     ]
 
-    icon = {"healthy":"🟢","caution":"🟡","danger":"🔴"}
-    for s in signals:
+    # ── 每个关键指标：理论怎么说 + 当前数据印证 ──
+    key_indicators = ["年线位置", "三周期趋势", "MACD动能", "量价结构", "RSI", "520战法"]
+    for name in key_indicators:
+        s = sig_map.get(name)
+        if not s: continue
         lines.append(f"**{icon[s.status]} {s.name}**: {s.value}")
-        lines.append(f"> {s.meaning}")
+        lines.append(f"> **理论**: {s.meaning}")
         if s.rule:
-            lines.append(f"> 📖 *{s.rule}*")
+            lines.append(f"> 📖 {s.rule}")
+        lines.append("")
+
+    # ── 辅助指标简表 ──
+    aux = [s for s in signals if s.name not in key_indicators]
+    if aux:
+        lines.append("**其他指标**:")
+        for s in aux:
+            lines.append(f"- {icon[s.status]} {s.name}: {s.value}")
         lines.append("")
 
     lines.append("---")
     lines.append("")
 
-    # 板块诊断
+    # ── 她最近的明确表态（板块级别） ──
+    tweet_sectors = [s for s in sectors if "📡" in s.get("tags", "")]
+    other_sectors = [s for s in sectors if "📡" not in s.get("tags", "")]
+
+    lines.append("## 📡 她最近的明确表态")
+    lines.append("")
+
+    if tweet_alerts:
+        lines.append(f"*最近4天推文中对 {len(tweet_alerts)} 个板块有明确判断：*")
+        lines.append("")
+        for board_name, alert in tweet_alerts.items():
+            lines.append(f"**{alert['rating']} — {board_name}**")
+            lines.append(f"> {alert['date']}: *{alert['quote'][:150]}*")
+            lines.append("")
+    else:
+        lines.append("*最近4天推文中未发现对具体板块的明确判断。以下为基于理论框架的板块诊断。*")
+        lines.append("")
+
+    lines.append("---")
+    lines.append("")
+
+    # ── 板块全貌（理论框架诊断） ──
     if sectors:
-        lines.append(f"## 📋 板块诊断 ({len(sectors)}个)")
+        lines.append(f"## 📋 板块全貌（{len(sectors)}个 · 理论框架诊断）")
         lines.append("")
         for label, filters in [
-            ("📡 推文权威信号", ["🔴 明确回避", "🔴 反弹就撤", "🔴 高位风险不追"]),
-            ("📡 推文关注信号", ["🟡 等反弹减仓", "🟡 等调整到位", "🟢 可以关注"]),
-            ("🟢 可操作", ["🟢 可入场","🟢 持有不动"]),
-            ("🟡 观察", ["🟡 等回踩再入","🟡 持有但警惕","🟡 观察中"]),
+            ("🟢 可入场/持有", ["🟢 可入场","🟢 持有不动"]),
+            ("🟡 等回踩/观察", ["🟡 等回踩再入","🟡 持有但警惕","🟡 观察中","🟡 等反弹减仓","🟡 等调整到位","🟢 可以关注"]),
             ("⬆️ 可能升级", ["⬆️ 可能升级"]),
-            ("⚠️ 异动", ["⚠️ 异动关注"]),
-            ("🔴 回避（规则）", ["🔴 继续回避"]),
+            ("⚠️ 异动关注", ["⚠️ 异动关注"]),
+            ("🔴 回避", ["🔴 继续回避","🔴 明确回避","🔴 反弹就撤","🔴 高位风险不追"]),
         ]:
             matched = [s for s in sectors if s["rating"] in filters]
             if matched:
                 lines.append(f"**{label} ({len(matched)}):**")
                 for s in matched:
                     lines.append(f"- {s['rating']} **{s['name']}** ({s['category']}) | {s['phase']}")
-                    lines.append(f"  {s['tags']}")
+                    if s.get('tags'): lines.append(f"  {s['tags']}")
                 lines.append("")
 
     lines.append("---")
     lines.append("")
 
-    # 策略
-    lines.append(f"## 🎯 {cycle['emoji']} {cycle['name']} — 操作指南")
+    # ── 综合策略 ──
+    lines.append(f"## 🎯 综合策略")
     lines.append("")
-    lines.append(f"**行动**: {cycle['action']}")
+    lines.append(f"**理论判断**: {cycle['name']} → 仓位{cycle['position']}")
+    lines.append(f"**操作**: {cycle['action']}")
     lines.append("")
-    lines.append("**关注点**:")
+    lines.append("**关键观察点**:")
     for w in cycle.get("watch", []): lines.append(f"- {w}")
     lines.append("")
     lines.append(f"> 💬 *{cycle['quote']}*")
@@ -834,13 +871,15 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if sector_text:
         lines.append("---")
         lines.append("")
-        lines.append("*以下为原始板块数据（6月29日会议规则），仅供参考。请以 📡 推文权威信号为准。*")
+        lines.append("<details><summary>📋 原始板块数据（6/29会议规则，仅供参考）</summary>")
         lines.append("")
         lines.append(sector_text)
         lines.append("")
+        lines.append("</details>")
+        lines.append("")
 
     lines.append("---")
-    lines.append("*基于《趋势交易论》(710页) + 2198条推文 | 不构成投资建议 | 每日自动生成*")
+    lines.append("*《趋势交易论》(710页) + 实时推文 | 每日自动*")
 
     return "\n".join(lines)
 
@@ -924,7 +963,7 @@ def main():
     cycle = assess_sentiment(signals)
     print(f"\n[4/4] 情绪周期: {cycle['emoji']} {cycle['name']}")
     ai = ai_interpret(cycle, signals, sectors_diag, idx)
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text)
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, tweet_alerts)
 
     print("\n" + msg)
     if args.dry_run: print("\n[i] Dry run"); return
