@@ -526,68 +526,121 @@ def assess_sentiment(signals: List[Signal]) -> Dict:
 # ═══════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════
-# 推文情绪分析 — 从最新推文提取板块观点，修正静态会议规则
+# 推文权威信号 — 每次运行实时加载，作为最高优先级覆盖一切静态规则
 # ═══════════════════════════════════════════════════════════
 
-# 板块关键词映射
+# 板块关键词映射（覆盖全部23个板块）
 SECTOR_KEYWORDS = {
-    "半导体": ["半导体", "芯片", "硬科技", "抱团", "科技方向", "高位科技"],
-    "互联网服务": ["互联网", "软件"],
-    "电气设备": ["电气", "新能源", "光伏", "锂电"],
+    "半导体": ["半导体", "芯片", "硬科技", "高位科技", "科技抱团"],
+    "互联网服务": ["互联网", "软件", "算力"],
+    "电气设备": ["电气", "新能源", "光伏", "锂电", "储能"],
     "新能源": ["新能源"],
-    "证券": ["证券", "券商"],
+    "证券": ["证券", "券商", "大金融"],
     "保险": ["保险"],
-    "银行": ["银行"],
-    "机器人": ["机器人", "智能驾驶", "AI应用"],
+    "仪器仪表": ["仪器仪表", "机器人", "自动化"],
+    "通用机械": ["通用机械", "机器人", "机械"],
+    "工业机械": ["工业机械", "机器人", "机械"],
+    "农林牧渔": ["农林牧渔", "农业", "种业", "猪肉", "粮食"],
+    "家电行业": ["家电", "格力", "美的", "白电"],
+    "煤炭行业": ["煤炭", "煤", "焦煤"],
+    "船舶制造": ["船舶", "造船", "船"],
+    "食品饮料": ["食品饮料", "白酒", "食品", "消费.*底"],
+    "日用化工": ["日化", "化工"],
+    "医疗保健": ["医疗保健", "医疗", "器械"],
+    "医药": ["医药", "创新药", "中药", "CRO", "药"],
+    "酿酒行业": ["酿酒", "白酒", "茅台", "酒"],
+    "有色金属": ["有色", "铜", "铝", "稀土", "黄金"],
+    "文教休闲": ["文教", "教育", "传媒"],
+    "旅游酒店": ["旅游", "酒店", "出行"],
+    "电力行业": ["电力", "发电", "电网", "绿电"],
+    "仓储物流": ["物流", "仓储", "快递"],
 }
 
-# 负面信号词 → 降低评级
-BEARISH_SIGNALS = [
-    ("🔴 反弹就撤", ["反弹就先出来", "破势", "不要抱有任何幻想", "放弃幻想", "果断放弃"]),
-    ("🔴 高位风险", ["不要追", "不追涨", "高位.*风险", "泡沫", "抱团.*结束", "踩踏"]),
-    ("🟡 等反弹减仓", ["等反弹", "回本", "减少亏损", "反弹机会", "不要恐慌割肉"]),
+# 信号规则 — 有序匹配，先匹配到的生效
+TWEET_SIGNAL_RULES = [
+    # 最强烈的看空
+    ("🔴 明确回避", [
+        "破势", "放弃幻想", "不要抱有任何幻想", "果断放弃",
+        "不要再碰", "坚决不碰", "清仓", "全部出掉"
+    ]),
+    # 反弹即走
+    ("🔴 反弹就撤", [
+        "反弹就先出来", "有反弹就出来", "反弹出", "逢反弹",
+        "减仓.*反弹", "反弹.*减仓"
+    ]),
+    # 高位风险/不追
+    ("🔴 高位风险不追", [
+        "不要追", "不追涨", "高位.*风险", "泡沫",
+        "抱团.*结束", "踩踏", "出货.*阶段", "主力.*出货"
+    ]),
+    # 等待反弹减仓
+    ("🟡 等反弹减仓", [
+        "等反弹", "回本", "减少亏损", "反弹.*机会",
+        "不要恐慌割肉", "被套.*不必.*悲观"
+    ]),
+    # 等调整/等回踩
+    ("🟡 等调整到位", [
+        "等回踩", "等调整", "等右侧", "不急于",
+        "横盘.*等", "耐心.*等"
+    ]),
+    # 积极信号
+    ("🟢 可以关注", [
+        "可以.*低吸", "可以.*布局", "逢低.*买", "可以.*关注",
+        "机会.*来了", "底部.*确认", "见底"
+    ]),
 ]
 
 
-def load_tweet_sector_alerts() -> dict:
-    """从最新推文中提取板块预警，覆盖静态会议规则。返回 {板块名: 修正评级}"""
+def load_tweet_alerts(json_path: str) -> dict:
+    """
+    每次运行仪表盘时实时调用。
+    从最新推文提取每个板块的权威判断。
+    返回 {板块名: {"rating": str, "quote": str, "date": str, "bookmarks": int}}
+    """
     alerts = {}
     try:
         import json
-        data = json.load(open(r"C:\Users\Administrator\Mimiwftt_clean.json", encoding='utf-8'))
+        data = json.load(open(json_path, encoding='utf-8'))
     except Exception:
         return alerts
 
-    # 只看最近3天
     from datetime import datetime, timedelta
-    cutoff = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+    # 最近4天（覆盖周末空窗期）
+    cutoff = (datetime.now() - timedelta(days=4)).strftime("%Y-%m-%d")
     recent = [t for t in data if t.get('created_at_iso', '')[:10] >= cutoff]
+    if not recent:
+        cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        recent = [t for t in data if t.get('created_at_iso', '')[:10] >= cutoff]
 
     for board_name, keywords in SECTOR_KEYWORDS.items():
+        best = None  # 找最强烈的信号（bookmarks最高的那条）
         for t in recent:
             text = t['text']
             if not any(kw in text for kw in keywords):
                 continue
-            for rating, signals in BEARISH_SIGNALS:
-                import re
+            import re
+            for rating, signals in TWEET_SIGNAL_RULES:
                 for sig in signals:
                     if re.search(sig, text):
-                        alerts[board_name] = rating
+                        bk = t.get('bookmarks', 0)
+                        if best is None or bk > best['bookmarks']:
+                            best = {
+                                "rating": rating,
+                                "quote": text[:150].replace('\n', ' '),
+                                "date": t.get('created_at_iso', '')[:10],
+                                "bookmarks": bk,
+                            }
                         break
-                if board_name in alerts:
-                    break
-            if board_name in alerts:
-                break
+                if best: break
+            if best: break
+        if best:
+            alerts[board_name] = best
 
     return alerts
 
 
-# 全局加载（模块导入时执行一次）
-TWEET_SECTOR_ALERTS = load_tweet_sector_alerts()
-
-
-def diagnose_sector_mi(s: Dict) -> Dict:
-    """用《趋势交易论》框架诊断单个板块"""
+def diagnose_sector_mi(s: Dict, tweet_alerts: dict) -> Dict:
+    """用《趋势交易论》框架诊断单个板块。tweet_alerts 为最高优先级权威信号。"""
     tech = s.get("technical", {})
     sig = s.get("signal", {})
     fund = s.get("fund_flow", {})
@@ -619,12 +672,12 @@ def diagnose_sector_mi(s: Dict) -> Dict:
     if abs(bias) > 8: tags.append(f"乖离{bias:+.0f}%")
 
     status = s.get("meeting_status", "watch")
-    # ── 推文情绪覆盖：如果最新推文有明确反向观点，修正评级 ──
-    tweet_override = TWEET_SECTOR_ALERTS.get(s["name"], "")
-    # 综合评级
-    if tweet_override:
-        rating = tweet_override
-        tags.append("📡 推文预警: " + tweet_override)
+    # ── 权威信号：推文最新表态覆盖一切 ──
+    tweet_alert = tweet_alerts.get(s["name"])
+    if tweet_alert:
+        rating = tweet_alert["rating"]
+        tags.insert(0, f"📡 {tweet_alert['date']}: {tweet_alert['quote'][:60]}...")
+    # ── 静态规则作为兜底 ──
     elif status == "entry" and any(t.startswith("✅") or t in ("金叉","底分型","周线↑") for t in tags):
         rating = "🟢 可入场"
     elif status == "entry" and any(t.startswith("⚠") for t in tags):
@@ -645,7 +698,7 @@ def diagnose_sector_mi(s: Dict) -> Dict:
     return {
         "name": s["name"], "category": s.get("category",""),
         "rating": rating, "phase": phase_cn,
-        "tags": ", ".join(tags) if tags else "指标正常",
+        "tags": ", ".join(tags) if tags else ("周末/节假日无实时数据" if not tech else "指标正常"),
         "note": s.get("meeting_note",""),
     }
 
@@ -741,13 +794,13 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         lines.append(f"## 📋 板块诊断 ({len(sectors)}个)")
         lines.append("")
         for label, filters in [
-            ("🔴 推文预警", ["🔴 反弹就撤", "🔴 高位风险"]),
-            ("🟡 推文关注", ["🟡 等反弹减仓"]),
+            ("📡 推文权威信号", ["🔴 明确回避", "🔴 反弹就撤", "🔴 高位风险不追"]),
+            ("📡 推文关注信号", ["🟡 等反弹减仓", "🟡 等调整到位", "🟢 可以关注"]),
             ("🟢 可操作", ["🟢 可入场","🟢 持有不动"]),
             ("🟡 观察", ["🟡 等回踩再入","🟡 持有但警惕","🟡 观察中"]),
             ("⬆️ 可能升级", ["⬆️ 可能升级"]),
             ("⚠️ 异动", ["⚠️ 异动关注"]),
-            ("🔴 回避", ["🔴 继续回避"]),
+            ("🔴 回避（规则）", ["🔴 继续回避"]),
         ]:
             matched = [s for s in sectors if s["rating"] in filters]
             if matched:
@@ -780,6 +833,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     if sector_text:
         lines.append("---")
+        lines.append("")
+        lines.append("*以下为原始板块数据（6月29日会议规则），仅供参考。请以 📡 推文权威信号为准。*")
         lines.append("")
         lines.append(sector_text)
         lines.append("")
@@ -847,13 +902,19 @@ def main():
     signals = compute_signals(idx, m1)
     for s in signals: print(f"  {s.name}: {s.value} [{s.status}]")
 
+    # 加载推文权威信号（每次运行实时读取，必须在诊断板块之前）
+    tweet_alerts = load_tweet_alerts(r"C:\Users\Administrator\Mimiwftt_clean.json")
+    print(f"  推文信号: {len(tweet_alerts)} 个板块有最新表态")
+    for k, v in tweet_alerts.items():
+        print(f"    {k}: {v['rating']} ({v['date']})")
+
     print("[3/4] 板块诊断...")
     sector_data = None; sector_text = ""; sectors_diag = []
     try:
         from sector_monitor import fetch_sector_monitor_data, format_sector_for_prompt
         sector_data = fetch_sector_monitor_data()
         sector_text = format_sector_for_prompt(sector_data)
-        sectors_diag = [diagnose_sector_mi(s) for s in sector_data.get("sectors", [])]
+        sectors_diag = [diagnose_sector_mi(s, tweet_alerts) for s in sector_data.get("sectors", [])]
         sm = sector_data.get("summary", {})
         print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
               f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
