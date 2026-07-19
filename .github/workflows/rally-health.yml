@@ -1,4 +1,4 @@
-name: 上涨持续性监测
+name: A股市场全景仪表盘
 
 on:
   schedule:
@@ -29,4 +29,4 @@ jobs:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-        run: python rally_health_monitor.py
+        run: python market_dashboard.py
