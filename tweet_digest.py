@@ -68,16 +68,26 @@ def main():
     with open(DATA_FILE, encoding='utf-8') as f:
         data = json.load(f)
 
-    # 筛选今日推文（北京时间）
-    today = (datetime.now() - timedelta(hours=8)).strftime("%Y-%m-%d")
-    yesterday = (datetime.now() - timedelta(hours=32)).strftime("%Y-%m-%d")
-    todays = [t for t in data if t.get('created_at_iso', '')[:10] in (today, yesterday)]
-    # 取最近24小时内
-    cutoff = (datetime.now() - timedelta(hours=30)).strftime("%Y-%m-%dT%H:%M")
-    todays = [t for t in todays if t.get('created_at_iso', '')[:16] >= cutoff]
+    # 取最近24小时内新增的推文
+    # 先按 created_at_iso 排序（处理混合格式）
+    def sort_key(t):
+        d = t.get('created_at_iso', t.get('created_at', ''))
+        return d
+    data.sort(key=sort_key, reverse=True)
+
+    # 筛选最近24小时的推文（容差处理：取最近30条，再按时间筛）
+    from datetime import datetime, timedelta
+    cutoff = (datetime.now() - timedelta(hours=36)).strftime("%Y-%m-%dT%H:%M")
+    todays = []
+    for t in data[:50]:  # 只看最近50条
+        d = t.get('created_at_iso', t.get('created_at', ''))
+        if d[:16] >= cutoff:
+            todays.append(t)
 
     if not todays:
-        print(f"No new tweets for {today}"); return
+        # 宽松模式：取最近15条
+        todays = data[:15]
+        print(f"宽松模式：最近15条推文")
 
     # 分类
     by_cat = defaultdict(list)
@@ -86,7 +96,9 @@ def main():
         by_cat[cat].append(t)
 
     total = len(todays)
-    date_str = today
+    first_date = todays[0].get('created_at_iso', '')[:10] if todays else '?'
+    last_date = todays[-1].get('created_at_iso', '')[:10] if todays else '?'
+    date_str = f"{last_date} → {first_date}" if first_date != last_date else first_date
 
     lines = [
         f"**{date_str}**  |  {total} 条新推文",
