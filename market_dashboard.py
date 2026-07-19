@@ -792,15 +792,52 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         "",
     ]
 
-    # ── 每个关键指标：理论怎么说 + 当前数据印证 ──
+    # ── 每个关键指标：理论 + 当前数据 + 操作建议 ──
     key_indicators = ["年线位置", "三周期趋势", "MACD动能", "量价结构", "RSI", "520战法"]
+    # 每个指标的操作建议（基于 status 和当前信号）
+    action_map = {
+        "年线位置": {
+            "healthy": "👉 **操作**：年线上方可以积极选股。重点找年线上方、均线多头排列的个股——这些是主升浪的候选标的。仓位可到5-7成。",
+            "caution": "👉 **操作**：年线附近方向不明，仓位控制在3-5成。不追涨不杀跌，等指数明确站上年线且年线走平或上翘后，再逐步加仓。",
+            "danger": "👉 **操作**：年线下方以防守为主，仓位控制在2成以下。不要抄底、不要追反弹。等指数重新站上年线且年线走平或上翘，才能考虑重新入场。",
+        },
+        "三周期趋势": {
+            "healthy": "👉 **操作**：三周期共振向上=可以重仓（7-8成）。不要被日内的回调吓出来——月线级别的主升浪中，日线下跌只是小浪花。",
+            "caution": "👉 **操作**：三个级别方向不一致时，仓位降到3-5成。不做新的买入，等三个级别重新统一方向后再动手。",
+            "danger": "👉 **操作**：三周期共振向下=空仓或极轻仓（2成以下）。不抄底、不抢反弹、不博弈短线。至少等日线走平不再创新低，才能重新评估。",
+        },
+        "MACD动能": {
+            "healthy": "👉 **操作**：MACD金叉或零轴上多头运行=可以持仓。如果是金叉刚出现，可以买入；如果已运行一段时间，持有不动，关注是否出现顶背离。",
+            "caution": "👉 **操作**：MACD空头运行或死叉=观望为主。零轴上死叉不用恐慌，但不要加仓；零轴下死叉要果断离场。有底背离时加入自选观察，等金叉确认再入场。",
+            "danger": "👉 **操作**：零轴下死叉=空头加速，应立即离场。不要抱「等反弹再走」的侥幸心理——零轴下的死叉往往意味着加速下跌。",
+        },
+        "量价结构": {
+            "healthy": "👉 **操作**：量价正常=按趋势信号操作即可。放量上涨时可以加仓，缩量回踩时可以持有。",
+            "caution": "👉 **操作**：缩量上涨或缩量下跌=不要追高，也不要恐慌。等成交量恢复正常再决定方向。持续缩量上涨3天以上要警惕见顶。",
+            "danger": "👉 **操作**：放量滞涨或放量下跌=立即减仓或离场。放量滞涨是《趋势交易论》最危险的信号——主力在出货。不要等暴跌再后悔。",
+        },
+        "RSI": {
+            "healthy": "👉 **操作**：RSI正常=按趋势信号操作。40-70区间是正常的波动范围。",
+            "caution": "👉 **操作**：RSI超卖（<30）=关注错杀机会，但不急于抄底——等MACD金叉+放量企稳再入场。RSI超买（>70）=不加仓，等回踩。",
+            "danger": "👉 **操作**：RSI极端超买（>80）=应分批减仓，「高潮减仓」。RSI极端超卖（<20）=冰点期，留意新题材萌芽，但不要裸抄底。",
+        },
+        "520战法": {
+            "healthy": "👉 **操作**：金叉或5日线上方=可以持仓。收盘不破5日线就继续持有。金叉配合放量是最可靠的入场信号。",
+            "caution": "👉 **操作**：5日线下方但未死叉=观望。关注20日线能否提供支撑。如果缩量止跌可以试探性买入，放量跌破则继续等。",
+            "danger": "👉 **操作**：死叉=按纪律离场。不要犹豫，不要「再等等看」。死叉后如果伴随放量下跌，更要果断清仓。",
+        },
+    }
     for name in key_indicators:
         s = sig_map.get(name)
         if not s: continue
         lines.append(f"**{icon[s.status]} {s.name}**: {s.value}")
-        lines.append(f"> **理论**: {s.meaning}")
+        lines.append(f"> {s.meaning}")
         if s.rule:
             lines.append(f"> 📖 {s.rule}")
+        # 操作建议
+        act = action_map.get(name, {}).get(s.status, "")
+        if act:
+            lines.append(f"> {act}")
         lines.append("")
 
     # ── 辅助指标简表 ──
@@ -823,40 +860,49 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     vp_s = sig_map.get("量价结构")
     sr_s = sig_map.get("支撑压力")
 
-    # 综合判断入场/出场
+    # 综合判断入场/出场 — 明确标注适用指数
     signals_bull = []
     signals_bear = []
 
     if m520:
-        if "金叉" in m520.value: signals_bull.append("520金叉 → 可入场")
-        elif "死叉" in m520.value: signals_bear.append("520死叉 → 应离场")
-        elif "多头" in m520.value: signals_bull.append("520多头运行 → 可持有")
-        else: signals_bear.append("520偏弱 → 不宜入场")
+        if "金叉" in m520.value: signals_bull.append("[上证] 520金叉 → 可入场买入")
+        elif "死叉" in m520.value: signals_bear.append("[上证] 520死叉 → 应离场清仓")
+        elif "多头" in m520.value: signals_bull.append("[上证] 520多头运行 → 可继续持有")
+        else: signals_bear.append("[上证] 520偏弱 → 暂不宜入场，等金叉")
 
     if macd_s:
-        if "金叉" in macd_s.value: signals_bull.append("MACD金叉 → 买入信号")
+        if "金叉" in macd_s.value: signals_bull.append("[上证] MACD金叉 → 买入信号")
         elif "死叉" in macd_s.value and "零轴上" in macd_s.value:
-            signals_bull.append("MACD零轴上死叉 → 正常调整，不必恐慌")
-        elif "死叉" in macd_s.value: signals_bear.append("MACD死叉 → 卖出信号")
-        if "底背离" in macd_s.value: signals_bull.append("MACD底背离 → 关注见底机会")
-        if "顶背离" in macd_s.value: signals_bear.append("MACD顶背离 → 减仓预警")
+            signals_bull.append("[上证] MACD零轴上死叉 → 正常调整，不必恐慌卖出")
+        elif "死叉" in macd_s.value: signals_bear.append("[上证] MACD死叉 → 应离场")
+        if "底背离" in macd_s.value: signals_bull.append("[上证] MACD底背离 → 关注见底机会（等金叉确认后入场）")
+        if "顶背离" in macd_s.value: signals_bear.append("[上证] MACD顶背离 → 上涨动力衰竭，逐步减仓")
 
     if rsi_s:
         rsi_val = rsi_s.value
-        if "极端超买" in rsi_val: signals_bear.append("RSI极端超买 → 高潮减仓")
-        elif "超买" in rsi_val: signals_bear.append("RSI超买 → 不宜追高")
+        if "极端超买" in rsi_val: signals_bear.append("[上证] RSI极端超买(>80) → 高潮期，分批减仓")
+        elif "超买" in rsi_val: signals_bear.append("[上证] RSI超买(>70) → 不加仓，等回踩")
         elif "超卖" in rsi_val or "极端超卖" in rsi_val:
-            signals_bull.append("RSI超卖 → 关注企稳后的入场机会（不急抄底）")
+            signals_bull.append("[上证] RSI超卖(<30) → 恐慌中有错杀机会，但需等MACD金叉+放量企稳双确认再入场")
 
-    if sr_s and "近.*支撑" in sr_s.value:
-        signals_bull.append("接近支撑位 → 若缩量企稳可低吸")
+    if sr_s:
+        import re
+        if re.search(r"近.*支撑", sr_s.value):
+            signals_bull.append(f"[上证] {sr_s.value} → 若缩量企稳可低吸")
 
     # 理论仓位
     theory_pos = cycle.get("position", "N/A")
 
+    # 各指数单独策略
+    idx_lines = []
+    for tag, df in indices.items():
+        if df is not None and len(df) >= 2:
+            c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
+            idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
+
     # 她最近的板块级表态
-    tweet_entry = []  # sectors she's bullish on
-    tweet_exit = []   # sectors she's bearish on
+    tweet_entry = []
+    tweet_exit = []
     if tweet_alerts:
         for name, alert in tweet_alerts.items():
             if "可以关注" in alert["rating"] or "可以入场" in alert["rating"]:
@@ -864,31 +910,63 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             elif "回避" in alert["rating"] or "反弹就撤" in alert["rating"] or "高位风险" in alert["rating"]:
                 tweet_exit.append(name)
 
-    lines.append(f"**理论仓位**: {theory_pos}")
+    lines.append(f"**以上信号基于**: 上证指数（{' | '.join(idx_lines)}）")
+    lines.append(f"**理论仓位**（上证）: {theory_pos}")
     lines.append("")
 
     if signals_bull:
-        lines.append("**入场信号**:")
-        for s in signals_bull: lines.append(f"- ✅ {s}")
+        lines.append("**🟢 入场/持有信号**:")
+        for s in signals_bull: lines.append(f"- {s}")
         lines.append("")
     if signals_bear:
-        lines.append("**出场/谨慎信号**:")
-        for s in signals_bear: lines.append(f"- ⚠ {s}")
+        lines.append("**🔴 出场/谨慎信号**:")
+        for s in signals_bear: lines.append(f"- {s}")
         lines.append("")
 
     if tweet_entry:
-        lines.append(f"**她看好的方向**: {', '.join(tweet_entry)}")
+        lines.append(f"**📡 她看好的板块**: {', '.join(tweet_entry)}——这些板块可以重点研究，等个股出现520金叉或底分型后入场。")
     if tweet_exit:
-        lines.append(f"**她回避的方向**: {', '.join(tweet_exit)}")
+        lines.append(f"**📡 她回避的板块**: {', '.join(tweet_exit)}——这些板块不要碰，即使短期反弹也不要追。")
     if tweet_entry or tweet_exit:
         lines.append("")
 
+    # 综合操作总结 — 三周期趋势权重最高，压倒一切
+    mtf_s = sig_map.get("三周期趋势")
+    mtf_danger = mtf_s and mtf_s.status == "danger"  # 共振向下
+    mtf_healthy = mtf_s and mtf_s.status == "healthy"  # 共振向上
+
+    # 致命信号：三周期共振向下 + 520死叉 = 无条件空仓
+    fatal_520 = m520 and "死叉" in m520.value
+    fatal_macd = macd_s and "死叉" in macd_s.value and "零轴下" in macd_s.value
+
+    if mtf_danger and (fatal_520 or fatal_macd):
+        summary = "🔴 三周期共振向下 + 关键死叉信号同时出现。**理论建议：无条件空仓。不要抄底、不要抢反弹。** 等至少日线走平且月线不再加速下跌，再重新评估。"
+    elif mtf_danger:
+        summary = "🔴 三周期共振向下——这是《趋势交易论》最危险的信号。**理论建议：空仓或极轻仓（2成以下）。** 虽然有底背离等积极信号，但三周期向下的力量更大，不宜逆势操作。等三周期中至少两个级别转向上方，再考虑入场。"
+    elif mtf_healthy:
+        summary = "🟢 三周期共振向上——这是最强的做多信号。**理论建议：可以重仓持有（7-8成）。** 按520战法纪律操作：不破5日线就拿着，破5日线减半仓，回踩20日线加回。"
+    else:
+        # 无共振，按信号数量判断
+        bear_count = len(signals_bear); bull_count = len(signals_bull)
+        if bear_count > bull_count:
+            summary = f"🟡 空头信号略占优（空{bear_count} vs 多{bull_count}）。**理论建议：轻仓观望（3-5成），等方向明确。**"
+        elif bull_count > bear_count:
+            summary = f"🟢 多头信号略占优（多{bull_count} vs 空{bear_count}）。**理论建议：可以持仓或逐步入场，按520战法纪律操作。**"
+        else:
+            summary = "🟡 信号均衡。**理论建议：轻仓观望，等方向明确后再行动。**"
+
+    # 如果有推文表态与理论冲突，标注
+    if mtf_danger and tweet_entry:
+        summary += f"\n\n📡 **注意**：理论框架判定为三周期共振向下（应空仓），但她最近的推文看好 {', '.join(tweet_entry)}。两者的逻辑是——理论说的是大盘整体方向，她看好的是局部板块机会。操作上：整体仓位仍按理论控制，但可以在她看好的板块中轻仓试探（不超过总仓位2成）。"
+    lines.append(f"**综合判断**: {summary}")
+    lines.append("")
+
     # 520战法具体规则
-    lines.append(f"**520战法纪律**:")
-    lines.append(f"- 买：MA5金叉MA20 + 放量 → 入场")
-    lines.append(f"- 减：收盘跌破MA5 → 减半仓")
-    lines.append(f"- 加：回踩MA20不破 → 加回")
-    lines.append(f"- 卖：MA5死叉MA20 → 全离场")
+    lines.append(f"**📖 520战法纪律速查（《趋势交易论》第128-129节）**:")
+    lines.append(f"- 入场：5日均线上穿20日均线（金叉）+ 成交量放大 → 买入")
+    lines.append(f"- 减仓：收盘价跌破5日均线 → 减掉一半仓位")
+    lines.append(f"- 加仓：回踩20日均线不破 + 缩量止跌 → 把减掉的仓位加回来")
+    lines.append(f"- 离场：5日均线下穿20日均线（死叉） → 全部清仓")
     lines.append("")
 
     lines.append("---")
