@@ -765,17 +765,25 @@ def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
-                     tweet_alerts: dict = None) -> str:
+                     tweet_alerts: dict = None, indices: dict = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
-    close = idx["close"].iloc[-1]; chg = (close/idx["close"].iloc[-2]-1) if len(idx)>=2 else 0
+
+    # 四大指数概览
+    idx_lines = []
+    for tag, df in indices.items():
+        if df is not None and len(df) >= 2:
+            c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
+            idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
+    idx_summary = "  |  ".join(idx_lines)
 
     icon = {"healthy":"🟢","caution":"🟡","danger":"🔴"}
     sig_map = {s.name: s for s in signals}
 
     lines = [
-        f"**{date_str} 周{wd}**  上证 {close:.0f} ({chg:+.2%})",
+        f"**{date_str} 周{wd}**",
+        f"{idx_summary}",
         f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
         "",
         "---",
@@ -802,6 +810,86 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         for s in aux:
             lines.append(f"- {icon[s.status]} {s.name}: {s.value}")
         lines.append("")
+
+    # ── 入场/出场信号与仓位（理论+表态综合） ──
+    lines.append("---")
+    lines.append("")
+    lines.append("## 🎯 入场/出场信号与仓位")
+    lines.append("")
+
+    m520 = sig_map.get("520战法")
+    macd_s = sig_map.get("MACD动能")
+    rsi_s = sig_map.get("RSI")
+    vp_s = sig_map.get("量价结构")
+    sr_s = sig_map.get("支撑压力")
+
+    # 综合判断入场/出场
+    signals_bull = []
+    signals_bear = []
+
+    if m520:
+        if "金叉" in m520.value: signals_bull.append("520金叉 → 可入场")
+        elif "死叉" in m520.value: signals_bear.append("520死叉 → 应离场")
+        elif "多头" in m520.value: signals_bull.append("520多头运行 → 可持有")
+        else: signals_bear.append("520偏弱 → 不宜入场")
+
+    if macd_s:
+        if "金叉" in macd_s.value: signals_bull.append("MACD金叉 → 买入信号")
+        elif "死叉" in macd_s.value and "零轴上" in macd_s.value:
+            signals_bull.append("MACD零轴上死叉 → 正常调整，不必恐慌")
+        elif "死叉" in macd_s.value: signals_bear.append("MACD死叉 → 卖出信号")
+        if "底背离" in macd_s.value: signals_bull.append("MACD底背离 → 关注见底机会")
+        if "顶背离" in macd_s.value: signals_bear.append("MACD顶背离 → 减仓预警")
+
+    if rsi_s:
+        rsi_val = rsi_s.value
+        if "极端超买" in rsi_val: signals_bear.append("RSI极端超买 → 高潮减仓")
+        elif "超买" in rsi_val: signals_bear.append("RSI超买 → 不宜追高")
+        elif "超卖" in rsi_val or "极端超卖" in rsi_val:
+            signals_bull.append("RSI超卖 → 关注企稳后的入场机会（不急抄底）")
+
+    if sr_s and "近.*支撑" in sr_s.value:
+        signals_bull.append("接近支撑位 → 若缩量企稳可低吸")
+
+    # 理论仓位
+    theory_pos = cycle.get("position", "N/A")
+
+    # 她最近的板块级表态
+    tweet_entry = []  # sectors she's bullish on
+    tweet_exit = []   # sectors she's bearish on
+    if tweet_alerts:
+        for name, alert in tweet_alerts.items():
+            if "可以关注" in alert["rating"] or "可以入场" in alert["rating"]:
+                tweet_entry.append(name)
+            elif "回避" in alert["rating"] or "反弹就撤" in alert["rating"] or "高位风险" in alert["rating"]:
+                tweet_exit.append(name)
+
+    lines.append(f"**理论仓位**: {theory_pos}")
+    lines.append("")
+
+    if signals_bull:
+        lines.append("**入场信号**:")
+        for s in signals_bull: lines.append(f"- ✅ {s}")
+        lines.append("")
+    if signals_bear:
+        lines.append("**出场/谨慎信号**:")
+        for s in signals_bear: lines.append(f"- ⚠ {s}")
+        lines.append("")
+
+    if tweet_entry:
+        lines.append(f"**她看好的方向**: {', '.join(tweet_entry)}")
+    if tweet_exit:
+        lines.append(f"**她回避的方向**: {', '.join(tweet_exit)}")
+    if tweet_entry or tweet_exit:
+        lines.append("")
+
+    # 520战法具体规则
+    lines.append(f"**520战法纪律**:")
+    lines.append(f"- 买：MA5金叉MA20 + 放量 → 入场")
+    lines.append(f"- 减：收盘跌破MA5 → 减半仓")
+    lines.append(f"- 加：回踩MA20不破 → 加回")
+    lines.append(f"- 卖：MA5死叉MA20 → 全离场")
+    lines.append("")
 
     lines.append("---")
     lines.append("")
@@ -929,7 +1017,14 @@ def main():
     print("=" * 50)
 
     print("\n[1/4] 数据...")
-    idx = fetch_index("上证指数", "sh000001", days=300)
+    # 四大指数
+    indices = {
+        "上证": fetch_index("上证指数", "sh000001", days=300),
+        "深证": fetch_index("深证成指", "sz399001", days=300),
+        "创业板": fetch_index("创业板指", "sz399006", days=300),
+        "科创50": fetch_index("科创50", "sh000688", days=300),
+    }
+    idx = indices["上证"]  # 主指数用于信号计算
     m1 = fetch_m1()
     if idx is None: print("[!!] 无数据"); return
 
@@ -963,7 +1058,7 @@ def main():
     cycle = assess_sentiment(signals)
     print(f"\n[4/4] 情绪周期: {cycle['emoji']} {cycle['name']}")
     ai = ai_interpret(cycle, signals, sectors_diag, idx)
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, tweet_alerts)
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, tweet_alerts, indices)
 
     print("\n" + msg)
     if args.dry_run: print("\n[i] Dry run"); return
