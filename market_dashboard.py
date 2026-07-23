@@ -1211,14 +1211,19 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         else:
             breadth_label = "🔴 极差"
 
+        vol_label = '🟢 放量' if vol_ratio > 1.2 else '🟡 正常' if vol_ratio > 0.8 else '🔴 缩量'
+        lim_label = '🟢 活跃' if lu >= 40 else '🟡 一般' if lu >= 20 else '🔴 冷清'
+
         temp_lines = [
             f"## 🔥 市场温度",
             f"",
             f"| 指标 | 数值 | 判断 |",
             f"|------|------|------|",
             f"| 涨跌比 | {up}↑ / {dn}↓ | {breadth_label} |",
-            f"| 涨停/跌停 | {lu}涨停 / {ld}跌停 | {'🟢 活跃' if lu >= 40 else '🟡 一般' if lu >= 20 else '🔴 冷清'} |",
-            f"| 成交额 | {vol_info.get('total_amount',0)/1e8:.0f}亿 | {'🟢 放量' if vol_ratio > 1.2 else '🟡 正常' if vol_ratio > 0.8 else '🔴 缩量'} |",
+            f"| 涨停/跌停 | {lu}涨停 / {ld}跌停 | {lim_label} |",
+            f"| 成交额 | {vol_info.get('total_amount',0)/1e8:.0f}亿 (vs 20日均) | {vol_label} |",
+            f"",
+            f"> 📖 **怎么看**：涨跌比反映赚钱效应——指数可能不跌但你手里的票全在跌（分化）。涨停数反映短线资金活跃度——少于20说明游资休息了。成交额是最诚实的指标——放量才有行情，缩量就是大家在等。三者结合判断：指数趋势告诉你方向，市场温度告诉你能不能赚钱。",
             f"",
         ]
         lines.extend(temp_lines)
@@ -1227,16 +1232,22 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if flow_data:
         north = flow_data.get("north", {})
         flows = flow_data.get("sectors", [])
+        north_flow = north.get('net_flow', 0)
+        north_label = '🟢 大幅流入' if north_flow > 50 else '🟢 小幅流入' if north_flow > 0 else '🔴 流出' if north_flow < -50 else '🟡 小幅流出'
         lines.extend([
             f"## 💰 资金地图",
             f"",
-            f"北向资金: **{north.get('net_flow',0):+.0f}亿** ({north.get('direction','')})",
+            f"北向资金: **{north_flow:+.0f}亿** {north_label}",
+            f"",
+            f"> 📖 **怎么看**：北向资金是外资通过沪深港通买卖A股的钱。持续流入=外资看好中国资产；持续流出=外资在撤退或调仓。单日几十亿进出意义不大，要看趋势。如果北向连续3天流入+技术面走好=资金+趋势共振，可靠性大幅提升。",
             f"",
         ])
         if flows:
             lines.append("主力净流入 TOP5:")
             for f in flows[:5]:
                 lines.append(f"- {f}")
+            lines.append("")
+            lines.append("> 📖 **怎么看**：主力资金流入的板块=大钱正在布局的方向。把主力流入TOP5和你的板块操作信号对照——如果半导体同时出现在「主力流入TOP5」和「可买入」= 技术面和资金面共振，信号更可靠。只在一侧出现要谨慎。')
             lines.append("")
 
     lines.extend([
