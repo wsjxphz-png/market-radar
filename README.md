@@ -1,75 +1,130 @@
-# 市场机会发现系统 (Market Opportunity Discovery System)
+# 📊 A股全景仪表盘 + 市场机会发现系统
 
-买方基金研究员视角的每日市场机会发现系统。
+基于《趋势交易论》(Mimiwftt 著, 710页) 构建的 A 股投资决策系统。不是炒股机器人，是一本可以每天翻阅的交易手册 + 练习本——帮你记规则、练纪律、看后果。
 
-**不是新闻总结。不是预测短期涨跌。**
-**发现未来1个月至5年内可能产生超额收益的投资机会。**
+---
 
-## 架构
+## 系统构成
+
+### 🏠 全景仪表盘 `market_dashboard.py`
+**每个交易日 16:00 自动运行，飞书推送。**
 
 ```
-GitHub Actions (每天 15:00 北京时间)
-  → RSS 抓取（金融新闻 / Reddit 投资社区 / YouTube 财经）
-  → Twitter GraphQL API（39 个金融账号）
-  → FRED 经济数据 / AKShare A股数据
-  → 预过滤
-  → DeepSeek AI 8层分析（含跨公司模式识别）
-  → 飞书 Bot API 推送（内部群）
-  → 飞书 Webhook 推送（外部群）
+🔥 市场温度   — 涨跌家数 · 涨停生态 · 成交额放缩
+💰 资金地图   — 北向资金 · 主力净流入 TOP5 板块
+📖 交易手册   — 五大模块速查(仓位/选股/入场/止损/止盈) + 量价八诀表
+⚠️ 信号翻转   — 与昨日对比，标注状态变化
+📊 今日信号   — 手册规则 × 当前数据，每个指标标注所属模块
+⚔️ 冲突裁决   — 指标打架时按优先级裁决(三周期 > 量价 > 520 > MACD > RSI)
+🔍 板块操作   — 具体买/卖/等 + 条件 + 止损 + 理论依据
+👀 板块观察池 — 差一个条件就满足入场的板块
+📋 板块全貌   — 23 个行业逐项诊断
+🎯 综合策略   — 仓位建议 + 关键观察点
+🤖 决策审计   — AI 五大模块逐项评分 /10，不发表观点只做合规检查
+💰 模拟账户   — 100 万模拟资金，每日持仓追踪 + 累计收益率
+📖 每日一得   — 按市场状态轮换的《趋势交易论》摘录
 ```
 
-## 信息源
+### 🔍 市场机会发现 `main.py`
+**每个交易日 15:00 自动运行，飞书推送。** RSS + FRED + AKShare + Polymarket + Tavily 多源抓取 → DeepSeek 8 层分析 → 飞书。
 
-- **Twitter**: 53 个金融/宏观/行业研究账号（中英文混合，含美股一线分析师）
-- **Reddit**: 10 个投资社区（r/investing, r/stocks, r/SecurityAnalysis, r/biotech 等）
-- **SEC EDGAR**: 10-K/10-Q/13F/Form 4/S-1/8-K 一手公司文件
-- **中国金融 RSS**: 财联社、金十数据、华尔街见闻、格隆汇、东方财富研报、雪球
-- **国际金融 RSS**: CNBC、MarketWatch、Bloomberg、Yahoo Finance、TechCrunch、FierceBiotech、美联储、ECB
-- **YouTube**: Bloomberg、CNBC、Real Vision、Patrick Boyle 等财经频道
-- **FRED**: 20 个美国经济核心指标
-- **AKShare**: A股行情+中国宏观数据
+### 📊 月度复盘 `backtest_review.py`
+**每月 1 号自动运行，飞书推送。** 不统计预测准确率——只检查五大模块纪律执行情况，违例标 ❌。
 
-## 配置
+---
 
-### GitHub Secrets
+## 技术栈
 
-| Secret | 说明 |
-|--------|------|
-| `DEEPSEEK_API_KEY` | DeepSeek API 密钥 |
-| `TWITTER_COOKIES` | Twitter auth_token + ct0（JSON 格式） |
-| `FEISHU_APP_ID` | 飞书 Bot App ID |
-| `FEISHU_APP_SECRET` | 飞书 Bot App Secret |
-| `FEISHU_WEBHOOK_URL` | 飞书 Webhook 机器人地址（推送到外部群） |
-| `FRED_API_KEY` | FRED API 密钥（可选，从 fred.stlouisfed.org 免费获取） |
+| 组件 | 技术 |
+|------|------|
+| 指数数据 | akshare → yfinance 双源自动降级 |
+| 板块数据 | akshare (23 个申万行业) |
+| 个股数据 | adata → akshare 双源 |
+| AI 分析 | DeepSeek (chat / reasoning) |
+| M1 宏观 | akshare / FRED |
+| 消息推送 | 飞书 Bot API + 交互卡片 |
+| 定时运行 | GitHub Actions (UTC 08:00) |
+| 数据持久化 | JSON 文件 (portfolio / trade_log / position_state) |
 
-## 本地测试
+---
+
+## GitHub Actions
+
+| Workflow | 触发时间 | 内容 |
+|----------|---------|------|
+| `rally-health.yml` | 工作日 16:00 北京时间 | 全景仪表盘 → 飞书 |
+| `daily-report.yml` | 每天 15:00 北京时间 | RSS 市场机会发现 → 飞书 |
+| `monthly-review.yml` | 每月 1 号 09:00 | 月度纪律复盘 → 飞书 |
+
+三个 workflow 均有开市检查，周末 / 节假日 / 未收盘自动跳过，不浪费配额。
+
+---
+
+## 本地使用
 
 ```bash
-# 安装依赖
 pip install -r requirements.txt
 
-# 测试飞书推送
-set FEISHU_APP_ID=xxx
-set FEISHU_APP_SECRET=xxx
-python main.py --test-feishu
+# 仪表盘
+python market_dashboard.py --dry-run          # 仅打印
+python market_dashboard.py --force --dry-run  # 跳过日期检查
 
-# Dry-run（只抓取不分析不推送）
-set TWITTER_COOKIES={"auth_token":"xxx","ct0":"xxx"}
+# 市场机会发现
 python main.py --dry-run
 
-# 完整运行
-set DEEPSEEK_API_KEY=xxx
-python main.py
+# 月度复盘
+python backtest_review.py --days 30 --dry-run
+
+# 个股数据测试
+python stock_data.py
 ```
 
-## 分析框架
+---
 
-8层分析体系：
-1. 变化扫描器（全市场变化类型识别）
-2. 预期差扫描器（市场共识 vs 现实）
-3. 投资推理引擎（事实→共识→多阶影响→验证）
-4. 机会分类器（成长/周期/价值/反转/防御）
-5. 杠铃分析（进攻端+防守端+环境判断）
-6. 资金与赔率分析
-7. 机会评分系统（100分制）
-8. 跨公司模式识别（多公司同向共振→提升胜率，所有行业同等对待）
+## GitHub Secrets
+
+| Secret | 用途 |
+|--------|------|
+| `DEEPSEEK_API_KEY` | AI 分析 + 决策审计 |
+| `FEISHU_APP_ID` | 飞书 Bot 推送 |
+| `FEISHU_APP_SECRET` | 飞书 Bot 推送 |
+| `FEISHU_CHAT_ID` | 飞书群聊 ID (可选) |
+| `FEISHU_WEBHOOK_URL` | 飞书 Webhook (可选) |
+| `FRED_API_KEY` | 美国宏观数据 (可选) |
+| `TAVILY_API_KEY` | 实时搜索 (可选) |
+
+---
+
+## 设计原则
+
+- **规则驱动, 不是情绪驱动**。每次买卖前过一遍五大模块规则
+- **手册和代码一致**。入场三条件(金叉+放量+不追高) 由代码硬校验，不满足就降级
+- **每条建议附带理论依据**。不只说"买什么"，还说"为什么——依据《趋势交易论》哪一节"
+- **复盘不看准确率, 看纪律执行**。违例标 ❌，无违例标 ✅
+- **系统帮你排除错误, 不帮你做决策**。告诉你什么时候不该买、哪些不该碰、什么仓位太危险
+
+---
+
+## 文件结构
+
+```
+market-radar/
+├── market_dashboard.py      # 全景仪表盘主控 (~1700行)
+├── sector_monitor.py        # 23 板块技术分析
+├── stock_data.py            # 个股数据层 (adata/akshare)
+├── portfolio.py             # 100万模拟账户
+├── backtest_review.py       # 月度复盘 (纪律检查)
+├── main.py                  # RSS 市场机会发现
+├── sources.json             # 信息源配置
+├── requirements.txt
+├── .github/workflows/
+│   ├── rally-health.yml     # 仪表盘定时
+│   ├── daily-report.yml     # 市场发现定时
+│   └── monthly-review.yml   # 月度复盘
+└── docs/
+    └── superpowers/specs/   # 设计文档
+```
+
+---
+
+*基于《趋势交易论》(Mimiwftt 著, 710页) | 每日自动 | 仅供参考, 不构成投资建议*
