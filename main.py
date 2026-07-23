@@ -1369,7 +1369,19 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--test-feishu", action="store_true")
     parser.add_argument("--sources", default="sources.json")
+    parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
+
+    # 开市检查
+    if not args.force:
+        now = datetime.now()
+        weekday = now.weekday()
+        if weekday >= 5:
+            log("周末休市，不推送"); return
+        if 1 <= weekday <= 4 and now.hour < 16:
+            log(f"交易日未收盘(当前{now.hour}:{now.minute:02d})，不推送"); return
+        if weekday == 0 and now.hour < 10:
+            log("周一早于10点数据可能未更新，不推送"); return
 
     log("="*50)
     log("📊 市场机会发现系统")
