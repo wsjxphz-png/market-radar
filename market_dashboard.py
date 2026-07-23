@@ -1247,7 +1247,7 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             for f in flows[:5]:
                 lines.append(f"- {f}")
             lines.append("")
-            lines.append("> 📖 **怎么看**：主力资金流入的板块=大钱正在布局的方向。把主力流入TOP5和你的板块操作信号对照——如果半导体同时出现在「主力流入TOP5」和「可买入」= 技术面和资金面共振，信号更可靠。只在一侧出现要谨慎。')
+            lines.append("> \U0001f4d6 **怎么看**：主力资金流入的板块=大钱正在布局的方向。把主力流入TOP5和你的板块操作信号对照——如果半导体同时出现在「主力流入TOP5」和「可买入」= 技术面和资金面共振，信号更可靠。只在一侧出现要谨慎。")
             lines.append("")
 
     lines.extend([
