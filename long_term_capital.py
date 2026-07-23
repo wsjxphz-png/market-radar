@@ -279,34 +279,48 @@ def analyze_sector_flow(df: pd.DataFrame) -> List[Dict]:
     if len(available) < 3:
         return []
 
+    # 计算排名分位（区分度远好于固定阈值）
+    sl_values = pd.to_numeric(df["super_large_net_yi"], errors="coerce")
+    main_values = pd.to_numeric(df["main_net_yi"], errors="coerce")
+    sl_ranks = sl_values.rank(pct=True)  # 0~1 分位
+    main_ranks = main_values.rank(pct=True)
+
     results = []
-    for _, row in df.iterrows():
+    for i, (_, row) in enumerate(df.iterrows()):
         industry = str(row.get("industry", ""))
         chg = float(row.get("chg_pct", 0)) if pd.notna(row.get("chg_pct")) else 0
         main = float(row.get("main_net_yi", 0)) if pd.notna(row.get("main_net_yi")) else 0
         sl = float(row.get("super_large_net_yi", 0)) if pd.notna(row.get("super_large_net_yi")) else 0
         large = float(row.get("large_net_yi", 0)) if pd.notna(row.get("large_net_yi")) else 0
+        sl_pct = float(sl_ranks.iloc[i]) * 100
 
-        # 信号分类
-        if sl > 5:
-            signal = "机构大幅买入 🔵"
-        elif sl > 0:
-            signal = "机构小幅流入 🟢"
-        elif sl > -5:
-            signal = "机构小幅流出 🟡"
+        # 按排名分位分类（无视绝对金额，只看相对位置）
+        if sl_pct >= 80:
+            signal = "TOP20% 🔵"
+        elif sl_pct >= 60:
+            signal = "60-80% 🟢"
+        elif sl_pct >= 40:
+            signal = "40-60% 🟡"
+        elif sl_pct >= 20:
+            signal = "20-40% 🟠"
         else:
-            signal = "机构大幅流出 🔴"
+            signal = "BOTTOM20% 🔴"
+
+        # 额外标注：价格下跌但机构仍在买 = 逆势抄底信号
+        if chg < -1 and sl > 0:
+            signal += " ⚡逆势买入"
 
         results.append({
             "industry": industry,
             "signal": signal,
+            "sl_percentile": round(sl_pct, 0),
             "chg_pct": round(chg, 2),
             "main_net_yi": round(main, 2),
             "super_large_net_yi": round(sl, 2),
             "large_net_yi": round(large, 2),
         })
 
-    # 按超大单净流入排序
+    # 按超大单排名分位排序
     results.sort(key=lambda x: x["super_large_net_yi"], reverse=True)
     return results
 
@@ -688,6 +702,7 @@ def _synthesize_signals(data: Dict) -> Dict:
         industry = sf["industry"]
         sig = sf["signal"]
         sl_net = sf["super_large_net_yi"]
+        sl_pct = sf.get("sl_percentile", 50)
 
         val = valuations.get(industry, {})
         pe_pct = val.get("pe_percentile")
@@ -695,13 +710,16 @@ def _synthesize_signals(data: Dict) -> Dict:
         score = 0
         reasons = []
 
-        # 超大单流入
-        if sl_net > 5:
+        # 超大单流入（按排名分位）
+        if sl_pct >= 80:
             score += 2
-            reasons.append(f"超大单净流入{sl_net:.1f}亿")
-        elif sl_net > 0:
+            reasons.append(f"超大单排名TOP{100-sl_pct:.0f}%")
+        elif sl_pct >= 60:
             score += 1
-            reasons.append(f"超大单小幅流入{sl_net:.1f}亿")
+            reasons.append(f"超大单排名前{100-sl_pct:.0f}%")
+        elif sl_pct < 20:
+            score -= 1
+            reasons.append(f"超大单排名后{sl_pct:.0f}%")
 
         # 估值低位
         if pe_pct is not None and pe_pct < 20:
@@ -711,21 +729,14 @@ def _synthesize_signals(data: Dict) -> Dict:
             score += 1
             reasons.append(f"PE分位{pe_pct:.0f}%（偏低）")
 
-        # 机构信号
-        if "大幅买入" in sig:
-            score += 1
-            reasons.append("机构大幅买入")
-        elif "小幅流入" in sig:
-            score += 1
-            reasons.append("机构小幅流入")
-
         # 北向资金配合
         if nb_bullish and sl_net > 0:
             score += 1
             reasons.append("北向同期净流入")
 
         entry = {"industry": industry, "score": score, "reasons": reasons,
-                 "super_large_net_yi": sl_net, "pe_percentile": pe_pct}
+                 "super_large_net_yi": sl_net, "sl_percentile": sl_pct,
+                 "pe_percentile": pe_pct}
 
         if score >= 4:
             signals["strong"].append(entry)
@@ -783,24 +794,33 @@ def format_for_feishu(data: Dict) -> str:
     else:
         lines.append("**北向资金**: 数据不可用")
 
-    # 二、板块资金流 TOP
+    # 二、板块资金流 TOP（按超大单排名分位）
     sector_flows = data.get("sector_flow", [])
     if sector_flows:
         lines.append("")
-        lines.append("**板块超大单净流入 TOP8**（当日）：")
-        top8 = [sf for sf in sector_flows if sf["super_large_net_yi"] > 0][:8]
-        if top8:
-            for sf in top8:
-                lines.append(f"- {sf['industry']}: {sf['super_large_net_yi']:+.1f}亿 "
-                             f"(主力{sf['main_net_yi']:+.1f}亿, {sf['chg_pct']:+.1f}%) {sf['signal']}")
-        else:
-            lines.append("（今日无板块机构净流入）")
+        lines.append("**板块机构资金集中度**（超大单排名分位，非绝对值）：")
 
-        # 流出板块
-        bottom5 = [sf for sf in sector_flows if sf["super_large_net_yi"] < 0][:5]
-        if bottom5:
-            names = "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in bottom5])
-            lines.append(f"机构流出: {names}")
+        top5 = sector_flows[:5]
+        if top5:
+            for sf in top5:
+                lines.append(f"- 🔵 {sf['industry']}: {sf['super_large_net_yi']:+.1f}亿 "
+                             f"({sf['sl_percentile']:.0f}%分位, {sf['chg_pct']:+.1f}%)")
+
+        # 逆势买入的板块（价格跌但超大单流入）
+        contrarian = [sf for sf in sector_flows if "逆势买入" in sf.get("signal", "")]
+        if contrarian:
+            lines.append(f"⚡ 逆势买入（价跌钱进）: " +
+                         "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in contrarian]))
+
+        bottom3 = sector_flows[-3:]
+        if bottom3:
+            names = "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in bottom3])
+            lines.append(f"相对冷落: {names}")
+        lines.append("")
+        lines.append("> 📖 **怎么看**：超大单=单笔>100万的成交净额，是机构行为的代理指标。"
+                     "但普涨日买家主动吃单→全部板块都显示净流入，所以**不看绝对值看相对排名**。"
+                     "TOP20%=机构重点方向；BOTTOM20%=机构相对冷落。"
+                     "⚡=价格下跌但超大单仍在买→逆势建仓信号。")
 
     # 三、估值分位（仅列出 <20% 分位的板块）
     valuations = data.get("valuation", [])
@@ -851,6 +871,16 @@ def format_for_feishu(data: Dict) -> str:
     # 数据可用性
     if data.get("_warnings"):
         lines.append(f"⚠️ 部分数据不可用: {', '.join(data['_warnings'])}")
+
+    # 指标说明
+    lines.append("")
+    lines.append("---")
+    lines.append("**📖 指标说明**")
+    lines.append("")
+    lines.append("**北向资金**: 外资通过沪深港通买卖A股的实时数据。正值=外资净买入A股，负值=净卖出。HK→沪/深=北向，沪/深→HK=南向。数据来源：东方财富实时页面。")
+    lines.append("**超大单资金**: 单笔成交>100万元的订单净额（主动买入-主动卖出）。是机构行为的粗糙代理——机构单子通常体量大，但大户拆单或算法单会被误分类。**关键不看绝对值（普涨日全部为正），看跨板块排名分位。**")
+    lines.append("**产业资本回购**: 上市公司用自己的钱买回自家股票。大额回购=管理层认为股价被低估。注意区分「计划回购」（董事会预案）和「已回购」（实际完成）。")
+    lines.append("**PE分位数**: 当前市盈率在历史（5年）中处于什么位置。10%分位=比90%的时间都便宜；90%分位=比90%的时间都贵。需付费数据源（Wind/Choice），当前免费接口不支持。")
 
     return "\n".join(lines)
 
