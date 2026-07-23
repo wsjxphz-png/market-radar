@@ -1579,9 +1579,21 @@ def main():
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
+    today = datetime.now()
+    weekday = today.weekday()
+
+    # ── 开市检查 ──
+    if not args.force:
+        if weekday >= 5:
+            print(f"[i] 周末休市 (周{['一','二','三','四','五','六','日'][weekday]})，不推送"); return
+        if weekday == 0 and today.hour < 10:
+            print(f"[i] 周一早于10点，数据可能未更新，不推送"); return
+        if 1 <= weekday <= 4 and today.hour < 16:
+            print(f"[i] 交易日未收盘 (当前{today.hour}:{today.minute:02d})，不推送"); return
+
     print("=" * 50)
     print("  A股全景仪表盘")
-    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  {today.strftime('%Y-%m-%d %H:%M')}")
     print("=" * 50)
 
     print("\n[1/4] 数据...")
