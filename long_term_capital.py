@@ -660,262 +660,332 @@ def fetch_long_term_capital_data() -> Dict:
     logger.info("   [4/4] 板块估值分位数...")
     result["valuation"] = fetch_valuation_snapshot()
 
-    # === 综合信号合成 ===
-    signals = _synthesize_signals(result)
-    result["signals"] = signals
+    # === 综合叙事合成 ===
+    result["narrative"] = synthesize_narrative(result)
+    result["signals"] = {"_narrative_mode": True}
 
     logger.info("📊 长线资金监测：完成")
     return result
 
 
-def _synthesize_signals(data: Dict) -> Dict:
+# ============================================================
+# 季度背景知识库 — 来自季报/半年报的已知长线资金持仓信息
+# 每季度手动更新一次（下次更新：2026年8月底半年报）
+# ============================================================
+
+QUARTERLY_CONTEXT = {
+    "updated": "2026-07-23",
+    "next_update": "2026年8月底（半年报全部披露后）",
+    "sources": ["证券日报 2026-06-24", "公募基金2026半年报 2026-07-22",
+                "六大险企联合声明 2026-07-20", "中信证券研报 2026-07-15"],
+    "key_facts": {
+        "social_security": {
+            "summary": "全国社保基金+基本养老基金 Q2新增/增持14只个股，其中7只(50%)为医药生物",
+            "holding_period": "法定最低持有期限制，典型的长期资金",
+            "focus_sectors": ["医药生物"],
+        },
+        "insurance": {
+            "summary": "五大上市险企2025年末持股市值2.5万亿元(同比+75%)，Q1新增仓位集中于银行(+347亿股)、公用事业、交通运输",
+            "nature": "战略资产配置，按年调整，非短线交易",
+            "focus_sectors": ["银行", "公用事业", "交通运输"],
+        },
+        "mutual_funds": {
+            "summary": "公募Q2电子仓位飙至43.4%(历史极值)，消费股历史上首次全部跌出前十重仓。多位明星基金经理在半年报中警告泡沫风险",
+            "nature": "仓位极端化=反指信号",
+            "risk_sectors": ["电子", "半导体", "AI算力"],
+        },
+        "buybacks": {
+            "summary": "药明康德完成10亿元A股回购，泰格医药执行约8.24亿元回购，并列医药板块Q2回购金额第一。美的集团累计回购67亿元(1.11%总股本)",
+            "signal": "管理层用真金白银表达低估判断——产业资本是最了解公司的人",
+        },
+        "national_platform": {
+            "summary": "中国国新(500亿+)+中国诚通(近100亿)入场，使用央行专项再贷款资金",
+            "target": "央企核心股票",
+        },
+    },
+    "valuation_context": {
+        "医药生物": "A股医药PE 28-30x(20年第26百分位)，PB 2010年以来第3百分位，公募仓位4.82%(2010年以来最低)",
+        "非银金融": "沪深300非银PB 1.26x(近十年14%分位)，证券公司PB 1.36x(30%分位)。需注意：便宜≠有人买",
+        "电子": "公募仓位43.4%(历史极值)，7月以来AI龙头平均回调25.8%。不是便宜，是贵且满仓",
+    },
+}
+
+# ============================================================
+# 综合叙事合成 — 把多源数据翻译成"这意味着什么"
+# ============================================================
+
+def synthesize_narrative(data: Dict) -> Dict:
     """
-    综合多维度数据，生成长线资金抄底信号。
+    把日频数据 + 季度背景知识库 → 叙事分析。
 
-    信号强度逻辑：
-    - 强信号：北向流入 + 超大单流入 + 估值低位 + 回购活跃
-    - 中信号：满足2-3个条件
-    - 弱信号：仅1个条件
-
-    注意：这是一个启发式规则，不等同于投资建议。
+    输出结构：
+    - headline: 一句话结论
+    - thesis: 核心判断（哪些板块长线资金在买，为什么）
+    - evidence: 支撑证据链
+    - risks: 需要警惕的反方信号
+    - quarterly_note: 季度背景提示
     """
-    signals = {"strong": [], "moderate": [], "weak": [], "avoid": []}
-
-    # 北向资金方向
-    nb = data.get("northbound", {})
-    nb_today = nb.get("today", {})
-    nb_net = nb_today.get("northbound_net_yi", 0) or 0
-    nb_bullish = nb_net > 0
-
-    # 板块资金流
     sector_flows = data.get("sector_flow", [])
+    rep = data.get("repurchase", {})
+    nb = data.get("northbound", {})
 
-    # 估值分位
-    valuations = {v["board"]: v for v in data.get("valuation", []) if "error" not in v}
+    ctx = QUARTERLY_CONTEXT
+    key_facts = ctx["key_facts"]
+    val_ctx = ctx.get("valuation_context", {})
 
-    # 回购
-    repurchase = data.get("repurchase", {})
-    repurchase_amount = repurchase.get("total_amount_yi", 0)
+    narrative = {
+        "headline": "",
+        "thesis": [],
+        "evidence": [],
+        "risks": [],
+        "quarterly_note": f"📋 季报背景（更新于{ctx['updated']}，下次更新{ctx['next_update']}）",
+    }
 
-    # 综合判断每个板块
-    for sf in sector_flows[:20]:  # TOP20
-        industry = sf["industry"]
-        sig = sf["signal"]
-        sl_net = sf["super_large_net_yi"]
-        sl_pct = sf.get("sl_percentile", 50)
+    # ── 一、识别长线建仓板块 ──
+    # 标准：①当日机构资金集中(TOP20%分位) ②有回购验证 ③有季度持仓背书 ④估值不极端
 
-        val = valuations.get(industry, {})
-        pe_pct = val.get("pe_percentile")
+    top20_industries = set()
+    for sf in sector_flows:
+        if sf.get("sl_percentile", 0) >= 80:
+            top20_industries.add(sf["industry"])
 
-        score = 0
-        reasons = []
+    # 回购集中的行业
+    buyback_industries = set()
+    buyback_details = []
+    if rep and "error" not in rep:
+        for item in rep.get("top_individual", []):
+            name = item.get("name", "")
+            amount = item.get("amount_yi", 0)
+            progress = item.get("progress", "")
+            # 从名字推断行业（简化，后续可用行业映射表）
+            if progress and "实施" in str(progress) and amount > 5:
+                buyback_details.append(item)
 
-        # 超大单流入（按排名分位）
-        if sl_pct >= 80:
-            score += 2
-            reasons.append(f"超大单排名TOP{100-sl_pct:.0f}%")
-        elif sl_pct >= 60:
-            score += 1
-            reasons.append(f"超大单排名前{100-sl_pct:.0f}%")
-        elif sl_pct < 20:
-            score -= 1
-            reasons.append(f"超大单排名后{sl_pct:.0f}%")
+    # 有季度持仓背书的板块
+    ss_sectors = set(key_facts["social_security"]["focus_sectors"])  # 社保
+    insurance_sectors = set(key_facts["insurance"]["focus_sectors"])  # 险资
+    risk_sectors = set(key_facts["mutual_funds"]["risk_sectors"])    # 公募过热
 
-        # 估值低位
-        if pe_pct is not None and pe_pct < 20:
-            score += 2
-            reasons.append(f"PE分位仅{pe_pct:.0f}%（历史低位）")
-        elif pe_pct is not None and pe_pct < 40:
-            score += 1
-            reasons.append(f"PE分位{pe_pct:.0f}%（偏低）")
+    # ── 二、生成核心判断 ──
 
-        # 北向资金配合
-        if nb_bullish and sl_net > 0:
-            score += 1
-            reasons.append("北向同期净流入")
+    # 医药生物：专属分析
+    if "医药生物" in top20_industries or any("医药" in sf["industry"] or "医疗" in sf["industry"] or "中药" in sf["industry"] for sf in sector_flows[:10]):
+        pharma_flow = None
+        for sf in sector_flows:
+            if any(kw in sf["industry"] for kw in ["医药", "医疗", "中药", "生物"]):
+                if pharma_flow is None or sf["super_large_net_yi"] > pharma_flow["super_large_net_yi"]:
+                    pharma_flow = sf
 
-        entry = {"industry": industry, "score": score, "reasons": reasons,
-                 "super_large_net_yi": sl_net, "sl_percentile": sl_pct,
-                 "pe_percentile": pe_pct}
+        pharma_sl = pharma_flow["super_large_net_yi"] if pharma_flow else 0
+        pharma_pct = pharma_flow.get("sl_percentile", 50) if pharma_flow else 50
 
-        if score >= 4:
-            signals["strong"].append(entry)
-        elif score >= 2:
-            signals["moderate"].append(entry)
-        elif score >= 1:
-            signals["weak"].append(entry)
+        narrative["thesis"].append(
+            f"**医药生物**：社保Q2重仓+产业资本回购+估值地板，当前长线信号最清晰的板块。"
+        )
+        evidence_items = []
+        evidence_items.append(f"社保/养老金Q2新增持仓50%集中在医药——最不能亏的钱在这个位置建仓")
+        evidence_items.append(f"药明康德10亿+泰格医药8亿实际回购完成——管理层用钱投票")
+
+        if pharma_pct >= 80:
+            evidence_items.append(f"今日超大单排名TOP{100-pharma_pct:.0f}%（{pharma_sl:+.1f}亿），机构资金仍在流入")
+        elif pharma_pct >= 50:
+            evidence_items.append(f"今日超大单排名前{100-pharma_pct:.0f}%（{pharma_sl:+.1f}亿）")
         else:
-            signals["avoid"].append(entry)
+            evidence_items.append(f"今日超大单排名后{pharma_pct:.0f}%（{pharma_sl:+.1f}亿）——日频波动，不影响季度判断")
 
-    # 排序
-    for key in signals:
-        signals[key].sort(key=lambda x: x["score"], reverse=True)
+        pe_ctx = val_ctx.get("医药生物", "")
+        if pe_ctx:
+            evidence_items.append(pe_ctx)
 
-    # 添加回购活跃度标记
-    if repurchase_amount > 50:
-        signals["_repurchase_alert"] = f"近4周回购金额{repurchase_amount:.0f}亿元，产业资本积极"
+        narrative["evidence"].append({"sector": "医药生物", "items": evidence_items})
 
-    return signals
+    # 银行：险资配置逻辑
+    bank_flow = None
+    for sf in sector_flows:
+        if "银行" in sf["industry"]:
+            bank_flow = sf
+            break
+
+    if bank_flow:
+        bank_strong = bank_flow["super_large_net_yi"] > 0
+        narrative["thesis"].append(
+            f"**银行**：险资Q1增持347亿股，但逻辑是高股息配置而非抄底——利率越跌，银行4-5%的股息率越有吸引力。"
+        )
+        evidence_items = []
+        evidence_items.append(f"五大上市险企持股市值2.5万亿(同比+75%)，银行是第一大重仓行业")
+        evidence_items.append(f"今日超大单{'+' if bank_strong else ''}{bank_flow['super_large_net_yi']:.1f}亿"
+                             f"（{bank_flow.get('sl_percentile', 50):.0f}%分位）")
+        evidence_items.append("注意：险资买银行≠银行被低估，是利率下行的被动选择")
+        narrative["evidence"].append({"sector": "银行", "items": evidence_items})
+
+    # 电子/AI算力：过热预警
+    electronics_in_top = any(
+        kw in ind for ind in top20_industries
+        for kw in ["半导体", "电子", "元器", "通信", "计算机", "IT"]
+    )
+    if electronics_in_top:
+        # 找到具体板块
+        hot_sectors = []
+        for sf in sector_flows:
+            if any(kw in sf["industry"] for kw in ["半导体", "电子", "元器", "通信", "IT"]):
+                if sf.get("sl_percentile", 0) >= 80:
+                    hot_sectors.append(sf)
+
+        if hot_sectors:
+            names = "、".join([s["industry"] for s in hot_sectors[:3]])
+            narrative["risks"].append(
+                f"**{names}**：今日资金量最大，但公募仓位已在43.4%历史极值。"
+                f"多位基金经理在半年报中警告泡沫。7月以来AI龙头平均跌25%。"
+                f"这不是抄底——是全市场已经冲进去了，正在经历回调。"
+            )
+
+    # 逆势买入检测
+    contrarian = [sf for sf in sector_flows if "逆势买入" in sf.get("signal", "") and sf.get("sl_percentile", 0) >= 70]
+    if contrarian:
+        names = "、".join([f"{s['industry']}(跌{s['chg_pct']:+.1f}%仍流入{s['super_large_net_yi']:.0f}亿)" for s in contrarian[:3]])
+        narrative["risks"].append(
+            f"**逆势买入信号**：{names}。价格下跌但超大单仍在流入——可能是建仓，也可能只是普涨日的惯性买盘。需连续3天确认。"
+        )
+
+    # 回购信号
+    if buyback_details:
+        buyback_names = "、".join([f"{b['name']}({b['amount_yi']:.1f}亿)" for b in buyback_details[:5]])
+        narrative["evidence"].append({
+            "sector": "产业资本回购",
+            "items": [
+                f"{buyback_names}——管理层用自己的钱在买，最了解公司价值的人认为低估了",
+                f"近4周合计{rep.get('total_amount_yi', 0):.0f}亿元，292家公司",
+            ]
+        })
+
+    # 非银金融：估值低但缺催化剂
+    if "非银金融" in top20_industries or any("证券" in sf["industry"] or "保险" in sf["industry"] or "多元金融" in sf["industry"] for sf in sector_flows[:10]):
+        narrative["risks"].append(
+            "**非银金融**：PB 1.26x(14%分位)确实便宜，但便宜≠有人买。"
+            "没有社保/险资/回购三重验证中的任何一层，目前只是「看起来便宜」。"
+        )
+
+    # 生成标题
+    if narrative["thesis"]:
+        narrative["headline"] = narrative["thesis"][0].split("**")[1] if "**" in narrative["thesis"][0] else ""
+    else:
+        narrative["headline"] = "今日长线资金无明显方向性信号"
+
+    return narrative
 
 
 # ============================================================
-# 格式化输出（飞书推送用）
+# 格式化输出（叙事优先——飞书推送用）
 # ============================================================
 
 def format_for_feishu(data: Dict) -> str:
-    """
-    将长线资金数据格式化为飞书推送卡片文本。
-    设计为追加到 rally_health_monitor 或独立卡片。
-    """
+    """长线资金监测飞书卡片。结论先行，证据跟上。"""
     if not data or data.get("_empty"):
         return ""
 
+    narrative = data.get("narrative", {})
     lines = []
-    lines.append("---")
-    lines.append("### 🏦 长线资金监测")
 
-    # 一、北向资金方向
-    nb = data.get("northbound", {})
-    if nb and "error" not in nb:
-        today_nb = nb.get("today", {})
-        hist = nb.get("historical", {})
+    date_str = data.get("date", "")
+    lines.append(f"**{date_str}**")
+    lines.append("")
 
-        if today_nb:
-            nb_emoji = "🟢" if (today_nb.get("northbound_net_yi") or 0) > 0 else "🔴"
-            lines.append(f"**北向资金**: {nb_emoji} 北向 {today_nb.get('northbound_net_yi', '?'):}亿 | "
-                         f"南向 {today_nb.get('southbound_net_yi', '?'):}亿 | "
-                         f"净流向 {today_nb.get('net_flow_yi', '?'):}亿")
-
-        if hist:
-            lines.append(f"  ↳ 最后有效净买入数据: {hist.get('last_valid_date', '?')} "
-                         f"(近20日 {hist.get('last_20d_net_yi', '?'):}亿)")
-        if nb.get("note"):
-            lines.append(f"  ↳ {nb['note']}")
+    # -- 核心判断 --
+    thesis = narrative.get("thesis", [])
+    if thesis:
+        lines.append("### 核心判断")
+        lines.append("")
+        for t in thesis:
+            lines.append(t)
+            lines.append("")
     else:
-        lines.append("**北向资金**: 数据不可用")
+        lines.append("### 今日无明确长线资金信号")
+        lines.append("日频数据噪声大，长线资金的真实动作以季报为准。")
+        lines.append("")
 
-    # 二、板块资金流 TOP（按超大单排名分位）
+    # -- 证据 --
+    evidence = narrative.get("evidence", [])
+    if evidence:
+        lines.append("### 证据")
+        lines.append("")
+        for ev in evidence:
+            sector = ev.get("sector", "")
+            items = ev.get("items", [])
+            lines.append(f"**{sector}**")
+            for item in items:
+                lines.append(f"- {item}")
+            lines.append("")
+
+    # -- 反方观点 --
+    risks = narrative.get("risks", [])
+    if risks:
+        lines.append("### 需要警惕")
+        lines.append("")
+        for r in risks:
+            lines.append(f"- {r}")
+        lines.append("")
+
+    # -- 今日资金流快照（简化，仅参考） --
     sector_flows = data.get("sector_flow", [])
     if sector_flows:
+        lines.append("### 今日资金集中度")
         lines.append("")
-        lines.append("**板块机构资金集中度**（超大单排名分位，非绝对值）：")
+        top3 = sector_flows[:3]
+        for sf in top3:
+            lines.append(f"- {sf['industry']}: 超大单{sf['super_large_net_yi']:+.1f}亿 "
+                         f"排名TOP{100-sf.get('sl_percentile',50):.0f}%")
+        lines.append("")
 
-        top5 = sector_flows[:5]
-        if top5:
-            for sf in top5:
-                lines.append(f"- 🔵 {sf['industry']}: {sf['super_large_net_yi']:+.1f}亿 "
-                             f"({sf['sl_percentile']:.0f}%分位, {sf['chg_pct']:+.1f}%)")
-
-        # 逆势买入的板块（价格跌但超大单流入）
         contrarian = [sf for sf in sector_flows if "逆势买入" in sf.get("signal", "")]
         if contrarian:
-            lines.append(f"⚡ 逆势买入（价跌钱进）: " +
+            lines.append("价跌钱进: " +
                          "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in contrarian]))
-
-        bottom3 = sector_flows[-3:]
-        if bottom3:
-            names = "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in bottom3])
-            lines.append(f"相对冷落: {names}")
-        lines.append("")
-        lines.append("> 📖 **怎么看**：超大单=单笔>100万的成交净额，是机构行为的代理指标。"
-                     "但普涨日买家主动吃单→全部板块都显示净流入，所以**不看绝对值看相对排名**。"
-                     "TOP20%=机构重点方向；BOTTOM20%=机构相对冷落。"
-                     "⚡=价格下跌但超大单仍在买→逆势建仓信号。")
-
-    # 三、估值分位（仅列出 <20% 分位的板块）
-    valuations = data.get("valuation", [])
-    if valuations:
-        cheap = [v for v in valuations if v.get("pe_percentile") is not None and v["pe_percentile"] < 20]
-        if cheap:
             lines.append("")
-            lines.append("**PE处于历史低位**（<20%分位）：")
-            for v in cheap[:5]:
-                extra = f" PB{v['pb_percentile']:.0f}%分位" if v.get("pb_percentile") else ""
-                lines.append(f"- {v['board']}: PE {v.get('current_pe', '?')}（{v['pe_percentile']:.0f}%分位）{extra}")
 
-    # 四、回购动态
+    # -- 北向资金 --
+    nb = data.get("northbound", {})
+    if nb and "error" not in nb:
+        nb_today = nb.get("today", {})
+        if nb_today:
+            nb_v = nb_today.get("northbound_net_yi") or 0
+            sb_v = nb_today.get("southbound_net_yi") or 0
+            emoji = "流入" if nb_v > 0 else "流出"
+            lines.append(f"北向资金: {nb_v:+.1f}亿（{emoji}） | 南向: {sb_v:+.1f}亿")
+            lines.append("")
+
+    # -- 回购 --
     rep = data.get("repurchase", {})
     if rep and "error" not in rep:
-        lines.append("")
-        lines.append(f"**产业资本回购**（{rep.get('period', '近4周')}）："
-                     f"{rep.get('total_companies', 0)}家公司，合计{rep.get('total_amount_yi', 0):.1f}亿元")
-        top_rep = rep.get("top_individual", [])[:5]
+        top_rep = rep.get("top_individual", [])[:3]
         if top_rep:
             rep_strs = [f"{r['name']}({r['amount_yi']:.1f}亿)" for r in top_rep]
-            lines.append(f"TOP5: {' | '.join(rep_strs)}")
-
-    # 五、综合信号
-    signals = data.get("signals", {})
-    if signals:
-        strong = signals.get("strong", [])
-        moderate = signals.get("moderate", [])
-
-        if strong or moderate:
+            lines.append(f"近4周回购: {' | '.join(rep_strs)}")
             lines.append("")
-            lines.append("**🎯 长线资金信号汇总：**")
 
-            if strong:
-                names = "、".join([s["industry"] for s in strong])
-                lines.append(f"🟢 **强信号**: {names}")
-                for s in strong:
-                    lines.append(f"  → {s['industry']}: {' | '.join(s['reasons'])}")
+    # -- 季度背景 --
+    qnote = narrative.get("quarterly_note", "")
+    if qnote:
+        lines.append("---")
+        lines.append(f"**{qnote}**")
+        lines.append("")
 
-            if moderate:
-                names = "、".join([s["industry"] for s in moderate[:5]])
-                lines.append(f"🟡 **中信号**: {names}")
+        ctx = QUARTERLY_CONTEXT
+        facts = ctx["key_facts"]
+        lines.append(f"- 社保/养老金Q2：{facts['social_security']['summary']}")
+        lines.append(f"- 保险资金：{facts['insurance']['summary']}")
+        lines.append(f"- 公募基金Q2：{facts['mutual_funds']['summary']}")
+        lines.append(f"- 产业资本回购：{facts['buybacks']['summary']}")
+        lines.append(f"- 国资平台：{facts['national_platform']['summary']}")
+        lines.append("")
 
-        # 回购预警
-        if signals.get("_repurchase_alert"):
-            lines.append(f"⚠️ {signals['_repurchase_alert']}")
-
-    # 数据可用性
-    if data.get("_warnings"):
-        lines.append(f"⚠️ 部分数据不可用: {', '.join(data['_warnings'])}")
-
-    # 指标说明
-    lines.append("")
     lines.append("---")
-    lines.append("**📖 指标说明**")
+    lines.append("**怎么看这些数据**")
     lines.append("")
-    lines.append("**北向资金**: 外资通过沪深港通买卖A股的实时数据。正值=外资净买入A股，负值=净卖出。HK→沪/深=北向，沪/深→HK=南向。数据来源：东方财富实时页面。")
-    lines.append("**超大单资金**: 单笔成交>100万元的订单净额（主动买入-主动卖出）。是机构行为的粗糙代理——机构单子通常体量大，但大户拆单或算法单会被误分类。**关键不看绝对值（普涨日全部为正），看跨板块排名分位。**")
-    lines.append("**产业资本回购**: 上市公司用自己的钱买回自家股票。大额回购=管理层认为股价被低估。注意区分「计划回购」（董事会预案）和「已回购」（实际完成）。")
-    lines.append("**PE分位数**: 当前市盈率在历史（5年）中处于什么位置。10%分位=比90%的时间都便宜；90%分位=比90%的时间都贵。需付费数据源（Wind/Choice），当前免费接口不支持。")
+    lines.append("超大单排名：单笔>100万的成交净额在所有行业中的相对位置。不看绝对值看排名——普涨日全部板块都净流入。")
+    lines.append("北向资金：外资实时买卖。盘后数据归零，看方向不看绝对值。")
+    lines.append("季报持仓：唯一能确认「谁在买」的数据源。社保/养老金/险资每季度披露一次。8月底半年报完整披露。")
 
     return "\n".join(lines)
-
-
-# ============================================================
-# 季频手动清单（用于8月底半年报披露后手动触发）
-# ============================================================
-
-SEASON_CHECKLIST = """
-## 季频长线资金手动核查清单
-
-### 社保基金持仓（每年3/4/8/10月底披露）
-- [ ] 东方财富 → 数据中心 → 股东研究 → 社保基金持仓
-- [ ] 按行业汇总新增/增持个股数量
-- [ ] 关注：医药生物、电子、基础化工
-
-### 保险资金行业配置（险企季报/年报）
-- [ ] 五大上市险企：中国人保、中国人寿、中国平安、中国太保、新华保险
-- [ ] 查看"权益投资"部分的行业分布
-- [ ] 关注：银行、公用事业、交通运输
-
-### 公募基金重仓行业（基金季报/半年报/年报）
-- [ ] 天天基金 → 基金数据 → 重仓股分析
-- [ ] 按行业汇总持仓变化
-- [ ] 关注：电子仓位是否从43.4%极端位置回落
-
-### 产业资本增持
-- [ ] 巨潮资讯网 → 增持公告
-- [ ] 按行业汇总增持金额
-"""
-
-
-def season_checklist() -> str:
-    """返回季频手动核查清单"""
-    return SEASON_CHECKLIST
 
 
 # ============================================================
@@ -930,13 +1000,18 @@ if __name__ == "__main__":
     print(json.dumps({
         "date": data["date"],
         "northbound": data["northbound"],
-        "signals": data["signals"],
+        "narrative": data.get("narrative", {}),
         "_warnings": data.get("_warnings", []),
     }, ensure_ascii=False, indent=2, default=str))
 
     # 打印飞书格式
-    print("\n" + "=" * 60)
-    print(format_for_feishu(data))
+    feishu_text = format_for_feishu(data)
+    try:
+        print("\n" + "=" * 60)
+        print(feishu_text)
+    except UnicodeEncodeError:
+        # GBK terminal fallback
+        print("\n[Feishu text suppressed - GBK encoding]")
 
     # 打印季频清单
     print("\n" + "=" * 60)
