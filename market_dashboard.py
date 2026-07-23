@@ -663,6 +663,8 @@ def diagnose_sector_mi(s: Dict) -> Dict:
         "rating": rating, "phase": phase_cn,
         "tags": ", ".join(tags) if tags else ("周末/节假日无实时数据" if not tech else "指标正常"),
         "note": s.get("meeting_note",""),
+        # 携带原始技术数据，供 generate_sector_ops 做硬校验
+        "_tech": tech,
     }
 
 
@@ -827,13 +829,62 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
     for s in sectors:
         rating = s.get("rating", "")
         tags = s.get("tags", "")
+        tech = s.get("_tech", {})
 
-        if "可入场" in rating and not any(x in tags for x in ("死叉", "持续背离", "顶分")):
+        # ── 选股条件验证（手册第2节） ──
+        above_ma20 = tech.get("above_ma20", False)
+        above_ma60 = tech.get("above_ma60", False)
+        is_doubled = tech.get("is_doubled", False)
+        suppressed = tech.get("suppressed_by_ma", False)
+        meets_stock_selection = above_ma20 and above_ma60 and not is_doubled and not suppressed
+
+        # ── 入场条件验证（手册第3节：金叉+放量+不追高，缺一不可） ──
+        golden = tech.get("any_golden_cross", False) or "金叉" in tags
+        vol_ratio = tech.get("vol_ratio", 0)
+        vol_price = tech.get("vol_price", "")
+        bias = tech.get("bias_ma5_pct", 0)
+        meets_entry = (
+            golden and
+            vol_ratio > 1.2 and vol_price == "healthy_up" and
+            abs(bias) < 5
+        )
+
+        # ── 止损条件（手册第4节） ──
+        dead_cross = tech.get("dead_cross_5_20", False) or "死叉" in tags
+        below_ma5 = not tech.get("above_ma5", True)
+
+        # ── 止盈条件（手册第5节） ──
+        vol_stagnant = vol_ratio > 2.0 and abs(tech.get("change_pct", 0)) < 0.3
+        top_with_dist = tech.get("top_fractal", False) and vol_price == "distribution"
+        extreme_overbought = False  # RSI > 80 from indicator signals
+
+        if "可入场" in rating and meets_stock_selection and meets_entry:
             buy_candidates.append(s)
+            s["_entry_check"] = f"✅ 金叉({golden})+放量({vol_ratio:.1f}x)+不追高(bias{bias:+.1f}%)"
+        elif "可入场" in rating and not meets_entry:
+            # downgrade: rating says enter but conditions not met
+            s["rating"] = "🟡 等条件满足"
+            reasons = []
+            if not golden: reasons.append("未金叉")
+            if vol_ratio <= 1.2 or vol_price != "healthy_up": reasons.append(f"未放量(vol={vol_ratio:.1f}x,{vol_price})")
+            if abs(bias) >= 5: reasons.append(f"乖离过高(bias{bias:+.1f}%)")
+            s["_entry_check"] = f"❌ {'; '.join(reasons)}——手册第3节：金叉+放量+不追高，缺一不可"
+            wait_candidates.append(s)
+            continue
+        elif "可入场" in rating and not meets_stock_selection:
+            s["rating"] = "🟡 选股不达标"
+            s["_entry_check"] = "❌ 不满足选股条件（手册第2节：年线上方+多头排列）"
+            wait_candidates.append(s)
+            continue
         elif any(x in rating for x in ("持有不动",)):
             buy_candidates.append(s)
         elif any(x in rating for x in ("明确回避", "反弹就撤", "高位风险", "继续回避")):
             sell_candidates.append(s)
+        elif dead_cross or below_ma5 or vol_stagnant or top_with_dist:
+            if "持有" in rating:
+                sell_candidates.append(s)
+            else:
+                wait_candidates.append(s)
         elif any(x in tags for x in ("已翻倍", "顶分+放量跌", "持续背离")):
             if "持有" in rating:
                 sell_candidates.append(s)
@@ -850,31 +901,19 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         lines.append("")
         for s in buy_candidates[:5]:
             tags = s.get("tags", "")
-            cond = []
-            if "金叉" in tags:
-                cond.append("520金叉已出现")
-            if "底分型" in tags:
-                cond.append("底分型形成")
-            if "站月线+季线" in tags:
-                cond.append("站上月线+季线")
-            if "周线↑" in tags:
-                cond.append("周线走好")
-            # 未满足的条件
-            missing = []
-            if "金叉" not in tags:
-                missing.append("等520金叉确认")
-            if "底分型" not in tags and "金叉" not in tags:
-                missing.append("等底部结构出现（底分型或双底）")
-            entry_cond = "、".join(cond) if cond else "等信号确认"
-            wait_cond = "、".join(missing) if missing else ""
-            action = f"👉 条件满足（{entry_cond}）→ 建1/3仓位入场。"
-            if wait_cond:
-                action += f" 还需满足：{wait_cond}。"
-            action += " 止损：近期低点下方3%。"
+            tech = s.get("_tech", {})
+            vol_ratio = tech.get("vol_ratio", 0)
+            bias = tech.get("bias_ma5_pct", 0)
+            golden = tech.get("any_golden_cross", False) or "金叉" in tags
+
+            check = s.get("_entry_check", f"✅ 金叉({golden})+放量({vol_ratio:.1f}x)+不追高(bias{bias:+.1f}%)")
+
+            action = f"👉 **建1/3仓位入场**。止损：近期低点下方3%。"
             lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
             lines.append(f"  {s.get('tags','指标正常')}")
+            lines.append(f"  {check}")
             lines.append(f"  {action}")
-            lines.append(f"  📖 理论依据：《趋势交易论》第128-129节（520战法入场条件）——金叉+放量=最可靠入场信号，缺一个条件就是在赌。")
+            lines.append(f"  📖 为什么：手册第2-3节——选股需年线上方+多头排列，入场需金叉+放量+不追高。三个条件全部验证通过。")
         lines.append("")
 
     if sell_candidates:
@@ -901,9 +940,13 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
     if wait_candidates:
         lines.append("**🟡 继续等待的板块**:")
         lines.append("")
-        for s in wait_candidates[:5]:
+        for s in wait_candidates[:8]:
             tags = s.get("tags", "")
-            if "均线压制" in tags:
+            tech = s.get("_tech", {})
+            check = s.get("_entry_check", "")
+            if check:
+                cond = check
+            elif "均线压制" in tags:
                 cond = "等价格站上20日均线+放量确认"
             elif "周线↓" in tags:
                 cond = "等周线走平不再创新低，再考虑入场"
@@ -1304,16 +1347,36 @@ def main():
         "signals": {s.name: s.status for s in signals},
     })
 
-    # 构建本次建议（供明天执行）
+    # 构建本次建议（供明天执行——明天会自动执行这些交易）
     index_rec = f"{cycle['name']} → 仓位{cycle['position']} | {cycle['action']}"
     sector_recs = {}
-    buy_ops = [s for s in sectors_diag if "可入场" in s.get("rating", "")]
-    sell_ops = [s for s in sectors_diag if any(x in s.get("rating", "") for x in ("回避", "反弹就撤"))]
-    for s in buy_ops:
-        sector_recs[s["name"]] = {"action": "考虑入场", "rating": s["rating"], "tags": s.get("tags", "")}
-    for s in sell_ops:
-        action = "清仓" if "明确回避" in s["rating"] else "减仓一半" if "反弹就撤" in s["rating"] else "减仓"
-        sector_recs[s["name"]] = {"action": action, "rating": s["rating"], "tags": s.get("tags", "")}
+
+    # 买入建议：只有通过入场三条件验证的才写入（明天自动买入）
+    for s in sectors_diag:
+        rating = s.get("rating", "")
+        entry_check = s.get("_entry_check", "")
+        if "可入场" in rating and entry_check.startswith("✅"):
+            sector_recs[s["name"]] = {
+                "action": "建仓入场",
+                "position_pct": 0.33,  # 1/3仓位
+                "rating": rating,
+                "entry_check": entry_check,
+            }
+
+    # 卖出建议
+    for s in sectors_diag:
+        rating = s.get("rating", "")
+        tags = s.get("tags", "")
+        if any(x in rating for x in ("明确回避", "反弹就撤", "高位风险", "继续回避")):
+            action = "清仓" if "明确回避" in rating else "减仓一半"
+        elif "死叉" in tags:
+            action = "减仓一半"
+        elif "顶分+放量跌" in tags:
+            action = "减仓一半"
+        else:
+            continue
+        sector_recs[s["name"]] = {"action": action, "rating": rating, "tags": tags}
+
     pf.save_position_state(index_rec, sector_recs)
 
     msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, pf)

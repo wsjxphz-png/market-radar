@@ -283,21 +283,47 @@ class Portfolio:
 
         # 执行板块级建议
         sector_recs = state.get("last_sector_recommendations", {})
+        executed = 0
+
+        # 先执行卖出（释放资金）
+        for sym, rec in sector_recs.items():
+            action = rec.get("action", "")
+            price = prices.get(sym, 0)
+            if price <= 0 or sym not in self.holdings:
+                continue
+
+            if "清仓" in action:
+                self.sell(sym, price, reason=f"执行上次建议: {action}")
+                executed += 1
+            elif "减仓" in action and "半" in action:
+                self.sell(sym, price, pct=0.5, reason=f"执行上次建议: {action}")
+                executed += 1
+            elif "减仓" in action:
+                self.sell(sym, price, pct=0.3, reason=f"执行上次建议: {action}")
+                executed += 1
+
+        # 再执行买入（使用剩余现金）
         for sym, rec in sector_recs.items():
             action = rec.get("action", "")
             price = prices.get(sym, 0)
             if price <= 0:
                 continue
 
-            if "减仓" in action and "半" in action and sym in self.holdings:
-                self.sell(sym, price, pct=0.5, reason=f"执行上次建议: {action}")
-            elif "清仓" in action and sym in self.holdings:
-                self.sell(sym, price, reason=f"执行上次建议: {action}")
-            elif "入场" in action and "站上" in action:
-                # 检查条件是否满足（需要具体价格判断）
-                # 这类建议是条件性的，不是无条件执行
+            if action == "建仓入场":
+                # 投入可用现金的1/3（分散到多个买入候选中）
+                position_size = rec.get("position_pct", 0.33)
+                alloc = self.cash * position_size
+                if sym not in self.holdings and alloc >= price * 100:
+                    self.buy(sym, price, alloc, reason=f"执行上次建议: 建仓入场")
+                    executed += 1
+                elif sym in self.holdings:
+                    pass  # 已持有，不加仓
+            elif "入场" in action and sym not in self.holdings:
+                # 有条件的入场建议——不自动执行，下次报告会重新评估
                 pass
 
+        if executed > 0:
+            print(f"  📋 执行了 {executed} 笔上次建议的交易")
         self.save()
 
     # ── 日志 ──────────────────────────────────────────────
