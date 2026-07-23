@@ -161,20 +161,61 @@ TRADING_MANUAL = """
 
 ---
 
-> 💡 **这五条规则，每次买卖前过一遍。对就是对，错就是错。不管市场怎么走，规则不变。**
+### 📖 量价八诀速查（第127-139节）
+
+量在价先——成交量的变化领先于价格的变化。以下八种量价组合是《趋势交易论》最核心的看盘技巧：
+
+| # | 形态 | 量 | 价 | 含义 | 操作 |
+|---|------|----|----|------|------|
+| 1 | 放量上涨 | ↑↑ | ↑ | 资金主动买入，上涨有持续性 | 🟢 持仓/加仓 |
+| 2 | 缩量下跌 | ↓ | ↓ | 抛压枯竭，卖的人越来越少 | 🟡 关注止跌信号 |
+| 3 | 放量下跌 | ↑↑ | ↓ | 资金出逃，恐慌或主力出货 | 🔴 减仓/清仓 |
+| 4 | 缩量上涨 | ↓ | ↑ | 买盘不足，上涨不可持续 | 🟡 警惕见顶，不加仓 |
+| 5 | 放量滞涨 | ↑↑ | → | 主力高位出货，最危险信号 | 🔴 立即减仓 |
+| 6 | 缩量止跌 | ↓ | → | 卖压耗尽，可能见底 | 🟡 等放量确认后入场 |
+| 7 | 量平价升 | → | ↑ | 温和上涨，趋势健康 | 🟢 继续持有 |
+| 8 | 量平价跌 | → | ↓ | 阴跌，没恐慌但也没人买 | 🟡 观望为主 |
+
+> 💡 **这五条规则+八种量价，每次买卖前过一遍。对就是对，错就是错。不管市场怎么走，规则不变。**
 """
 
 
 def fetch_index(name: str, code: str, days: int = 300) -> Optional[pd.DataFrame]:
+    # 主数据源: akshare
     try:
         import akshare as ak
         df = ak.stock_zh_index_daily(symbol=code)
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date").tail(days).reset_index(drop=True)
-        return df
+        if len(df) >= 10:
+            return df
     except Exception as e:
-        print(f"  [!] {name}: {e}")
-        return None
+        print(f"  [!] akshare {name}: {e}")
+
+    # 备用数据源: yfinance (GitHub Actions 从美国访问更稳定)
+    yf_map = {
+        "sh000001": "000001.SS", "sz399001": "399001.SZ",
+        "sz399006": "399006.SZ", "sh000688": "000688.SS",
+    }
+    yf_ticker = yf_map.get(code)
+    if yf_ticker:
+        try:
+            import yfinance as yf
+            df = yf.download(yf_ticker, period=f"{days+30}d", progress=False, auto_adjust=True)
+            if df is not None and len(df) >= 10:
+                df = df.reset_index()
+                df = df.rename(columns={
+                    "Date": "date", "Open": "open", "High": "high",
+                    "Low": "low", "Close": "close", "Volume": "volume"
+                })
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.sort_values("date").tail(days).reset_index(drop=True)
+                print(f"  [i] {name}: 使用 yfinance 备用数据源")
+                return df
+        except Exception as e2:
+            print(f"  [!] yfinance {name}: {e2}")
+
+    return None
 
 def fetch_m1() -> Optional[pd.DataFrame]:
     try:
@@ -881,10 +922,29 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         elif any(x in rating for x in ("明确回避", "反弹就撤", "高位风险", "继续回避")):
             sell_candidates.append(s)
         elif dead_cross or below_ma5 or vol_stagnant or top_with_dist:
+            # 量价八诀: 死叉/破5日线/放量滞涨/顶分+放量跌 = 卖出
             if "持有" in rating:
+                s["_sell_reason"] = (
+                    "死叉" if dead_cross else
+                    "破5日线" if below_ma5 else
+                    "放量滞涨（八诀#5: 主力高位出货）" if vol_stagnant else
+                    "顶分型+放量跌（八诀#3: 资金出逃）"
+                )
                 sell_candidates.append(s)
             else:
                 wait_candidates.append(s)
+        elif vol_price == "weak_up" and abs(bias) > 5:
+            # 量价八诀 #4: 缩量上涨+高乖离 = 警惕见顶
+            if "持有" in rating:
+                s["_sell_reason"] = "缩量上涨+乖离过高（八诀#4: 买盘不足，上涨不可持续）"
+                sell_candidates.append(s)
+            else:
+                s["_wait_reason"] = "缩量上涨（八诀#4: 等放量确认或回踩再入）"
+                wait_candidates.append(s)
+        elif vol_price == "weak_down":
+            # 量价八诀 #2/#6: 缩量下跌 = 抛压耗尽，可能见底
+            s["_wait_reason"] = "缩量下跌（八诀#2: 抛压枯竭，等放量止跌确认后可能反转）"
+            wait_candidates.append(s)
         elif any(x in tags for x in ("已翻倍", "顶分+放量跌", "持续背离")):
             if "持有" in rating:
                 sell_candidates.append(s)
@@ -905,15 +965,24 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             vol_ratio = tech.get("vol_ratio", 0)
             bias = tech.get("bias_ma5_pct", 0)
             golden = tech.get("any_golden_cross", False) or "金叉" in tags
+            rating = s.get("rating", "")
+            is_holding = "持有不动" in rating
 
             check = s.get("_entry_check", f"✅ 金叉({golden})+放量({vol_ratio:.1f}x)+不追高(bias{bias:+.1f}%)")
 
-            action = f"👉 **建1/3仓位入场**。止损：近期低点下方3%。"
+            if is_holding:
+                action = "👉 **继续持有。**不破5日线就拿着，破5日线减半仓。"
+                why = "📖 为什么：手册第1/4节——趋势未破，持仓纪律是「不破不走」。"
+            else:
+                action = "👉 **建1/3仓位入场**。止损：近期低点下方3%。"
+                why = "📖 为什么：手册第2-3节——选股需年线上方+多头排列，入场需金叉+放量+不追高。三个条件全部验证通过。"
+
             lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
             lines.append(f"  {s.get('tags','指标正常')}")
-            lines.append(f"  {check}")
+            if not is_holding:
+                lines.append(f"  {check}")
             lines.append(f"  {action}")
-            lines.append(f"  📖 为什么：手册第2-3节——选股需年线上方+多头排列，入场需金叉+放量+不追高。三个条件全部验证通过。")
+            lines.append(f"  {why}")
         lines.append("")
 
     if sell_candidates:
@@ -921,7 +990,10 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         lines.append("")
         for s in sell_candidates[:5]:
             tags = s.get("tags", "")
-            if "已翻倍" in tags and ("死叉" in tags or "顶分" in tags):
+            sell_reason = s.get("_sell_reason", "")
+            if sell_reason:
+                action = f"👉 **减仓/清仓。**原因：{sell_reason}。"
+            elif "已翻倍" in tags and ("死叉" in tags or "顶分" in tags):
                 action = "👉 **清仓。**涨幅已透支+顶部信号出现。全部卖出，锁定利润。"
             elif "死叉" in tags:
                 action = "👉 **减仓至少一半。**死叉=按520战法纪律离场。破5日线清掉剩下的。"
@@ -932,9 +1004,10 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             else:
                 action = "👉 **不要加仓，设好止损。**若破5日线→减半仓；破20日线→全清。"
             lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
-            lines.append(f"  {s.get('tags','')}")
+            if tags:
+                lines.append(f"  {tags}")
             lines.append(f"  {action}")
-            lines.append(f"  📖 依据：《趋势交易论》量价八诀 + 筑顶特征（第127-139节）")
+            lines.append(f"  📖 依据：量价八诀 + 筑顶特征（第127-139节）")
         lines.append("")
 
     if wait_candidates:
@@ -942,10 +1015,12 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         lines.append("")
         for s in wait_candidates[:8]:
             tags = s.get("tags", "")
-            tech = s.get("_tech", {})
             check = s.get("_entry_check", "")
+            wait_reason = s.get("_wait_reason", "")
             if check:
                 cond = check
+            elif wait_reason:
+                cond = wait_reason
             elif "均线压制" in tags:
                 cond = "等价格站上20日均线+放量确认"
             elif "周线↓" in tags:
@@ -958,6 +1033,110 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         lines.append("")
 
     return lines
+
+
+# ═══════════════════════════════════════════════════════════
+# 信号翻转检测 — 对比昨日信号，标注状态翻转
+# ═══════════════════════════════════════════════════════════
+
+def detect_signal_flips(signals: List[Signal]) -> List[str]:
+    """从 trade_log.jsonl 加载昨日信号，对比今日，检测翻转向。"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(script_dir, "trade_log.jsonl")
+    if not os.path.exists(log_path):
+        return []
+
+    try:
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        yest_sigs = {}
+        with open(log_path, encoding='utf-8') as f:
+            for line in f:
+                try:
+                    e = json.loads(line.strip())
+                    if e.get("date") == yesterday and e.get("type") == "index" and "signals" in e:
+                        yest_sigs = e["signals"]
+                        break
+                except Exception:
+                    continue
+
+        if not yest_sigs:
+            return []
+
+        flips = []
+        today_sigs = {s.name: s.status for s in signals}
+        for name, today_status in today_sigs.items():
+            yest_status = yest_sigs.get(name, "")
+            if yest_status and yest_status != today_status:
+                arrow = "↑" if today_status == "healthy" and yest_status != "healthy" else \
+                        "↓" if today_status == "danger" and yest_status != "danger" else "→"
+                flips.append(f"{name}: {yest_status}→{today_status} {arrow}")
+
+        return flips
+    except Exception:
+        return []
+
+
+# ═══════════════════════════════════════════════════════════
+# 每日一得 — 从《趋势交易论》按市场状态选摘
+# ═══════════════════════════════════════════════════════════
+
+DAILY_INSIGHTS = {
+    "三周期向下": [
+        "「大级别下跌趋势里不要抄底博弈反弹——一套一个不吱声」—《趋势交易论》三周期共振",
+        "「空头市场中，反弹往往是卖出或做空的机会」—《趋势交易论》多空循环",
+        "「趋势不明，宁可休息」—口诀第6条",
+    ],
+    "三周期向上": [
+        "「三者共振出黄金点。历史上每一轮大牛市的主升浪，都伴随着三周期共振向上」—《趋势交易论》三周期选股",
+        "「月线级别的主升浪中，日线下跌只是小浪花——不要被日内回调吓出来」—《趋势交易论》持仓纪律",
+    ],
+    "放量滞涨": [
+        "「高位放量滞涨，坚决出局观望」—口诀第4条",
+        "「放巨量但价格基本不动——往往是主力在高位出货。历史上多次大顶前都出现过放量滞涨」—《趋势交易论》筑顶特征",
+    ],
+    "缩量": [
+        "「下跌过程中成交量持续萎缩=抛压耗尽」—《趋势交易论》底部判断",
+        "「缩量回踩不破是机会不是风险。好股票每次回踩关键均线都是加仓点」—《趋势交易论》量价八诀",
+    ],
+    "震荡": [
+        "「横盘的时候最考验耐心。着急的人买在最高点、卖在最低点——因为他们等不起」—《趋势交易论》中枢震荡",
+        "「趋势不明时，做的越多错的越多。等待本身就是一种策略」—《趋势交易论》交易心理",
+    ],
+    "default": [
+        "「短线看量，长线看势——量是一切分析的基础」—《趋势交易论》量价关系",
+        "「买横买坑不买竖。横盘或回踩时入场，追涨必亏」—《趋势交易论》入场条件",
+        "「跌出来的机会，涨出来的风险」—口诀第3条",
+        "「收盘跌破5日线减仓，20日线加回来」—《趋势交易论》第18节",
+        "「震仓：打压后有承接，股价能很快企稳。出货：放量下跌后无人承接」—《趋势交易论》震仓vs出货",
+    ],
+}
+
+
+def pick_daily_insight(cycle: Dict, signals: List[Signal]) -> str:
+    """根据当日市场状态，从摘录库中选一条最相关的。"""
+    cycle_name = cycle.get("name", "")
+
+    # 匹配规则：优先匹配更具体的状态
+    sig_map = {s.name: s for s in signals}
+    if "下跌" in cycle_name:
+        pool = DAILY_INSIGHTS.get("三周期向下", DAILY_INSIGHTS["default"])
+    elif "上涨" in cycle_name:
+        pool = DAILY_INSIGHTS.get("三周期向上", DAILY_INSIGHTS["default"])
+    elif "震荡" in cycle_name:
+        pool = DAILY_INSIGHTS.get("震荡", DAILY_INSIGHTS["default"])
+    else:
+        pool = DAILY_INSIGHTS["default"]
+
+    # 叠加量价状态
+    vp = sig_map.get("量价结构")
+    if vp and vp.status == "danger":
+        pool = DAILY_INSIGHTS.get("放量滞涨", pool)
+    elif vp and vp.status == "caution":
+        pool = DAILY_INSIGHTS.get("缩量", pool)
+
+    # 选一条（用日期做种子，同一天同一句）
+    day_seed = int(datetime.now().strftime("%d")) % len(pool)
+    return pool[day_seed]
 
 
 # ═══════════════════════════════════════════════════════════
@@ -991,6 +1170,21 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     # ── 📖 交易手册速查 ──
     lines.append(TRADING_MANUAL)
+
+    # ── ⚠️ 信号翻转 ──
+    flips = detect_signal_flips(signals)
+    if flips:
+        lines.extend([
+            "---",
+            "",
+            "## ⚠️ 信号翻转 — 与昨日对比",
+            "",
+        ])
+        for f in flips:
+            lines.append(f"- ⚠️ {f}")
+        lines.append("")
+        lines.append("> 信号翻转日是最容易犯错的时刻——确认翻转是真实的趋势变化还是盘中噪声。")
+        lines.append("")
 
     lines.extend([
         "---",
@@ -1232,6 +1426,15 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         pf_lines = portfolio.format_for_dashboard()
         lines.extend(pf_lines)
         lines.append("")
+
+    # ── 📖 每日一得 ──
+    lines.append("---")
+    lines.append("")
+    insight = pick_daily_insight(cycle, signals)
+    lines.append(f"## 📖 每日一得")
+    lines.append("")
+    lines.append(f"> {insight}")
+    lines.append("")
 
     lines.append("---")
     lines.append("*《趋势交易论》(710页) | 每日自动*")
