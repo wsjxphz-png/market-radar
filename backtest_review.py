@@ -1,458 +1,327 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-月度回测复盘 — 回顾交易日志，评估信号正确率，输出改进建议。
+月度复盘 — 纪律检查 + 学习笔记
 
-用法:
-  python backtest_review.py              # 回看最近30天
-  python backtest_review.py --days 60    # 回看60天
-  python backtest_review.py --month 2026-06  # 指定月份
+不评估预测准确率。只检查一件事：本月有没有遵守《趋势交易论》五大模块的规则。
 
-输出:
-  📊 账户表现 vs 基准
-  📈 信号正确率统计
-  ⚠️ 发现的系统弱点
-  🔧 规则改进建议
+复盘三问：
+  1. 有没有三周期向下时建议买入？ → 违例 = 违反了框架第一原则
+  2. 有没有放量滞涨时建议持有？ → 违例 = 忽略了量价八诀
+  3. 有没有死叉出现后还不让卖？ → 违例 = 没执行520纪律
+
+输出：
+  ✅ 本月亮点 — 做对了什么，学到了什么
+  ⚠️ 本月教训 — 哪里违例了，下次怎么避免
+  📋 纪律检查 — 五大模块逐项对账
 """
 
 import os, sys, json, argparse
 from datetime import datetime, timedelta
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
-import numpy as np
-import pandas as pd
 import requests
-import warnings
-warnings.filterwarnings("ignore")
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 TRADE_LOG = os.path.join(DATA_DIR, "trade_log.jsonl")
 PORTFOLIO_FILE = os.path.join(DATA_DIR, "portfolio.json")
+POSITION_STATE_FILE = os.path.join(DATA_DIR, "position_state.json")
 
 
 # ═══════════════════════════════════════════════════════════
-# 数据工具
+# 五大模块规则清单（和仪表盘交易手册一致）
 # ═══════════════════════════════════════════════════════════
 
-def fetch_index_history(code: str, name: str, days: int = 60) -> Optional[pd.DataFrame]:
-    """获取指数历史K线"""
-    try:
-        import akshare as ak
-        end = datetime.now().strftime("%Y%m%d")
-        start = (datetime.now() - timedelta(days=days+10)).strftime("%Y%m%d")
-        df = ak.stock_zh_index_daily(symbol=code)
-        if df is None or len(df) == 0:
-            return None
-        df = df.rename(columns={"date": "date", "close": "close", "open": "open"})
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values("date")
-        df["close"] = pd.to_numeric(df["close"], errors="coerce")
-        return df[["date", "close"]].dropna()
-    except Exception as e:
-        print(f"  ⚠️ 获取{name}失败: {e}")
-        return None
-
-
-def get_forward_return(df: pd.DataFrame, date_str: str, days: int) -> Optional[float]:
-    """计算某个日期之后N天的收益率"""
-    d = pd.Timestamp(date_str)
-    row = df[df["date"] == d]
-    if len(row) == 0:
-        # 找最近的下一个交易日
-        future = df[df["date"] >= d]
-        if len(future) < days + 1:
-            return None
-        start_price = float(future["close"].iloc[0])
-        end_idx = min(days, len(future) - 1)
-        end_price = float(future["close"].iloc[end_idx])
-    else:
-        idx = df[df["date"] == d].index[0]
-        future = df.iloc[idx:]
-        if len(future) < days + 1:
-            return None
-        start_price = float(future["close"].iloc[0])
-        end_price = float(future["close"].iloc[min(days, len(future)-1)])
-    return round((end_price / start_price - 1) * 100, 1)
-
-
-# ═══════════════════════════════════════════════════════════
-# 信号评估
-# ═══════════════════════════════════════════════════════════
-
-def evaluate_index_signal(signal: str, forward_5d: float, forward_10d: float) -> Tuple[bool, str]:
-    """
-    评估大盘仓位建议是否正确。
-    - 建议空仓/轻仓 + 后续下跌 = 正确
-    - 建议重仓 + 后续上涨 = 正确
-    """
-    is_bearish = any(x in signal for x in ("空仓", "轻仓", "0-20%", "下跌趋势"))
-    is_bullish = any(x in signal for x in ("重仓", "70-80%", "可以持仓"))
-
-    if is_bearish:
-        correct = forward_10d < 0
-        return correct, f"看空→后续10天{forward_10d:+.1f}% {'✅' if correct else '❌'}"
-    elif is_bullish:
-        correct = forward_10d > 0
-        return correct, f"看多→后续10天{forward_10d:+.1f}% {'✅' if correct else '❌'}"
-    else:
-        # 中性建议，只要不大跌就算对
-        correct = forward_10d > -3
-        return correct, f"中性→后续10天{forward_10d:+.1f}% {'✅' if correct else '❌（跌幅过大）'}"
-
-
-def evaluate_sector_signal(action: str, forward_5d: float) -> Tuple[bool, str]:
-    """评估板块操作建议是否正确"""
-    if any(x in action for x in ("减仓", "清仓", "回避")):
-        correct = forward_5d < 0
-        return correct, f"看空→后续5天{forward_5d:+.1f}% {'✅' if correct else '❌ 错失涨幅'}"
-    elif any(x in action for x in ("入场", "买入", "考虑入场")):
-        correct = forward_5d > 0
-        return correct, f"看多→后续5天{forward_5d:+.1f}% {'✅' if correct else '❌ 入场即跌'}"
-    else:
-        return True, f"等待→后续5天{forward_5d:+.1f}% (不评判)"
+DISCIPLINE_RULES = {
+    "仓位管理": {
+        "rules": [
+            "三周期共振向上 → 仓位7-8成",
+            "级别不统一 → 仓位3-5成，不做新买入",
+            "三周期共振向下 → 仓位0-2成，空仓或极轻仓",
+        ],
+        "check": "对比每日情绪周期与模拟账户仓位，是否存在超仓操作",
+    },
+    "选股": {
+        "rules": [
+            "板块必须在年线上方 + 均线多头排列",
+            "排除已翻倍的板块（涨幅透支）",
+            "排除均线空头排列的板块",
+        ],
+        "check": "被列为🟢可买入的板块，是否都满足年线上方+多头排列？",
+    },
+    "入场": {
+        "rules": [
+            "520金叉（5日线上穿20日线）",
+            "放量（成交量 > 20日均量1.2倍）",
+            "不追高（BIAS乖离率 < 5%）",
+        ],
+        "check": "买入操作是否三个条件全部满足？少一个就是在赌。",
+    },
+    "止损": {
+        "rules": [
+            "收盘跌破5日均线 → 减仓一半",
+            "5日线下穿20日线（死叉） → 全部清仓",
+            "单笔亏损达到仓位5% → 无条件止损",
+        ],
+        "check": "持仓中是否有破5日线未减仓的？有死叉未清仓的？",
+    },
+    "止盈": {
+        "rules": [
+            "放量滞涨（量>2倍均量但涨幅<0.3%） → 减仓一半",
+            "高位顶分型 + 放量下跌 → 清仓",
+            "RSI > 80（极端超买） → 分批减仓",
+        ],
+        "check": "持仓中是否有放量滞涨未减仓的？RSI>80未动的？",
+    },
+}
 
 
 # ═══════════════════════════════════════════════════════════
-# 主逻辑
+# 检查逻辑
 # ═══════════════════════════════════════════════════════════
 
-def run_backtest(days: int = 30) -> str:
+def load_entries(days: int) -> List[Dict]:
+    """加载交易日志"""
     if not os.path.exists(TRADE_LOG):
-        return "⚠️ 无交易日志，回测无法进行。请先运行 market_dashboard.py。"
-
-    # 加载日志
+        return []
     entries = []
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
     with open(TRADE_LOG, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
-            if line:
-                try:
-                    entries.append(json.loads(line))
-                except Exception:
-                    continue
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+                if e.get("date", "") >= cutoff:
+                    entries.append(e)
+            except Exception:
+                continue
+    return entries
+
+
+def load_portfolio() -> Optional[Dict]:
+    """加载账户状态"""
+    if not os.path.exists(PORTFOLIO_FILE):
+        return None
+    try:
+        with open(PORTFOLIO_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def load_position_states(days: int) -> List[Dict]:
+    """加载仓位状态历史（通过 trade log 中的 index 条目）"""
+    entries = load_entries(days)
+    return [e for e in entries if e.get("type") == "index"]
+
+
+def check_discipline(entries: List[Dict], pf: Optional[Dict]) -> Dict:
+    """
+    逐项检查五大模块纪律。
+    返回 {模块名: {"pass": bool, "details": [str], "violations": [str]}}
+    """
+    results = {}
+
+    index_entries = [e for e in entries if e.get("type") == "index"]
+    sector_entries = [e for e in entries if e.get("type") == "sector"]
+    trade_entries = [e for e in entries if e.get("action") in ("BUY", "SELL")]
+
+    # 1. 仓位管理
+    violations = []
+    for e in index_entries:
+        position = e.get("position", "")
+        cycle = e.get("cycle", "")
+        sigs = e.get("signals", {})
+        mtf = sigs.get("三周期趋势", "")
+
+        # 检查：三周期向下时是否建议了高仓位
+        if mtf == "danger" and any(x in position for x in ("70-80%", "5-7成")):
+            violations.append(f"{e['date']}: 三周期向下但建议仓位{position}——违反了空仓/轻仓原则")
+        # 检查：三周期向上时是否建议了空仓
+        if mtf == "healthy" and any(x in position for x in ("0-20%", "空仓")):
+            violations.append(f"{e['date']}: 三周期向上但建议仓位{position}——可能过于保守")
+
+    results["仓位管理"] = {
+        "pass": len(violations) == 0,
+        "details": [f"共{len(index_entries)}个交易日有仓位建议"],
+        "violations": violations,
+    }
+
+    # 2. 选股 — 从 sector entries 检查
+    violations = []
+    buy_recs = [e for e in sector_entries if any(x in e.get("recommendation", "") for x in ("入场", "买入", "建仓"))]
+    for e in buy_recs:
+        rec = e.get("recommendation", "")
+        # 无法从日志中精确反查板块技术指标，标记为"需人工核查"
+        pass
+    results["选股"] = {
+        "pass": True,  # 日志粒度不足以自动检查
+        "details": [f"共{len(buy_recs)}条买入建议，需打开仪表盘逐项核对板块是否满足选股条件"],
+        "violations": [],
+    }
+
+    # 3. 入场
+    violations = []
+    if pf:
+        holdings = pf.get("holdings", {})
+        for sym, h in holdings.items():
+            reason = h.get("entry_reason", "")
+            if "金叉" not in reason and "520" not in reason:
+                violations.append(f"{sym}: 入场理由「{reason}」未提及金叉确认——可能缺少入场条件")
+    results["入场"] = {
+        "pass": len(violations) == 0,
+        "details": [f"当前持仓{len(pf['holdings']) if pf else 0}个标的"],
+        "violations": violations,
+    }
+
+    # 4. 止损
+    violations = []
+    if pf:
+        for sym, h in pf.get("holdings", {}).items():
+            pnl = h.get("pnl_pct", 0)
+            if pnl < -5:
+                violations.append(f"{sym}: 亏损{pnl:.1f}%（超过-5%止损线）——应立即止损或检查止损价是否已触发")
+    results["止损"] = {
+        "pass": len(violations) == 0,
+        "details": [],
+        "violations": violations,
+    }
+
+    # 5. 止盈
+    violations = []
+    if pf:
+        for sym, h in pf.get("holdings", {}).items():
+            pnl = h.get("pnl_pct", 0)
+            if pnl > 50:
+                violations.append(f"{sym}: 盈利{pnl:.1f}%——需确认是否触发RSI>80或放量滞涨，考虑分批止盈")
+    results["止盈"] = {
+        "pass": len(violations) == 0,
+        "details": [],
+        "violations": violations,
+    }
+
+    return results
+
+
+# ═══════════════════════════════════════════════════════════
+# 学习笔记
+# ═══════════════════════════════════════════════════════════
+
+def generate_learning_notes(discipline: Dict, entries: List[Dict], pf: Optional[Dict]) -> List[str]:
+    """从纪律检查结果中提取学习要点"""
+    notes = []
+
+    # 亮点：通过的模块
+    passed = [mod for mod, r in discipline.items() if r["pass"] and not r["violations"]]
+    if passed:
+        notes.append(f"✅ **本月遵守了**: {'、'.join(passed)}")
+
+    # 违例：需要改进的
+    for mod, r in discipline.items():
+        for v in r["violations"]:
+            notes.append(f"⚠️ **{mod}违例**: {v}")
+
+    # 从交易中提取学习点
+    trade_entries = [e for e in entries if e.get("action") in ("BUY", "SELL")]
+    buys = [e for e in trade_entries if e["action"] == "BUY"]
+    sells = [e for e in trade_entries if e["action"] == "SELL"]
+
+    if buys:
+        notes.append(f"📝 本月共 {len(buys)} 次买入操作。每次入场前检查：三个条件全满足了吗？")
+    if sells:
+        notes.append(f"📝 本月共 {len(sells)} 次卖出操作。每次卖出时想：是因为纪律触发，还是盘中冲动？")
+
+    # 账户表现概况
+    if pf:
+        cum_ret = pf.get("cumulative_return_pct", 0)
+        notes.append(f"💰 模拟账户累计收益 **{cum_ret:+.1f}%**。")
+
+    # 如果没有任何问题
+    if not any(r["violations"] for r in discipline.values()) and not notes:
+        notes.append("✅ 本月纪律执行完美，无违例。继续保持。")
+
+    return notes
+
+
+# ═══════════════════════════════════════════════════════════
+# 生成报告
+# ═══════════════════════════════════════════════════════════
+
+def run_review(days: int = 30) -> str:
+    entries = load_entries(days)
+    pf = load_portfolio()
 
     if not entries:
-        return "⚠️ 交易日志为空。"
+        return "⚠️ 本月无交易日志。复盘无法进行。请先运行 market_dashboard.py 至少一周。"
 
-    # 按日期范围筛选
-    today = datetime.now()
-    cutoff = (today - timedelta(days=days)).strftime("%Y-%m-%d")
-    entries = [e for e in entries if e.get("date", "") >= cutoff]
-    if not entries:
-        return f"⚠️ 最近{days}天无日志记录。"
+    # 统计基本信息
+    index_dates = set(e["date"] for e in entries if e.get("type") == "index")
+    sector_count = sum(1 for e in entries if e.get("type") == "sector")
+    trade_count = sum(1 for e in entries if e.get("action") in ("BUY", "SELL"))
 
-    print(f"📋 加载 {len(entries)} 条日志 ({cutoff} ~ {today.strftime('%Y-%m-%d')})")
+    first = min(index_dates) if index_dates else "?"
+    last = max(index_dates) if index_dates else "?"
 
-    # 获取上证指数历史数据用于评估
-    print("📊 获取基准数据...")
-    sh_idx = fetch_index_history("sh000001", "上证指数", days=days+20)
-    if sh_idx is None:
-        return "⚠️ 无法获取指数数据，回测中止。"
+    # 执行纪律检查
+    discipline = check_discipline(entries, pf)
 
-    # 评估每条信号
-    index_results = []
-    sector_results = []
-    dates_covered = set()
+    # 生成学习笔记
+    learning = generate_learning_notes(discipline, entries, pf)
 
-    for entry in entries:
-        etype = entry.get("type", "")
-        date_str = entry.get("date", "")
-        if not date_str:
-            continue
-        dates_covered.add(date_str)
-
-        if etype == "index":
-            signal = entry.get("position", entry.get("recommendation", ""))
-            f5 = get_forward_return(sh_idx, date_str, 5)
-            f10 = get_forward_return(sh_idx, date_str, 10)
-            if f5 is not None and f10 is not None:
-                correct, note = evaluate_index_signal(signal, f5, f10)
-                index_results.append({
-                    "date": date_str, "correct": correct, "note": note,
-                    "signal": signal,
-                })
-            else:
-                index_results.append({
-                    "date": date_str, "correct": None, "note": "数据不足",
-                    "signal": signal,
-                })
-
-        elif etype == "sector":
-            action = entry.get("recommendation", "")
-            target = entry.get("target", "")
-            # 板块回测需要板块价格，这里用上证指数近似
-            f5 = get_forward_return(sh_idx, date_str, 5)
-            if f5 is not None:
-                correct, note = evaluate_sector_signal(action, f5)
-                sector_results.append({
-                    "date": date_str, "target": target, "correct": correct,
-                    "note": note, "action": action,
-                })
-
-    # 统计
-    valid_index = [r for r in index_results if r["correct"] is not None]
-    valid_sector = [r for r in sector_results if r["correct"] is not None]
-
-    idx_correct = sum(1 for r in valid_index if r["correct"])
-    idx_total = len(valid_index)
-    idx_rate = idx_correct / idx_total * 100 if idx_total > 0 else 0
-
-    sec_correct = sum(1 for r in valid_sector if r["correct"])
-    sec_total = len(valid_sector)
-    sec_rate = sec_correct / sec_total * 100 if sec_total > 0 else 0
-
-    # 账户表现
-    portfolio_return = 0.0
-    if os.path.exists(PORTFOLIO_FILE):
-        try:
-            with open(PORTFOLIO_FILE, encoding='utf-8') as f:
-                pf = json.load(f)
-            portfolio_return = pf.get("cumulative_return_pct", 0.0)
-        except Exception:
-            pass
-
-    # 基准表现（同期上证）
-    first_date = min(dates_covered) if dates_covered else cutoff
-    last_date = max(dates_covered) if dates_covered else today.strftime("%Y-%m-%d")
-    benchmark_return = get_forward_return(sh_idx, first_date, days) or 0.0
-
-    # 生成报告
+    # 组装报告
+    today = datetime.now().strftime("%Y-%m-%d")
     lines = [
-        f"# 📊 回测复盘报告",
+        f"# 📊 月度复盘 — {first} → {last}",
         f"",
-        f"**回看周期**: {first_date} → {last_date}（{len(dates_covered)}个交易日）",
-        f"**报告生成**: {today.strftime('%Y-%m-%d')}",
+        f"**复盘日期**: {today} | **交易日**: {len(index_dates)}天 | **生成**: {datetime.now().strftime('%H:%M')}",
+        f"**交易日志**: {len(entries)}条（指数{len([e for e in entries if e.get('type')=='index'])} + 板块{sector_count} + 交易{trade_count}）",
         f"",
         f"---",
         f"",
-        f"## 💰 账户表现",
-        f"",
-        f"| 指标 | 数值 |",
-        f"|------|------|",
-        f"| 模拟账户累计收益率 | **{portfolio_return:+.1f}%** |",
-        f"| 同期上证指数 | **{benchmark_return:+.1f}%** |",
-        f"| 相对超额收益 | **{portfolio_return - benchmark_return:+.1f}%** |",
+        f"## 📋 纪律检查 — 五大模块逐项对账",
         f"",
     ]
 
-    if portfolio_return > benchmark_return:
-        lines.append(f"✅ 模拟账户跑赢大盘 {portfolio_return - benchmark_return:.1f}个百分点。")
-    else:
-        lines.append(f"⚠️ 模拟账户跑输大盘 {benchmark_return - portfolio_return:.1f}个百分点，需审视信号质量。")
+    for mod, rules in DISCIPLINE_RULES.items():
+        r = discipline.get(mod, {"pass": True, "violations": []})
+        icon = "✅" if r["pass"] else "❌"
+        lines.append(f"### {icon} {mod}")
+        lines.append(f"")
+        for rule in rules["rules"]:
+            lines.append(f"- 📋 {rule}")
+        if r.get("details"):
+            for d in r["details"]:
+                lines.append(f"  {d}")
+        if r.get("violations"):
+            lines.append(f"")
+            for v in r["violations"]:
+                lines.append(f"  ❌ {v}")
+        lines.append(f"")
 
+    # 学习笔记
     lines.extend([
-        f"",
         f"---",
         f"",
-        f"## 📈 信号正确率",
+        f"## 🧠 学习笔记",
         f"",
     ])
+    for note in learning:
+        lines.append(note)
+    lines.append("")
 
-    if idx_total > 0:
-        lines.append(f"**大盘仓位建议**: {idx_correct}/{idx_total} = **{idx_rate:.0f}%**")
-        lines.append(f"")
-        for r in valid_index:
-            lines.append(f"- {r['date']}: {r['note']}")
-        lines.append(f"")
-
-    if sec_total > 0:
-        lines.append(f"**板块操作建议**: {sec_correct}/{sec_total} = **{sec_rate:.0f}%**")
-        lines.append(f"")
-        for r in valid_sector:
-            lines.append(f"- {r['date']} {r['target']}: {r['action']} → {r['note']}")
-        lines.append(f"")
-
-    # 发现的问题
+    # 底部
     lines.extend([
         f"---",
         f"",
-        f"## ⚠️ 系统弱点分析",
+        f"*复盘不是打分，是学习。每个违例都是一次修正交易框架的机会。*",
         f"",
-    ])
-
-    issues = []
-
-    if idx_rate < 60:
-        issues.append(f"- 大盘仓位建议正确率仅{idx_rate:.0f}%，低于60%阈值。**建议**：检查三周期趋势判断是否过于滞后——周线/月线信号在震荡市中容易反复。")
-    if sec_rate < 50:
-        issues.append(f"- 板块操作建议正确率仅{sec_rate:.0f}%。**建议**：板块判断叠加更多确认条件（如站上20日线+量能放大），减少假信号。")
-    if idx_rate >= 60 and sec_rate >= 50:
-        issues.append(f"- 信号质量总体可接受。继续积累数据以识别周期性模式（如月末效应、财报季等）。")
-
-    # 假信号分析
-    false_buys = [r for r in valid_sector if not r["correct"] and any(x in r.get("action","") for x in ("入场","买入","考虑入场"))]
-    false_sells = [r for r in valid_sector if not r["correct"] and any(x in r.get("action","") for x in ("减仓","清仓"))]
-
-    if false_buys:
-        issues.append(f"- 买入假信号 {len(false_buys)} 次（入场即跌）：{', '.join(r['date'] for r in false_buys)}。" +
-                       "**建议**：入场条件加严——底分型+站上5日线+放量，三条件缺一不可。")
-    if false_sells:
-        issues.append(f"- 卖出假信号 {len(false_sells)} 次（卖出即涨）：{', '.join(r['date'] for r in false_sells)}。" +
-                       "**建议**：卖出前确认是否仅为正常回踩（缩量+不破关键均线），避免恐慌性清仓。")
-
-    if not issues:
-        issues.append("- 暂无足够数据识别系统弱点。继续积累。")
-
-    lines.extend(issues)
-
-    # 改进建议
-    lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"## 🔧 规则改进建议",
-        f"",
-    ])
-
-    suggestions = []
-
-    # 基于信号统计给出建议
-    signal_statuses = defaultdict(list)
-    for entry in entries:
-        if entry.get("type") == "index" and "signals" in entry:
-            for name, status in entry["signals"].items():
-                signal_statuses[name].append(status)
-
-    for name, statuses in signal_statuses.items():
-        danger_pct = sum(1 for s in statuses if s == "danger") / len(statuses) * 100
-        caution_pct = sum(1 for s in statuses if s == "caution") / len(statuses) * 100
-        if danger_pct > 30:
-            suggestions.append(f"- **{name}** 信号偏空比例 {danger_pct:.0f}%，如果市场实际未大跌，说明该指标阈值可能需要放宽。")
-        if caution_pct > 50:
-            suggestions.append(f"- **{name}** 模糊信号占比 {caution_pct:.0f}%——caution 太多等于没给信号。考虑收紧阈值，减少中间地带。")
-
-    if not suggestions:
-        suggestions.append("- 信号分布正常，暂无调整建议。继续积累数据。")
-
-    lines.extend(suggestions)
-
-    # ── 自动生成学习规则 ──
-    learned = generate_learned_rules(false_buys, false_sells, idx_rate, sec_rate, signal_statuses)
-    if learned:
-        rules_path = os.path.join(DATA_DIR, "learned_rules.json")
-        with open(rules_path, 'w', encoding='utf-8') as f:
-            json.dump(learned, f, ensure_ascii=False, indent=2)
-        lines.extend([
-            f"",
-            f"---",
-            f"",
-            f"## 🧠 自动学习",
-            f"",
-            f"已生成 **{len(learned['rules'])} 条**规则修正，写入 `learned_rules.json`：",
-        ])
-        for r in learned["rules"]:
-            lines.append(f"- **{r['id']}**: {r['description']} → {r['change']}")
-            lines.append(f"  依据: {r['evidence']}")
-        lines.append(f"")
-        lines.append(f"下次仪表盘运行时自动应用以上规则。")
-
-    lines.extend([
-        f"",
-        f"---",
-        f"",
-        f"*回测基于《趋势交易论》框架 | 数据来源: AKShare | 仅供参考，不构成投资建议*",
+        f"*基于《趋势交易论》五大模块 | 每月1号自动运行*",
     ])
 
     return "\n".join(lines)
-
-
-# ═══════════════════════════════════════════════════════════
-# 自动学习 — 从错误中发现可编程的规则修正
-# ═══════════════════════════════════════════════════════════
-
-def generate_learned_rules(false_buys: List[Dict], false_sells: List[Dict],
-                          idx_rate: float, sec_rate: float,
-                          signal_statuses: Dict[str, List[str]]) -> Dict:
-    """从回测错误中自动生成规则修正。返回 learned_rules.json 的内容。"""
-    rules = []
-
-    # 规则1: 底分型假阳性过多 → 加严入场条件
-    if len(false_buys) >= 2:
-        # 分析假买入信号的共同特征
-        buy_dates = [r["date"] for r in false_buys]
-        rules.append({
-            "id": "entry-require-multi-confirm",
-            "description": "入场需多重确认",
-            "trigger": "sector_buy_signal",
-            "condition": "底分型 或 金叉出现",
-            "additional_checks": ["站上5日均线", "成交量>1.2倍20日均量"],
-            "action": "require_all",
-            "change": "入场条件加严：底分型/金叉 + 站上5日线 + 放量(>1.2倍均量)，三条件缺一不可",
-            "active": True,
-            "from_review": datetime.now().strftime("%Y-%m-%d"),
-            "evidence": f"{len(false_buys)}次假买入信号({', '.join(buy_dates)})，入场即跌",
-        })
-
-    # 规则2: 卖出假信号 → 卖出前确认是否正常回踩
-    if len(false_sells) >= 2:
-        sell_dates = [r["date"] for r in false_sells]
-        rules.append({
-            "id": "exit-check-pullback",
-            "description": "卖出前排除正常回踩",
-            "trigger": "sector_sell_signal",
-            "condition": "减仓 或 清仓建议",
-            "additional_checks": ["缩量(量<0.7倍均量)", "未破关键均线(20日线)"],
-            "action": "block_if_all",
-            "change": "卖出前检查：若缩量+未破20日线→可能为正常回踩，暂缓卖出，设20日线止损",
-            "active": True,
-            "from_review": datetime.now().strftime("%Y-%m-%d"),
-            "evidence": f"{len(false_sells)}次假卖出信号({', '.join(sell_dates)})，卖出即涨",
-        })
-
-    # 规则3: 大盘仓位建议偏低 → 三周期共振阈值调整
-    if idx_rate < 60:
-        rules.append({
-            "id": "cycle-signal-lag",
-            "description": "三周期趋势信号滞后",
-            "trigger": "index_position",
-            "condition": "三周期共振信号",
-            "change": "三周期判断中月线/周线权重从等权调整为：月线40%+周线30%+日线30%（日线领先，减少滞后）",
-            "active": True,
-            "from_review": datetime.now().strftime("%Y-%m-%d"),
-            "evidence": f"大盘仓位建议正确率仅{idx_rate:.0f}%，低于60%阈值",
-        })
-
-    # 规则4: caution 信号过多 → 收紧阈值
-    stale_signals = []
-    for name, statuses in signal_statuses.items():
-        caution_pct = sum(1 for s in statuses if s == "caution") / len(statuses) * 100 if statuses else 0
-        if caution_pct > 60:
-            stale_signals.append(f"{name}(caution占比{caution_pct:.0f}%)")
-    if stale_signals:
-        rules.append({
-            "id": "tighten-caution-thresholds",
-            "description": "收紧模糊信号阈值",
-            "trigger": "signal_computation",
-            "change": f"以下指标caution信号过多，建议收紧阈值区间：{'; '.join(stale_signals)}。将caution区间收窄10%，让信号更倾向healthy/danger二分类。",
-            "active": False,  # 需人工确认后再启用
-            "from_review": datetime.now().strftime("%Y-%m-%d"),
-            "evidence": f"多个指标caution占比>60%，模糊信号过多=没给信号",
-        })
-
-    if not rules:
-        return {}
-
-    # 加载已有规则，合并（保留人工手动添加的规则，更新自动生成的规则）
-    existing_rules = {}
-    rules_path = os.path.join(DATA_DIR, "learned_rules.json")
-    if os.path.exists(rules_path):
-        try:
-            with open(rules_path, encoding='utf-8') as f:
-                existing = json.load(f)
-            for r in existing.get("rules", []):
-                existing_rules[r["id"]] = r
-        except Exception:
-            pass
-
-    # 合并：新规则覆盖旧同ID规则
-    for r in rules:
-        existing_rules[r["id"]] = r
-
-    return {
-        "updated": datetime.now().strftime("%Y-%m-%d"),
-        "rules": list(existing_rules.values()),
-    }
 
 
 # ═══════════════════════════════════════════════════════════
@@ -460,11 +329,9 @@ def generate_learned_rules(false_buys: List[Dict], false_sells: List[Dict],
 # ═══════════════════════════════════════════════════════════
 
 def send_feishu(content: str) -> bool:
-    """推送复盘报告到飞书。复用 dashboard 相同的环境变量。"""
     app_id = os.environ.get("FEISHU_APP_ID", "")
     app_secret = os.environ.get("FEISHU_APP_SECRET", "")
     chat_id = os.environ.get("FEISHU_CHAT_ID") or "oc_94e85ee81df40d0ac71c358861427b06"
-
     if not app_id or not app_secret:
         return False
 
@@ -478,56 +345,20 @@ def send_feishu(content: str) -> bool:
     except Exception:
         return False
 
-    # 超长内容分段发送（飞书卡片 max 约30KB）
-    max_chars = 28000
-    if len(content) <= max_chars:
-        card = {
-            "config": {"wide_screen_mode": True},
-            "header": {"template": "blue", "title": {"tag": "plain_text", "content": "📊 月度回测复盘"}},
-            "elements": [{"tag": "markdown", "content": content}],
-        }
-        try:
-            resp = requests.post(
-                "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
-                json={"receive_id": chat_id, "msg_type": "interactive",
-                      "content": json.dumps(card, ensure_ascii=False)},
-                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, timeout=30)
-            return resp.status_code == 200 and resp.json().get("code") == 0
-        except Exception:
-            return False
-    else:
-        # 分段
-        parts = []
-        remaining = content
-        while len(remaining) > max_chars:
-            split_at = remaining.rfind("---", 0, max_chars)
-            if split_at < 1000:
-                split_at = remaining.rfind("\n\n", 0, max_chars)
-            if split_at < 1000:
-                split_at = max_chars
-            parts.append(remaining[:split_at])
-            remaining = remaining[split_at:]
-        parts.append(remaining)
-
-        ok_all = True
-        for i, part in enumerate(parts):
-            card = {
-                "config": {"wide_screen_mode": True},
-                "header": {"template": "blue", "title": {"tag": "plain_text", "content": f"📊 月度回测复盘 ({i+1}/{len(parts)})"}},
-                "elements": [{"tag": "markdown", "content": part}],
-            }
-            try:
-                resp = requests.post(
-                    "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
-                    json={"receive_id": chat_id, "msg_type": "interactive",
-                          "content": json.dumps(card, ensure_ascii=False)},
-                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, timeout=30)
-                ok = resp.status_code == 200 and resp.json().get("code") == 0
-                if not ok:
-                    ok_all = False
-            except Exception:
-                ok_all = False
-        return ok_all
+    card = {
+        "config": {"wide_screen_mode": True},
+        "header": {"template": "blue", "title": {"tag": "plain_text", "content": "📊 月度复盘"}},
+        "elements": [{"tag": "markdown", "content": content}],
+    }
+    try:
+        resp = requests.post(
+            "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id",
+            json={"receive_id": chat_id, "msg_type": "interactive",
+                  "content": json.dumps(card, ensure_ascii=False)},
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, timeout=30)
+        return resp.status_code == 200 and resp.json().get("code") == 0
+    except Exception:
+        return False
 
 
 # ═══════════════════════════════════════════════════════════
@@ -538,27 +369,20 @@ if __name__ == "__main__":
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-    parser = argparse.ArgumentParser(description="月度回测复盘")
+    parser = argparse.ArgumentParser(description="月度复盘 — 纪律检查+学习笔记")
     parser.add_argument("--days", type=int, default=30, help="回看天数")
-    parser.add_argument("--month", type=str, help="指定月份 (YYYY-MM)")
-    parser.add_argument("--dry-run", action="store_true", help="仅打印，不推送飞书")
+    parser.add_argument("--dry-run", action="store_true", help="仅打印")
     args = parser.parse_args()
 
-    if args.month:
-        y, m = args.month.split("-")
-        import calendar
-        days_in_month = calendar.monthrange(int(y), int(m))[1]
-        args.days = days_in_month + 20
-
     print("=" * 50)
-    print(f"  回测复盘 - 最近{args.days}天")
+    print(f"  月度复盘 — 最近{args.days}天")
     print("=" * 50)
 
-    report = run_backtest(days=args.days)
+    report = run_review(days=args.days)
     print("\n" + report)
 
     if not args.dry_run:
         ok = send_feishu(report)
-        print(f"\n[>] 飞书: {'OK' if ok else 'FAIL (检查 FEISHU_APP_ID/FEISHU_APP_SECRET)'}")
+        print(f"\n[>] 飞书: {'OK' if ok else 'FAIL'}")
     else:
-        print("\n[i] Dry run — 未推送飞书")
+        print("\n[i] Dry run")

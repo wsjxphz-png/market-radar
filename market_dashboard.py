@@ -87,6 +87,84 @@ M1_FALL_SEVERE = -1.5
 # 数据获取
 # ═══════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════
+# 交易手册 — 《趋势交易论》五大模块速查
+# 每条规则三段：📚 理论 → 📋 规则 → 🔍 验证
+# ═══════════════════════════════════════════════════════════
+
+TRADING_MANUAL = """
+## 📖 交易手册 — 《趋势交易论》核心规则
+
+---
+
+### 1. 仓位管理 — 多少钱下注
+
+📚 **理论**：三周期共振定仓位，趋势不明宁可休息（第265-269节）。月线方向决定你是否应该在场内，日线信号决定你具体什么时候动手。两者是主从关系，不能平起平坐。
+
+📋 **规则**：
+- 三周期共振向上 → 仓位 **7-8成**，可以重仓持有
+- 级别不统一 → 仓位 **3-5成**，不做新买入，等方向明确
+- 三周期共振向下 → 仓位 **0-2成**，空仓或极轻仓
+
+🔍 **自检**：打开今日信号，看「三周期趋势」指标——三个级别方向一致吗？模拟账户仓位是否在规则范围内？
+
+---
+
+### 2. 选股 — 什么能买
+
+📚 **理论**：「日线只做所有均线都在250日线之上的个股。买横买坑不买竖——横盘或回踩时入场，追涨必亏」（第128-130节）。核心逻辑：年线上方代表多数人赚钱、趋势向上；年线下方代表多数人被套、趋势向下。在向上的趋势里找机会，不要逆着大方向硬做。
+
+📋 **规则**：
+- 板块必须满足：年线上方 + 均线多头排列（价格>MA5>MA20>MA60）
+- 排除：已翻倍（涨幅透支）、均线空头排列、日线在年线下方
+
+🔍 **自检**：打开板块操作信号，被列为🟢的板块——是否都满足「站上月线+季线」？有没有年线下方的板块被误判为可买？
+
+---
+
+### 3. 入场 — 什么时候买
+
+📚 **理论**：「金叉+放量是最可靠的入场信号。没有量的突破是假的」（第128-129节）。量的背后是钱——有人真金白银在买，价格才撑得住。缩量上涨是买家不够多，随时可能跌回来。
+
+📋 **规则**：以下三个条件**缺一不可**——
+- 520金叉（5日均线上穿20日均线）
+- 放量（当日成交量 > 20日均量的1.2倍）
+- 不追高（BIAS 乖离率 < 5%，价格没有远离均线）
+
+🔍 **自检**：今天被列为🟢可买入的板块——三个条件全满足了吗？少一个就是在赌。
+
+---
+
+### 4. 止损 — 什么时候认错
+
+📚 **理论**：「死叉后还持有的唯一理由是希望——而希望不是策略」（第128节）。止损不是承认你错了，是承认市场不按你设想的走。保住本金永远比证明自己正确更重要。
+
+📋 **规则**：
+- 收盘跌破5日均线 → **减仓一半**（趋势可能转弱）
+- 5日线下穿20日线（死叉）→ **全部清仓**（趋势确认反转）
+- 单笔亏损达到仓位5% → **无条件止损**（不管指标怎么说）
+
+🔍 **自检**：模拟账户里有持仓吗？有没有已经跌破5日线但还没减仓的？有没有死叉了还在持有的？
+
+---
+
+### 5. 止盈 — 什么时候收手
+
+📚 **理论**：「高位放量滞涨，坚决出局观望」（口诀第4条 + 筑顶特征）。庄家在高位出货的典型手法：成交量很大但价格不涨——说明买的人在减少、卖的人在增加。等你看到大跌，已经晚了。
+
+📋 **规则**：
+- 放量滞涨（量>2倍均量但涨幅<0.3%）→ **减仓一半**
+- 高位顶分型 + 放量下跌 → **清仓**
+- RSI > 80（极端超买）→ **分批减仓**，每次减1/3
+
+🔍 **自检**：持仓中有没有放量滞涨的？有没有RSI>80还在继续持有的？有没有涨幅已翻倍还没动的？
+
+---
+
+> 💡 **这五条规则，每次买卖前过一遍。对就是对，错就是错。不管市场怎么走，规则不变。**
+"""
+
+
 def fetch_index(name: str, code: str, days: int = 300) -> Optional[pd.DataFrame]:
     try:
         import akshare as ak
@@ -731,87 +809,16 @@ def detect_conflicts(signals: List[Signal]) -> List[str]:
     return conflicts
 
 
-def load_learned_rules() -> Dict:
-    """加载 learned_rules.json 中的活跃规则修正。"""
-    rules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "learned_rules.json")
-    if not os.path.exists(rules_path):
-        return {}
-    try:
-        with open(rules_path, encoding='utf-8') as f:
-            data = json.load(f)
-        active = [r for r in data.get("rules", []) if r.get("active")]
-        if active:
-            print(f"  🧠 已加载 {len(active)} 条学习规则 (updated {data.get('updated','?')})")
-            for r in active:
-                print(f"    - {r['id']}: {r['change'][:60]}...")
-        return {r["id"]: r for r in active}
-    except Exception as e:
-        print(f"  ⚠️ 加载 learned_rules 失败: {e}")
-        return {}
-
-
-def apply_learned_rules_to_sectors(sectors: List[Dict], learned: Dict) -> List[Dict]:
-    """将学习规则应用到板块诊断结果，修正分类。返回调整后的 sectors 列表。"""
-    if not learned:
-        return sectors
-
-    entry_rule = learned.get("entry-require-multi-confirm")
-    exit_rule = learned.get("exit-check-pullback")
-
-    for s in sectors:
-        tags = s.get("tags", "")
-
-        # 应用入场加严规则
-        if entry_rule:
-            checks = entry_rule.get("additional_checks", [])
-            has_bottom = "底分型" in tags
-            has_golden = "金叉" in tags
-            if has_bottom or has_golden:
-                # 检查是否满足额外条件
-                all_met = True
-                missing = []
-                for check in checks:
-                    if "5日均线" in check and "站上5日" not in tags and "站月线" not in tags:
-                        all_met = False; missing.append("站上5日线")
-                    if "放量" in check.lower() or "成交量" in check:
-                        # tags 中没有直接标记成交量，默认不满足
-                        all_met = False; missing.append("放量>1.2倍均量")
-                if not all_met:
-                    # 降级：从 🟢 可入场 → 🟡 继续等待
-                    if "可入场" in s.get("rating", ""):
-                        s["rating"] = "🟡 继续等待"
-                        s["_learned_note"] = f"🧠 学习规则: 需{', '.join(missing)}"
-
-        # 应用卖出前确认规则
-        if exit_rule:
-            if any(x in s.get("rating", "") for x in ("减仓", "清仓", "回避", "反弹就撤")):
-                checks = exit_rule.get("additional_checks", [])
-                # 检查是否是正常回踩（缩量+未破均线）
-                has_shrink = "缩量" in tags
-                has_support = "站月线" in tags or "站上" in tags
-                if has_shrink and has_support:
-                    # 可能是正常回踩，降级卖出信号
-                    s["rating"] = "🟡 持有但警惕"
-                    s["_learned_note"] = "🧠 学习规则: 缩量+未破均线→可能为正常回踩，暂缓卖出"
-
-    return sectors
-
-
 # ═══════════════════════════════════════════════════════════
 # 板块操作信号
 # ═══════════════════════════════════════════════════════════
 
-def generate_sector_ops(sectors: List[Dict], learned: Dict = None) -> List[str]:
+def generate_sector_ops(sectors: List[Dict]) -> List[str]:
     """
     将模糊的板块评级转换为具体的交易操作信号。
     三类：🟢 可考虑买入、🔴 应考虑减仓、🟡 继续等待。
     每条输出：具体条件 + 动作 + 止损/止盈 + 理论依据。
-    应用 learned_rules.json 中的活跃规则修正。
     """
-    # 应用学习规则
-    if learned:
-        sectors = apply_learned_rules_to_sectors(sectors, learned)
-
     lines = []
     buy_candidates = []
     sell_candidates = []
@@ -866,10 +873,8 @@ def generate_sector_ops(sectors: List[Dict], learned: Dict = None) -> List[str]:
             action += " 止损：近期低点下方3%。"
             lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
             lines.append(f"  {s.get('tags','指标正常')}")
-            if s.get("_learned_note"):
-                lines.append(f"  {s['_learned_note']}")
             lines.append(f"  {action}")
-            lines.append(f"  📖 依据：《趋势交易论》第128-129节（520战法入场条件）")
+            lines.append(f"  📖 理论依据：《趋势交易论》第128-129节（520战法入场条件）——金叉+放量=最可靠入场信号，缺一个条件就是在赌。")
         lines.append("")
 
     if sell_candidates:
@@ -939,15 +944,28 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         f"{idx_summary}",
         f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
         "",
-        "---",
-        "",
-        "## 📖 理论框架 × 当前数据",
-        "",
     ]
 
-    # ── 每个关键指标：理论 + 当前数据 + 操作建议 ──
+    # ── 📖 交易手册速查 ──
+    lines.append(TRADING_MANUAL)
+
+    lines.extend([
+        "---",
+        "",
+        "## 📊 今日信号 — 手册规则 × 当前数据",
+        "",
+        f"**仓位模块** → 手册第1节：当前 {cycle['emoji']} {cycle['name']} → 理论仓位 **{cycle['position']}**",
+        f"> 📖 为什么：{cycle.get('quote','')}",
+        "",
+    ])
+
+    # ── 每个关键指标：理论 + 当前数据 + 操作建议 + 手册归属 ──
     key_indicators = ["年线位置", "三周期趋势", "MACD动能", "量价结构", "RSI", "520战法"]
-    # 每个指标的操作建议（基于 status 和当前信号）
+    # 每个指标所属的手册模块
+    indicator_module = {
+        "年线位置": "2.选股", "三周期趋势": "1.仓位管理", "MACD动能": "3.入场",
+        "量价结构": "3.入场 / 5.止盈", "RSI": "5.止盈", "520战法": "3.入场 / 4.止损",
+    }
     action_map = {
         "年线位置": {
             "healthy": "👉 **操作**：年线上方可以积极选股。重点找年线上方、均线多头排列的个股——这些是主升浪的候选标的。仓位可到5-7成。",
@@ -983,7 +1001,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     for name in key_indicators:
         s = sig_map.get(name)
         if not s: continue
-        lines.append(f"**{icon[s.status]} {s.name}**: {s.value}")
+        mod = indicator_module.get(name, "")
+        lines.append(f"**{icon[s.status]} {s.name}**（📖 手册 {mod}）: {s.value}")
         lines.append(f"> {s.meaning}")
         if s.rule:
             lines.append(f"> 📖 {s.rule}")
@@ -1118,12 +1137,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # ── 🔍 板块操作信号 ──
-    learned = load_learned_rules()
-    sector_ops = generate_sector_ops(sectors, learned)
+    sector_ops = generate_sector_ops(sectors)
     lines.extend(sector_ops)
-    if learned:
-        lines.append("> 🧠 以上信号已根据历史复盘结果自动修正（`learned_rules.json`）")
-        lines.append("")
 
     lines.append("---")
     lines.append("")
