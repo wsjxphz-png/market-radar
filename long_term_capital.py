@@ -202,171 +202,112 @@ def fetch_northbound_flow() -> Dict:
 # 2. 板块主力资金流向（日频 — 超大单为机构代理指标）
 # ============================================================
 
-# 申万一级行业 → 东方财富板块名称映射（常见变体）
-INDUSTRY_GROUPS = {
-    "医药生物": ["医药", "医疗", "医药制造", "生物制品", "医疗器械", "医药生物"],
-    "银行": ["银行"],
-    "非银金融": ["券商", "保险", "多元金融", "证券"],
-    "电子": ["半导体", "电子元件", "消费电子", "光学光电子", "电子"],
-    "食品饮料": ["食品饮料", "酿酒", "食品", "饮料"],
-    "电力设备": ["电气设备", "新能源", "光伏", "风电", "电池"],
-    "计算机": ["互联网服务", "软件开发", "计算机"],
-    "汽车": ["汽车", "汽车零部件", "汽车整车"],
-    "机械设备": ["通用机械", "专用设备", "工业机械", "仪器仪表"],
-    "基础化工": ["化学制品", "化工", "塑料", "橡胶"],
-    "有色金属": ["有色金属", "贵金属", "稀有金属"],
-    "公用事业": ["电力", "公用事业", "燃气", "水务"],
-    "房地产": ["房地产", "房地产开发"],
-    "建筑装饰": ["工程建设", "建筑", "装修装饰"],
-    "交通运输": ["交通运输", "物流", "航运", "港口"],
-    "家用电器": ["家电"],
-    "农林牧渔": ["农牧饲渔", "农业", "渔业", "畜牧业"],
-    "国防军工": ["航天航空", "船舶", "军工"],
-    "煤炭": ["煤炭"],
-    "钢铁": ["钢铁"],
-    "石油石化": ["石油", "石化"],
-    "通信": ["通信"],
-    "传媒": ["文化传媒", "游戏", "影视"],
-    "纺织服饰": ["纺织服装"],
-    "轻工制造": ["造纸印刷", "包装材料"],
-    "社会服务": ["旅游酒店", "教育"],
-    "商贸零售": ["商业百货", "贸易"],
-    "环保": ["环保"],
-    "美容护理": ["美容护理", "化妆品"],
-}
-
-
-def _map_to_sw_industry(em_board_name: str) -> str:
-    """东方财富板块名 → 申万一级行业名"""
-    for sw_name, keywords in INDUSTRY_GROUPS.items():
-        for kw in keywords:
-            if kw in em_board_name:
-                return sw_name
-    return em_board_name
-
-
-def fetch_sector_capital_flow(indicator: str = "今日") -> Optional[pd.DataFrame]:
+def fetch_sector_capital_flow() -> Optional[pd.DataFrame]:
     """
-    获取板块资金流向排名（东方财富行业资金流）。
+    获取当日板块资金流向（东方财富行业资金流）。
+    数据源: stock_fund_flow_industry（东方财富 datacenter API）
 
-    Args:
-        indicator: "今日" | "5日" | "10日" | "20日"
+    注意：push2.eastmoney.com 已失效（2026.07），改用本接口。
 
     Returns:
-        DataFrame with columns: board_name, change_pct, main_inflow, super_large_inflow, ...
+        DataFrame: 行业, 涨跌幅, 主力资金(亿), 超大单资金(亿), 大单资金(亿), 公司数, 领涨股
     """
     import akshare as ak
-    df = _safe_call(ak.stock_sector_fund_flow_rank,
-                    indicator=indicator, sector_type="行业资金流")
+    df = _safe_call(ak.stock_fund_flow_industry)
     if df is None or len(df) == 0:
         return None
 
-    # 列名映射
-    col_map = {
-        "名称": "board_name",
-        "今日涨跌幅": "chg_today",
-        f"{indicator}涨跌幅": "chg",
-        f"{indicator}主力净流入-净额": "main_inflow",
-        f"{indicator}主力净流入-净占比": "main_inflow_pct",
-        f"{indicator}超大单净流入-净额": "super_large_inflow",
-        f"{indicator}超大单净流入-净占比": "super_large_inflow_pct",
-        f"{indicator}大单净流入-净额": "large_inflow",
-        f"{indicator}大单净流入-净占比": "large_inflow_pct",
-        f"{indicator}中单净流入-净额": "mid_inflow",
-        f"{indicator}中单净流入-净占比": "mid_inflow_pct",
-        f"{indicator}小单净流入-净额": "small_inflow",
-        f"{indicator}小单净流入-净占比": "small_inflow_pct",
-        f"{indicator}主力净流入最大股": "top_stock",
+    # 固定列序: 0:序号, 1:行业, 2:行业指数, 3:涨跌幅(%),
+    #           4:主力资金(亿), 5:超大单资金(亿), 6:大单资金(亿),
+    #           7:公司数, 8:领涨股, 9:领涨股涨跌幅, 10:当前排名
+    cols = df.columns.tolist()
+    n_cols = len(cols)
+    pos_names = {
+        1: "industry", 2: "index_value", 3: "chg_pct",
+        4: "main_net_yi", 5: "super_large_net_yi", 6: "large_net_yi",
+        7: "company_count", 8: "lead_stock", 9: "lead_stock_chg_pct",
     }
-    df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+    rename_map = {}
+    for pos, new_name in pos_names.items():
+        if pos < n_cols:
+            rename_map[cols[pos]] = new_name
 
-    # 映射到申万行业
-    df["sw_industry"] = df["board_name"].apply(_map_to_sw_industry)
+    # 回退：子串匹配
+    if len(rename_map) < 5:
+        for col in cols:
+            col_str = str(col)
+            if "行业" in col_str and "涨跌幅" not in col_str and "指数" not in col_str:
+                rename_map[col] = "industry"
+            elif "涨跌幅" in col_str and "领涨" not in col_str:
+                rename_map[col] = "chg_pct"
+            elif "主力" in col_str:
+                rename_map[col] = "main_net_yi"
+            elif "超大单" in col_str or "超大" in col_str:
+                rename_map[col] = "super_large_net_yi"
+            elif "大单" in col_str:
+                rename_map[col] = "large_net_yi"
+            elif "公司" in col_str:
+                rename_map[col] = "company_count"
+
+    df = df.rename(columns=rename_map)
+
+    # 确保数值列类型正确
+    for col in ["chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     return df
 
 
-def analyze_sector_flow(inflow_5d_df, inflow_20d_df, top_n=15):
+def analyze_sector_flow(df: pd.DataFrame) -> List[Dict]:
     """
-    综合分析板块资金流向，识别长线资金信号。
+    分析当日板块资金流向，识别机构资金信号。
 
     逻辑：
-    - 超大单净流入 = 机构/长线资金代理指标（大单也可能是游资）
-    - 5日流入 > 0 且 20日流入 > 0 → 持续流入（accumulation）
-    - 5日流出但 20日流入 → 短期扰动（still accumulating）
-    - 5日流入但 20日流出 → 刚转流入（early signal）
-    - 5日流出且 20日流出 → 持续流出（distribution）
+    - 超大单净流入 > 0 = 机构/长线资金在买
+    - 大单净流入 > 0 = 游资/大户在买
+    - 主力 = 超大单 + 大单
 
     Returns:
-        List[Dict] — 按申万行业汇总的资金流分析
+        List[Dict] — 按超大单净流入排序的行业资金流分析
     """
-    # 汇总到申万一级行业
-    def aggregate(df):
-        if df is None or len(df) == 0:
-            return pd.DataFrame()
-        agg_cols = {
-            "main_inflow": "sum",
-            "super_large_inflow": "sum",
-            "large_inflow": "sum",
-            "mid_inflow": "sum",
-            "small_inflow": "sum",
-        }
-        available = [c for c in agg_cols if c in df.columns]
-        if not available:
-            return pd.DataFrame()
-        grouped = df.groupby("sw_industry")[available].sum().reset_index()
-        return grouped
-
-    agg5 = aggregate(inflow_5d_df)
-    agg20 = aggregate(inflow_20d_df)
-
-    if agg5.empty and agg20.empty:
+    if df is None or len(df) == 0:
         return []
 
-    # 合并5日和20日数据
-    if not agg5.empty and not agg20.empty:
-        merged = agg5.merge(agg20, on="sw_industry", how="outer",
-                           suffixes=("_5d", "_20d")).fillna(0)
-    elif not agg5.empty:
-        merged = agg5.copy()
-        for c in merged.columns:
-            if c != "sw_industry":
-                merged = merged.rename(columns={c: f"{c}_5d"})
-                merged[f"{c}_20d"] = 0
-    else:
-        merged = agg20.copy()
-        for c in merged.columns:
-            if c != "sw_industry":
-                merged = merged.rename(columns={c: f"{c}_20d"})
-                merged[f"{c}_5d"] = 0
+    needed = ["industry", "chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]
+    available = [c for c in needed if c in df.columns]
+    if len(available) < 3:
+        return []
 
-    # 分类信号
     results = []
-    for _, row in merged.iterrows():
-        name = row["sw_industry"]
-        sl_5d = row.get("super_large_inflow_5d", 0)
-        sl_20d = row.get("super_large_inflow_20d", 0)
-        main_5d = row.get("main_inflow_5d", 0)
+    for _, row in df.iterrows():
+        industry = str(row.get("industry", ""))
+        chg = float(row.get("chg_pct", 0)) if pd.notna(row.get("chg_pct")) else 0
+        main = float(row.get("main_net_yi", 0)) if pd.notna(row.get("main_net_yi")) else 0
+        sl = float(row.get("super_large_net_yi", 0)) if pd.notna(row.get("super_large_net_yi")) else 0
+        large = float(row.get("large_net_yi", 0)) if pd.notna(row.get("large_net_yi")) else 0
 
-        if sl_5d > 0 and sl_20d > 0:
-            signal = "持续流入 🔵"
-        elif sl_5d < 0 and sl_20d > 0:
-            signal = "短期扰动 🟡"
-        elif sl_5d > 0 and sl_20d < 0:
-            signal = "刚转流入 🟢"
+        # 信号分类
+        if sl > 5:
+            signal = "机构大幅买入 🔵"
+        elif sl > 0:
+            signal = "机构小幅流入 🟢"
+        elif sl > -5:
+            signal = "机构小幅流出 🟡"
         else:
-            signal = "持续流出 🔴"
+            signal = "机构大幅流出 🔴"
 
         results.append({
-            "industry": name,
+            "industry": industry,
             "signal": signal,
-            "super_large_5d_yi": round(sl_5d / 1e8, 2),
-            "super_large_20d_yi": round(sl_20d / 1e8, 2),
-            "main_inflow_5d_yi": round(main_5d / 1e8, 2),
+            "chg_pct": round(chg, 2),
+            "main_net_yi": round(main, 2),
+            "super_large_net_yi": round(sl, 2),
+            "large_net_yi": round(large, 2),
         })
 
-    # 按5日超大单流入排序
-    results.sort(key=lambda x: x["super_large_5d_yi"], reverse=True)
+    # 按超大单净流入排序
+    results.sort(key=lambda x: x["super_large_net_yi"], reverse=True)
     return results
 
 
@@ -684,17 +625,15 @@ def fetch_long_term_capital_data() -> Dict:
     result["northbound"] = fetch_northbound_flow()
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
-    # 2. 板块主力资金流（今日 + 10日）
-    logger.info("   [2/4] 板块主力资金流向（今日+10日）...")
-    inflow_today = fetch_sector_capital_flow("今日")
-    time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
-    inflow_10d = fetch_sector_capital_flow("10日")
+    # 2. 板块主力资金流（当日）
+    logger.info("   [2/4] 板块主力资金流向（当日）...")
+    inflow_df = fetch_sector_capital_flow()
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
-    if inflow_today is not None or inflow_10d is not None:
-        result["sector_flow"] = analyze_sector_flow(inflow_today, inflow_10d)
+    if inflow_df is not None:
+        result["sector_flow"] = analyze_sector_flow(inflow_df)
     else:
-        logger.warning("   ⚠️ 板块资金流数据不可用（push2.eastmoney.com 可能被代理拦截）")
+        logger.warning("   ⚠️ 板块资金流数据不可用")
         result["_warnings"] = result.get("_warnings", [])
         result["_warnings"].append("sector_flow_unavailable")
 
@@ -748,7 +687,7 @@ def _synthesize_signals(data: Dict) -> Dict:
     for sf in sector_flows[:20]:  # TOP20
         industry = sf["industry"]
         sig = sf["signal"]
-        sl_5d = sf["super_large_5d_yi"]
+        sl_net = sf["super_large_net_yi"]
 
         val = valuations.get(industry, {})
         pe_pct = val.get("pe_percentile")
@@ -757,12 +696,12 @@ def _synthesize_signals(data: Dict) -> Dict:
         reasons = []
 
         # 超大单流入
-        if sl_5d > 5:
+        if sl_net > 5:
             score += 2
-            reasons.append(f"超大单5日净流入{sl_5d:.1f}亿")
-        elif sl_5d > 0:
+            reasons.append(f"超大单净流入{sl_net:.1f}亿")
+        elif sl_net > 0:
             score += 1
-            reasons.append(f"超大单小幅流入{sl_5d:.1f}亿")
+            reasons.append(f"超大单小幅流入{sl_net:.1f}亿")
 
         # 估值低位
         if pe_pct is not None and pe_pct < 20:
@@ -772,21 +711,21 @@ def _synthesize_signals(data: Dict) -> Dict:
             score += 1
             reasons.append(f"PE分位{pe_pct:.0f}%（偏低）")
 
-        # 持续流入
-        if "持续流入" in sig:
+        # 机构信号
+        if "大幅买入" in sig:
             score += 1
-            reasons.append("5日+20日持续流入")
-        elif "刚转流入" in sig:
+            reasons.append("机构大幅买入")
+        elif "小幅流入" in sig:
             score += 1
-            reasons.append("近期转流入")
+            reasons.append("机构小幅流入")
 
         # 北向资金配合
-        if nb_bullish and sl_5d > 0:
+        if nb_bullish and sl_net > 0:
             score += 1
             reasons.append("北向同期净流入")
 
         entry = {"industry": industry, "score": score, "reasons": reasons,
-                 "super_large_5d_yi": sl_5d, "pe_percentile": pe_pct}
+                 "super_large_net_yi": sl_net, "pe_percentile": pe_pct}
 
         if score >= 4:
             signals["strong"].append(entry)
@@ -848,17 +787,20 @@ def format_for_feishu(data: Dict) -> str:
     sector_flows = data.get("sector_flow", [])
     if sector_flows:
         lines.append("")
-        lines.append("**板块超大单净流入 TOP8**（5日）：")
-        top8 = [sf for sf in sector_flows if sf["super_large_5d_yi"] > 0][:8]
-        for sf in top8:
-            lines.append(f"- {sf['industry']}: {sf['super_large_5d_yi']:+.1f}亿 "
-                         f"（20日{sf['super_large_20d_yi']:+.1f}亿）{sf['signal']}")
+        lines.append("**板块超大单净流入 TOP8**（当日）：")
+        top8 = [sf for sf in sector_flows if sf["super_large_net_yi"] > 0][:8]
+        if top8:
+            for sf in top8:
+                lines.append(f"- {sf['industry']}: {sf['super_large_net_yi']:+.1f}亿 "
+                             f"(主力{sf['main_net_yi']:+.1f}亿, {sf['chg_pct']:+.1f}%) {sf['signal']}")
+        else:
+            lines.append("（今日无板块机构净流入）")
 
         # 流出板块
-        bottom5 = [sf for sf in sector_flows if sf["super_large_5d_yi"] < 0][:5]
+        bottom5 = [sf for sf in sector_flows if sf["super_large_net_yi"] < 0][:5]
         if bottom5:
-            names = "、".join([f"{s['industry']}({s['super_large_5d_yi']:.0f}亿)" for s in bottom5])
-            lines.append(f"持续流出: {names}")
+            names = "、".join([f"{s['industry']}({s['super_large_net_yi']:.0f}亿)" for s in bottom5])
+            lines.append(f"机构流出: {names}")
 
     # 三、估值分位（仅列出 <20% 分位的板块）
     valuations = data.get("valuation", [])
