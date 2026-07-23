@@ -35,3 +35,38 @@ jobs:
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
         run: python market_dashboard.py ${{ inputs.force && '--force' || '' }}
+
+      - name: 长线资金监测
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+        run: |
+          python -c "
+          from long_term_capital import fetch_long_term_capital_data, format_for_feishu
+          import json, os, requests
+
+          data = fetch_long_term_capital_data()
+          msg = format_for_feishu(data)
+
+          # Only send if there's meaningful data beyond the header
+          if msg.strip():
+              token_resp = requests.post(
+                  'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+                  json={'app_id': os.environ['FEISHU_APP_ID'], 'app_secret': os.environ['FEISHU_APP_SECRET']},
+                  timeout=15)
+              token = token_resp.json().get('tenant_access_token')
+              card = {
+                  'config': {'wide_screen_mode': True},
+                  'header': {'template': 'blue', 'title': {'tag': 'plain_text', 'content': '长线资金监测'}},
+                  'elements': [{'tag': 'markdown', 'content': msg}]
+              }
+              resp = requests.post(
+                  'https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id',
+                  json={'receive_id': os.environ['FEISHU_CHAT_ID'], 'msg_type': 'interactive',
+                        'content': json.dumps(card, ensure_ascii=False)},
+                  headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+                  timeout=30)
+              print(f'Feishu: OK' if resp.status_code == 200 and resp.json().get('code') == 0 else f'Feishu: FAIL {resp.text[:200]}')
+          " 2>&1
