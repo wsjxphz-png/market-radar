@@ -5,6 +5,11 @@ on:
     # 北京时间 16:00 (UTC 08:00), 周一至周五
     - cron: '0 8 * * 1-5'
   workflow_dispatch:
+    inputs:
+      force:
+        description: '跳过非交易日检查，强制运行'
+        type: boolean
+        default: false
 
 jobs:
   monitor:
@@ -29,4 +34,4 @@ jobs:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-        run: python market_dashboard.py
+        run: python market_dashboard.py ${{ inputs.force && '--force' || '' }}
