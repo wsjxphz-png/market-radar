@@ -1,0 +1,66 @@
+name: 长线资金监测
+
+on:
+  schedule:
+    # 北京时间 16:30 (UTC 08:30), 周一至周五
+    - cron: '30 8 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '强制运行（忽略非交易日检查）'
+        type: boolean
+        default: false
+      weeks:
+        description: '回购回溯周数（默认4周）'
+        type: number
+        default: 4
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 长线资金监测
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+        run: |
+          python -c "
+          from long_term_capital import fetch_long_term_capital_data, format_for_feishu
+          import json, os, requests
+
+          data = fetch_long_term_capital_data()
+          msg = format_for_feishu(data)
+
+          if msg.strip():
+              token_resp = requests.post(
+                  'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal',
+                  json={'app_id': os.environ['FEISHU_APP_ID'], 'app_secret': os.environ['FEISHU_APP_SECRET']},
+                  timeout=15)
+              token = token_resp.json().get('tenant_access_token')
+              card = {
+                  'config': {'wide_screen_mode': True},
+                  'header': {'template': 'blue', 'title': {'tag': 'plain_text', 'content': '长线资金监测'}},
+                  'elements': [{'tag': 'markdown', 'content': msg}]
+              }
+              resp = requests.post(
+                  'https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id',
+                  json={'receive_id': os.environ['FEISHU_CHAT_ID'], 'msg_type': 'interactive',
+                        'content': json.dumps(card, ensure_ascii=False)},
+                  headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'},
+                  timeout=30)
+              print(f'Feishu: OK' if resp.status_code == 200 and resp.json().get('code') == 0 else f'Feishu: FAIL {resp.text[:200]}')
+          " 2>&1
