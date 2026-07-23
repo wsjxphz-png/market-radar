@@ -381,6 +381,10 @@ def calc_technical_indicators(df: pd.DataFrame) -> Dict:
     above_ma5 = close_now > ma5_now
     above_ma20 = close_now > ma20_now
     above_ma60 = close_now > ma60_now
+    # 250日线（年线）—— 如果数据不足250天，用最长可用周期近似
+    ma250 = _ma(pd.Series(close), min(250, len(close)))
+    ma250_now = ma250[-1] if len(ma250) > 0 and not np.isnan(ma250[-1]) else ma60_now
+    above_ma250 = close_now > ma250_now
 
     ma5_5d_ago = ma5[-6] if len(ma5) >= 6 and not np.isnan(ma5[-6]) else ma5_now
     ma5_direction = "up" if ma5_now > ma5_5d_ago else "down"
@@ -549,6 +553,7 @@ def calc_technical_indicators(df: pd.DataFrame) -> Dict:
         "above_ma5": above_ma5,
         "above_ma20": above_ma20,
         "above_ma60": above_ma60,
+        "above_ma250": above_ma250,
         "ma5_direction": ma5_direction,
         "ma20_direction": ma20_direction,
         "ma_alignment": ma_alignment,

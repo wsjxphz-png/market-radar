@@ -28,6 +28,7 @@ from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass
 
 from portfolio import Portfolio
+from stock_data import StockData
 
 import requests
 import pandas as pd
@@ -713,22 +714,26 @@ def diagnose_sector_mi(s: Dict) -> Dict:
 # AI 解读
 # ═══════════════════════════════════════════════════════════
 
-def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
-                 idx_tail: pd.DataFrame) -> Optional[str]:
-    if not DEEPSEEK_API_KEY: return None
+def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
+             idx_tail: pd.DataFrame, temp_data: Dict, flow_data: Dict) -> Optional[str]:
+    """AI 决策审计 — 不发表观点，只做合规检查。为五大模块逐项评分。"""
+    if not DEEPSEEK_API_KEY:
+        return None
     try:
         sig_text = "\n".join(f"- {s.name}: {s.value} [{s.status}]" for s in signals)
         sec_text = "\n".join(
             f"- {s['rating']} {s['name']}({s['category']}): {s['phase']} | {s['tags']}"
             for s in sorted(sectors, key=lambda x: x['rating'])
         )
-        recent = idx_tail.tail(5)[["date","close","volume"]].to_string()
+        temp_text = f"涨{temp_data.get('up_count',0)}家/跌{temp_data.get('down_count',0)}家, 涨停{temp_data.get('limit_up',0)}, 跌停{temp_data.get('limit_down',0)}"
+        flow_text = f"北向{flow_data.get('net_flow',0):+.0f}亿"
 
-        prompt = f"""你是A股市场监测系统的AI分析师。你的分析框架来自《趋势交易论》（Mimiwftt著）。
+        prompt = f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块规则逐项评分。
 
-当前情绪周期: {cycle['emoji']} {cycle['name']}
-仓位建议: {cycle['position']}
-核心操作: {cycle['action']}
+当前状态:
+{cycle['emoji']} {cycle['name']} | 仓位{cycle['position']} | {cycle['action']}
+市场温度: {temp_text}
+资金: {flow_text}
 
 大盘信号:
 {sig_text}
@@ -736,30 +741,35 @@ def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 板块概览:
 {sec_text}
 
-最近5日:
-{recent}
+请按以下格式输出（只输出这个格式，不要废话）:
 
-用直接客观的风格说4-5句话：
-- 第一句：现在市场处于什么阶段
-- 第二句：最值得关注的1个风险或机会
-- 第三句：具体该怎么做
-- 最后：一句你的经典口诀
+**决策审计:**
 
-要求：直接、接地气、不模棱两可、不用分析师语言。就像在跟朋友聊天。"""
+趋势: [X/2分] — 理由
+量价: [X/2分] — 理由
+资金: [X/2分] — 理由
+板块: [X/2分] — 理由
+风险: [X/2分] — 理由
+
+**总分: X/10**
+
+**规则违例:**
+- [若有违例列出，无则写"无违例"]
+"""
 
         resp = requests.post(
             "https://api.deepseek.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
             json={"model": "deepseek-chat", "messages": [
-                {"role": "system", "content": "你是A股市场监测系统的AI分析师。分析风格：直接、接地气、不装腔作势。参考框架：买横买坑不买竖、趋势不明宁可休息、高位放量滞涨坚决出局。"},
+                {"role": "system", "content": "你是交易纪律审计员。严格根据《趋势交易论》五大模块规则评判，不打感情分。只说事实，不发表投资建议。"},
                 {"role": "user", "content": prompt}
-            ], "temperature": 0.4, "max_tokens": 500},
+            ], "temperature": 0.3, "max_tokens": 400},
             timeout=60
         )
         if resp.status_code == 200:
             return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception as e:
-        print(f"[!] AI: {e}")
+        print(f"[!] AI审计: {e}")
     return None
 
 
@@ -872,14 +882,20 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
         tags = s.get("tags", "")
         tech = s.get("_tech", {})
 
-        # ── 选股条件验证（手册第2节） ──
+        # ── 选股条件验证（手册第2节：五选五） ──
         above_ma20 = tech.get("above_ma20", False)
         above_ma60 = tech.get("above_ma60", False)
+        above_ma250 = tech.get("above_ma250", False) or above_ma60  # 60日线上方近似年线上方
         is_doubled = tech.get("is_doubled", False)
         suppressed = tech.get("suppressed_by_ma", False)
-        meets_stock_selection = above_ma20 and above_ma60 and not is_doubled and not suppressed
+        weekly_bull = tech.get("weekly_trend", "") == "bullish"
+        meets_stock_selection = (
+            above_ma20 and above_ma60 and above_ma250 and
+            not is_doubled and not suppressed and
+            weekly_bull  # ⑤周线趋势向上
+        )
 
-        # ── 入场条件验证（手册第3节：金叉+放量+不追高，缺一不可） ──
+        # ── 入场条件验证（手册第3节：金叉+放量+不追高，三条件缺一不可） ──
         golden = tech.get("any_golden_cross", False) or "金叉" in tags
         vol_ratio = tech.get("vol_ratio", 0)
         vol_price = tech.get("vol_price", "")
@@ -914,7 +930,14 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             continue
         elif "可入场" in rating and not meets_stock_selection:
             s["rating"] = "🟡 选股不达标"
-            s["_entry_check"] = "❌ 不满足选股条件（手册第2节：年线上方+多头排列）"
+            reasons = []
+            if not above_ma20: reasons.append("未站上20日线")
+            if not above_ma60: reasons.append("未站上60日线")
+            if not above_ma250: reasons.append("未站上年线")
+            if is_doubled: reasons.append("已翻倍")
+            if suppressed: reasons.append("均线压制")
+            if not weekly_bull: reasons.append("周线未走好")
+            s["_entry_check"] = f"❌ {'; '.join(reasons)}——手册第2节：选股需五条件全满足"
             wait_candidates.append(s)
             continue
         elif any(x in rating for x in ("持有不动",)):
@@ -1145,7 +1168,8 @@ def pick_daily_insight(cycle: Dict, signals: List[Signal]) -> str:
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
-                     indices: dict = None, portfolio: Portfolio = None) -> str:
+                     indices: dict = None, portfolio: Portfolio = None,
+                     temp_data: Dict = None, flow_data: Dict = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -1164,9 +1188,61 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines = [
         f"**{date_str} 周{wd}**",
         f"{idx_summary}",
-        f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
-        "",
     ]
+
+    # ── 🔥 市场温度 ──
+    if temp_data:
+        up = temp_data.get("up_count", 0)
+        dn = temp_data.get("down_count", 0)
+        lu = temp_data.get("limit_up", 0)
+        ld = temp_data.get("limit_down", 0)
+        total = temp_data.get("total", up+dn)
+        breadth_ok = up > dn
+        vol_info = temp_data.get("volume", {})
+        vol_ratio = vol_info.get("ratio", 1.0)
+
+        # 赚钱效应判断
+        if up > total * 0.7:
+            breadth_label = "🟢 极好"
+        elif up > total * 0.5:
+            breadth_label = "🟡 分化"
+        elif up > total * 0.3:
+            breadth_label = "🔴 较差"
+        else:
+            breadth_label = "🔴 极差"
+
+        temp_lines = [
+            f"## 🔥 市场温度",
+            f"",
+            f"| 指标 | 数值 | 判断 |",
+            f"|------|------|------|",
+            f"| 涨跌比 | {up}↑ / {dn}↓ | {breadth_label} |",
+            f"| 涨停/跌停 | {lu}涨停 / {ld}跌停 | {'🟢 活跃' if lu >= 40 else '🟡 一般' if lu >= 20 else '🔴 冷清'} |",
+            f"| 成交额 | {vol_info.get('total_amount',0)/1e8:.0f}亿 | {'🟢 放量' if vol_ratio > 1.2 else '🟡 正常' if vol_ratio > 0.8 else '🔴 缩量'} |",
+            f"",
+        ]
+        lines.extend(temp_lines)
+
+    # ── 💰 资金地图 ──
+    if flow_data:
+        north = flow_data.get("north", {})
+        flows = flow_data.get("sectors", [])
+        lines.extend([
+            f"## 💰 资金地图",
+            f"",
+            f"北向资金: **{north.get('net_flow',0):+.0f}亿** ({north.get('direction','')})",
+            f"",
+        ])
+        if flows:
+            lines.append("主力净流入 TOP5:")
+            for f in flows[:5]:
+                lines.append(f"- {f}")
+            lines.append("")
+
+    lines.extend([
+        f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
+        f"",
+    ])
 
     # ── 📖 交易手册速查 ──
     lines.append(TRADING_MANUAL)
@@ -1414,11 +1490,22 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append(f"> 💬 *{cycle['quote']}*")
     lines.append("")
 
+    # ── 👀 板块观察池 ──
+    close_calls = [s for s in sectors if s.get("_entry_check", "").startswith("❌") and "可入场" not in s.get("rating","")]
+    if close_calls:
+        lines.append("---")
+        lines.append("")
+        lines.append("## 👀 板块观察池 — 差一个条件就满足入场")
+        lines.append("")
+        for s in close_calls[:5]:
+            check = s.get("_entry_check", "")
+            lines.append(f"- **{s['name']}** ({s.get('category','')}): {check}")
+        lines.append("")
+
     if ai_text:
         lines.append("---")
         lines.append("")
-        lines.append(f"**🤖 AI分析:**")
-        lines.append(f"> {ai_text}")
+        lines.append(f"{ai_text}")
         lines.append("")
 
     # ── 💰 模拟账户 ──
@@ -1520,11 +1607,41 @@ def main():
         print(f"  [!] 板块: {e}")
 
     cycle = assess_sentiment(signals)
-    print(f"\n[4/5] 情绪周期: {cycle['emoji']} {cycle['name']}")
-    ai = ai_interpret(cycle, signals, sectors_diag, idx)
+    print(f"\n[4/6] 情绪周期: {cycle['emoji']} {cycle['name']}")
+
+    # ── 市场温度 + 资金流向 ──
+    print("\n[5/6] 市场温度+资金...")
+    temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {}}
+    flow_data = {"north": {}, "sectors": []}
+    try:
+        sd = StockData()
+        breadth = sd.get_market_breadth()
+        vol_info = sd.get_market_volume()
+        north = sd.get_north_flow()
+        temp_data = {
+            "up_count": breadth["up_count"], "down_count": breadth["down_count"],
+            "limit_up": breadth["limit_up"], "limit_down": breadth["limit_down"],
+            "total": breadth["total"],
+            "volume": {"total_amount": vol_info["total_amount"], "ratio": vol_info["ratio"]},
+        }
+        flow_data["north"] = north
+        ff = sd.get_sector_fund_flow()
+        if len(ff) > 0:
+            name_col = [c for c in ff.columns if "名称" in str(c) or "板块" in str(c) or "name" in str(c).lower()]
+            flow_col = [c for c in ff.columns if "净流入" in str(c) or "主力" in str(c)]
+            if name_col and flow_col:
+                for _, row in ff.iterrows():
+                    flow_data["sectors"].append(f"{row[name_col[0]]}: {row[flow_col[0]]}")
+        print(f"  温度: {breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']} | 北向{north['net_flow']:+.0f}亿")
+    except Exception as e:
+        print(f"  [!] 温度数据: {e}")
+
+    ai = ai_audit(cycle, signals, sectors_diag, idx, temp_data,
+                  {"north": flow_data.get("north", {}), "net_flow": flow_data.get("north", {}).get("net_flow", 0),
+                   "sectors": flow_data.get("sectors", [])})
 
     # ── 模拟账户 ──
-    print("\n[5/5] 模拟账户...")
+    print("\n[6/6] 模拟账户...")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     pf = Portfolio(script_dir, initial_cash=1_000_000)
 
@@ -1582,7 +1699,7 @@ def main():
 
     pf.save_position_state(index_rec, sector_recs)
 
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, pf)
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, pf, temp_data, flow_data)
 
     # 飞书内容可能超长，分段发送
     max_chars = 25000
