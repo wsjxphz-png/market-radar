@@ -927,29 +927,30 @@ def format_for_feishu(data: Dict) -> str:
 
     # ── 1. 抄底信号（最重要的） ──
     bf = categories.get("bottom_fishing", [])
+    lines.append("### 抄底信号")
+    lines.append("")
     if bf:
-        lines.append("### 抄底信号")
-        lines.append("")
         for e in bf:
             lines.append(f"**{e['industry']}**: {e['detail']}")
-            lines.append(f"  今日超大单{e['sl_net']:+.1f}亿（{e['sl_pct']:.0f}%分位，{'跌' if e['chg'] < 0 else '涨'}{e['chg']:+.1f}%）")
+            lines.append(f"  今日: 超大单{e['sl_net']:+.1f}亿 | {'跌' if e['chg'] < 0 else '涨'}{e['chg']:+.1f}% | 排名{e['sl_pct']:.0f}%分位")
+            lines.append(f"  → 价格在跌但大资金在买。如果连续3天以上出现，说明不是一日游。结合季报或回购信号可信度更高。")
         lines.append("")
     else:
-        lines.append("### 抄底信号：无")
-        lines.append("主流板块未出现价格下跌+资金逆势买入的抄底组合。")
+        lines.append("主流板块未出现「价格下跌 + 大资金逆势买入 + 回购/季报验证」的抄底组合。")
         lines.append("")
 
     # ── 2. 见顶信号 ──
     ts = categories.get("topping_signal", [])
+    lines.append("### 见顶信号")
+    lines.append("")
     if ts:
-        lines.append("### 见顶信号")
-        lines.append("")
         for e in ts:
             lines.append(f"**{e['industry']}**: {e['detail']}")
-            lines.append(f"  今日超大单{e['sl_net']:+.1f}亿（{e['sl_pct']:.0f}%分位）")
+            lines.append(f"  今日: 超大单{e['sl_net']:+.1f}亿 | {'跌' if e['chg'] < 0 else '涨'}{e['chg']:+.1f}% | 排名{e['sl_pct']:.0f}%分位")
+            lines.append(f"  → 公募基金在这个方向仓位已到历史极值。当所有人都已经上车了，边际买家就没了。7月以来龙头已跌25%+，等出清再看不迟。")
         lines.append("")
     else:
-        lines.append("### 见顶信号：无")
+        lines.append("无。")
         lines.append("")
         lines.append("")
 
@@ -960,7 +961,8 @@ def format_for_feishu(data: Dict) -> str:
         lines.append("")
         for e in lb:
             lines.append(f"**{e['industry']}**: {e['detail']}")
-            lines.append(f"  今日超大单{e['sl_net']:+.1f}亿（{e['sl_pct']:.0f}%分位）")
+            lines.append(f"  今日: 超大单{e['sl_net']:+.1f}亿 | 排名{e['sl_pct']:.0f}%分位")
+            lines.append(f"  → 社保养老年金这类不能亏的钱在买，持有期以年为单位。日频波动不影响判断，看季报趋势。")
         lines.append("")
 
     # ── 4. 高股息配置 ──
@@ -970,7 +972,8 @@ def format_for_feishu(data: Dict) -> str:
         lines.append("")
         for e in dp:
             lines.append(f"**{e['industry']}**: {e['detail']}")
-            lines.append(f"  今日超大单{e['sl_net']:+.1f}亿（{e['sl_pct']:.0f}%分位）")
+            lines.append(f"  今日: 超大单{e['sl_net']:+.1f}亿 | 排名{e['sl_pct']:.0f}%分位")
+            lines.append(f"  → 险资买银行不是抄底，是利率下行的被动选择——4-5%的股息率比买国债划算。这不是价值发现，是资产配置。")
         lines.append("")
 
     # ── 5. 资金关注（缺季度验证） ──
@@ -979,7 +982,8 @@ def format_for_feishu(data: Dict) -> str:
         lines.append("### 资金关注（无季报背书，可能是短线）")
         lines.append("")
         for e in ca[:5]:
-            lines.append(f"- {e['industry']}: {e['sl_net']:+.1f}亿（TOP{100-e['sl_pct']:.0f}%）— {e['detail']}")
+            lines.append(f"- {e['industry']}: {e['sl_net']:+.1f}亿（TOP{100-e['sl_pct']:.0f}%）")
+            lines.append(f"  → 钱在进，但不知道是谁的钱。没有季报验证，可能是机构建仓也可能是量化一日游。")
         lines.append("")
 
     # ── 6. 便宜无人买 ──
@@ -989,6 +993,7 @@ def format_for_feishu(data: Dict) -> str:
         lines.append("")
         for e in cbq[:3]:
             lines.append(f"- {e['industry']}: {e['detail']}")
+            lines.append(f"  → 估值低但资金不进来。便宜可以持续很久，等第一个信号出现再关注。")
         lines.append("")
 
     # ── 回购 ──
