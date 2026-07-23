@@ -331,7 +331,7 @@ def run_review(days: int = 30) -> str:
 def send_feishu(content: str) -> bool:
     app_id = os.environ.get("FEISHU_APP_ID", "")
     app_secret = os.environ.get("FEISHU_APP_SECRET", "")
-    chat_id = os.environ.get("FEISHU_CHAT_ID") or "oc_94e85ee81df40d0ac71c358861427b06"
+    chat_id = os.environ.get("FEISHU_CHAT_ID", "")
     if not app_id or not app_secret:
         return False
 
