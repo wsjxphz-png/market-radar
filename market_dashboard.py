@@ -731,16 +731,87 @@ def detect_conflicts(signals: List[Signal]) -> List[str]:
     return conflicts
 
 
+def load_learned_rules() -> Dict:
+    """加载 learned_rules.json 中的活跃规则修正。"""
+    rules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "learned_rules.json")
+    if not os.path.exists(rules_path):
+        return {}
+    try:
+        with open(rules_path, encoding='utf-8') as f:
+            data = json.load(f)
+        active = [r for r in data.get("rules", []) if r.get("active")]
+        if active:
+            print(f"  🧠 已加载 {len(active)} 条学习规则 (updated {data.get('updated','?')})")
+            for r in active:
+                print(f"    - {r['id']}: {r['change'][:60]}...")
+        return {r["id"]: r for r in active}
+    except Exception as e:
+        print(f"  ⚠️ 加载 learned_rules 失败: {e}")
+        return {}
+
+
+def apply_learned_rules_to_sectors(sectors: List[Dict], learned: Dict) -> List[Dict]:
+    """将学习规则应用到板块诊断结果，修正分类。返回调整后的 sectors 列表。"""
+    if not learned:
+        return sectors
+
+    entry_rule = learned.get("entry-require-multi-confirm")
+    exit_rule = learned.get("exit-check-pullback")
+
+    for s in sectors:
+        tags = s.get("tags", "")
+
+        # 应用入场加严规则
+        if entry_rule:
+            checks = entry_rule.get("additional_checks", [])
+            has_bottom = "底分型" in tags
+            has_golden = "金叉" in tags
+            if has_bottom or has_golden:
+                # 检查是否满足额外条件
+                all_met = True
+                missing = []
+                for check in checks:
+                    if "5日均线" in check and "站上5日" not in tags and "站月线" not in tags:
+                        all_met = False; missing.append("站上5日线")
+                    if "放量" in check.lower() or "成交量" in check:
+                        # tags 中没有直接标记成交量，默认不满足
+                        all_met = False; missing.append("放量>1.2倍均量")
+                if not all_met:
+                    # 降级：从 🟢 可入场 → 🟡 继续等待
+                    if "可入场" in s.get("rating", ""):
+                        s["rating"] = "🟡 继续等待"
+                        s["_learned_note"] = f"🧠 学习规则: 需{', '.join(missing)}"
+
+        # 应用卖出前确认规则
+        if exit_rule:
+            if any(x in s.get("rating", "") for x in ("减仓", "清仓", "回避", "反弹就撤")):
+                checks = exit_rule.get("additional_checks", [])
+                # 检查是否是正常回踩（缩量+未破均线）
+                has_shrink = "缩量" in tags
+                has_support = "站月线" in tags or "站上" in tags
+                if has_shrink and has_support:
+                    # 可能是正常回踩，降级卖出信号
+                    s["rating"] = "🟡 持有但警惕"
+                    s["_learned_note"] = "🧠 学习规则: 缩量+未破均线→可能为正常回踩，暂缓卖出"
+
+    return sectors
+
+
 # ═══════════════════════════════════════════════════════════
 # 板块操作信号
 # ═══════════════════════════════════════════════════════════
 
-def generate_sector_ops(sectors: List[Dict]) -> List[str]:
+def generate_sector_ops(sectors: List[Dict], learned: Dict = None) -> List[str]:
     """
     将模糊的板块评级转换为具体的交易操作信号。
     三类：🟢 可考虑买入、🔴 应考虑减仓、🟡 继续等待。
     每条输出：具体条件 + 动作 + 止损/止盈 + 理论依据。
+    应用 learned_rules.json 中的活跃规则修正。
     """
+    # 应用学习规则
+    if learned:
+        sectors = apply_learned_rules_to_sectors(sectors, learned)
+
     lines = []
     buy_candidates = []
     sell_candidates = []
@@ -795,6 +866,8 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             action += " 止损：近期低点下方3%。"
             lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
             lines.append(f"  {s.get('tags','指标正常')}")
+            if s.get("_learned_note"):
+                lines.append(f"  {s['_learned_note']}")
             lines.append(f"  {action}")
             lines.append(f"  📖 依据：《趋势交易论》第128-129节（520战法入场条件）")
         lines.append("")
@@ -1045,8 +1118,12 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # ── 🔍 板块操作信号 ──
-    sector_ops = generate_sector_ops(sectors)
+    learned = load_learned_rules()
+    sector_ops = generate_sector_ops(sectors, learned)
     lines.extend(sector_ops)
+    if learned:
+        lines.append("> 🧠 以上信号已根据历史复盘结果自动修正（`learned_rules.json`）")
+        lines.append("")
 
     lines.append("---")
     lines.append("")

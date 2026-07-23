@@ -326,6 +326,27 @@ def run_backtest(days: int = 30) -> str:
         suggestions.append("- 信号分布正常，暂无调整建议。继续积累数据。")
 
     lines.extend(suggestions)
+
+    # ── 自动生成学习规则 ──
+    learned = generate_learned_rules(false_buys, false_sells, idx_rate, sec_rate, signal_statuses)
+    if learned:
+        rules_path = os.path.join(DATA_DIR, "learned_rules.json")
+        with open(rules_path, 'w', encoding='utf-8') as f:
+            json.dump(learned, f, ensure_ascii=False, indent=2)
+        lines.extend([
+            f"",
+            f"---",
+            f"",
+            f"## 🧠 自动学习",
+            f"",
+            f"已生成 **{len(learned['rules'])} 条**规则修正，写入 `learned_rules.json`：",
+        ])
+        for r in learned["rules"]:
+            lines.append(f"- **{r['id']}**: {r['description']} → {r['change']}")
+            lines.append(f"  依据: {r['evidence']}")
+        lines.append(f"")
+        lines.append(f"下次仪表盘运行时自动应用以上规则。")
+
     lines.extend([
         f"",
         f"---",
@@ -334,6 +355,104 @@ def run_backtest(days: int = 30) -> str:
     ])
 
     return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════
+# 自动学习 — 从错误中发现可编程的规则修正
+# ═══════════════════════════════════════════════════════════
+
+def generate_learned_rules(false_buys: List[Dict], false_sells: List[Dict],
+                          idx_rate: float, sec_rate: float,
+                          signal_statuses: Dict[str, List[str]]) -> Dict:
+    """从回测错误中自动生成规则修正。返回 learned_rules.json 的内容。"""
+    rules = []
+
+    # 规则1: 底分型假阳性过多 → 加严入场条件
+    if len(false_buys) >= 2:
+        # 分析假买入信号的共同特征
+        buy_dates = [r["date"] for r in false_buys]
+        rules.append({
+            "id": "entry-require-multi-confirm",
+            "description": "入场需多重确认",
+            "trigger": "sector_buy_signal",
+            "condition": "底分型 或 金叉出现",
+            "additional_checks": ["站上5日均线", "成交量>1.2倍20日均量"],
+            "action": "require_all",
+            "change": "入场条件加严：底分型/金叉 + 站上5日线 + 放量(>1.2倍均量)，三条件缺一不可",
+            "active": True,
+            "from_review": datetime.now().strftime("%Y-%m-%d"),
+            "evidence": f"{len(false_buys)}次假买入信号({', '.join(buy_dates)})，入场即跌",
+        })
+
+    # 规则2: 卖出假信号 → 卖出前确认是否正常回踩
+    if len(false_sells) >= 2:
+        sell_dates = [r["date"] for r in false_sells]
+        rules.append({
+            "id": "exit-check-pullback",
+            "description": "卖出前排除正常回踩",
+            "trigger": "sector_sell_signal",
+            "condition": "减仓 或 清仓建议",
+            "additional_checks": ["缩量(量<0.7倍均量)", "未破关键均线(20日线)"],
+            "action": "block_if_all",
+            "change": "卖出前检查：若缩量+未破20日线→可能为正常回踩，暂缓卖出，设20日线止损",
+            "active": True,
+            "from_review": datetime.now().strftime("%Y-%m-%d"),
+            "evidence": f"{len(false_sells)}次假卖出信号({', '.join(sell_dates)})，卖出即涨",
+        })
+
+    # 规则3: 大盘仓位建议偏低 → 三周期共振阈值调整
+    if idx_rate < 60:
+        rules.append({
+            "id": "cycle-signal-lag",
+            "description": "三周期趋势信号滞后",
+            "trigger": "index_position",
+            "condition": "三周期共振信号",
+            "change": "三周期判断中月线/周线权重从等权调整为：月线40%+周线30%+日线30%（日线领先，减少滞后）",
+            "active": True,
+            "from_review": datetime.now().strftime("%Y-%m-%d"),
+            "evidence": f"大盘仓位建议正确率仅{idx_rate:.0f}%，低于60%阈值",
+        })
+
+    # 规则4: caution 信号过多 → 收紧阈值
+    stale_signals = []
+    for name, statuses in signal_statuses.items():
+        caution_pct = sum(1 for s in statuses if s == "caution") / len(statuses) * 100 if statuses else 0
+        if caution_pct > 60:
+            stale_signals.append(f"{name}(caution占比{caution_pct:.0f}%)")
+    if stale_signals:
+        rules.append({
+            "id": "tighten-caution-thresholds",
+            "description": "收紧模糊信号阈值",
+            "trigger": "signal_computation",
+            "change": f"以下指标caution信号过多，建议收紧阈值区间：{'; '.join(stale_signals)}。将caution区间收窄10%，让信号更倾向healthy/danger二分类。",
+            "active": False,  # 需人工确认后再启用
+            "from_review": datetime.now().strftime("%Y-%m-%d"),
+            "evidence": f"多个指标caution占比>60%，模糊信号过多=没给信号",
+        })
+
+    if not rules:
+        return {}
+
+    # 加载已有规则，合并（保留人工手动添加的规则，更新自动生成的规则）
+    existing_rules = {}
+    rules_path = os.path.join(DATA_DIR, "learned_rules.json")
+    if os.path.exists(rules_path):
+        try:
+            with open(rules_path, encoding='utf-8') as f:
+                existing = json.load(f)
+            for r in existing.get("rules", []):
+                existing_rules[r["id"]] = r
+        except Exception:
+            pass
+
+    # 合并：新规则覆盖旧同ID规则
+    for r in rules:
+        existing_rules[r["id"]] = r
+
+    return {
+        "updated": datetime.now().strftime("%Y-%m-%d"),
+        "rules": list(existing_rules.values()),
+    }
 
 
 # ═══════════════════════════════════════════════════════════
