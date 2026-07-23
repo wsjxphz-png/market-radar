@@ -1,13 +1,13 @@
-name: A股市场全景仪表盘
+name: 月度回测复盘
 
 on:
   schedule:
-    # 北京时间 16:00 (UTC 08:00), 周一至周五
-    - cron: '0 8 * * 1-5'
+    # 每月1号 北京时间 09:00 (UTC 01:00)
+    - cron: '0 1 1 * *'
   workflow_dispatch:
 
 jobs:
-  monitor:
+  monthly-review:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -23,10 +23,9 @@ jobs:
       - name: 安装依赖
         run: pip install -r requirements.txt
 
-      - name: 运行全景仪表盘
+      - name: 运行月度回测
         env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-        run: python market_dashboard.py
+        run: python backtest_review.py

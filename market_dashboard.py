@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-A股市场全景仪表盘 — 基于《趋势交易论》(710页) + 2198条最新推文
+A股市场全景仪表盘 — 基于《趋势交易论》(710页)
 ================================================================
-数据源: 《趋势交易论》(710页) + 2198条推文
+数据源: 《趋势交易论》(710页)
 
 核心框架:
   三周期共振 — 大盘定仓位 + 板块定方向 + 个股定买点
@@ -26,6 +26,8 @@ import os, sys, json, argparse
 from datetime import datetime, timedelta
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass
+
+from portfolio import Portfolio
 
 import requests
 import pandas as pd
@@ -320,11 +322,11 @@ def compute_signals(df: pd.DataFrame, m1_df: Optional[pd.DataFrame]) -> List[Sig
     elif monthly == "bear" and weekly in ("bear","neut") and daily == "↓":
         s = Signal("三周期趋势", f"{mtf_val} — 共振向下 ⚠", "danger",
             "上证指数当前出现了《趋势交易论》认为最危险的信号：月线向下、周线向下、日线向下——三周期共振向下。这意味着：长期趋势在走弱（月线）、中期结构在恶化（周线）、短期也在继续跌（日线）。三个时间维度的力量都在把你往下拉——这不是「回调」，这是「趋势反转」。书里的原话是「果断放弃，空仓看戏」。为什么不能抄底？因为当三个级别都向下时，你以为的「底」很可能只是下跌中继——底下还有底。要等至少日线先走平不再创新低、月线的下跌速度开始放缓（斜率变小），才能开始考虑重新入场。",
-            "「大级别下跌趋势里不要抄底博弈反弹——一套一个不吱声」—推文")
+            "「大级别下跌趋势里不要抄底博弈反弹——一套一个不吱声」—《趋势交易论》")
     elif monthly == "bull" and daily == "↓":
         s = Signal("三周期趋势", f"{mtf_val} — 大级别向上，小级别调整", "caution",
             "当前月线和周线向上（大方向没变），但日线在下跌——这是「牛市中的正常回踩」。就像一辆上坡的车偶尔松一下油门，不是要掉头。如何确认是回踩而不是反转？看两点：①日线回踩是否在20日均线或60日均线获得支撑；②回调时成交量是否缩小（说明卖的人越来越少，不是恐慌出逃）。如果这两个条件都满足，那就是加仓的好时机——「回踩不破是机会不是风险」。",
-            "「回踩不破是机会不是风险。好股票每次回踩关键均线都是加仓点」—推文")
+            "「回踩不破是机会不是风险。好股票每次回踩关键均线都是加仓点」—《趋势交易论》")
     elif monthly == "bear" and daily == "↑":
         s = Signal("三周期趋势", f"{mtf_val} — 大级别向下，小级别反弹", "caution",
             "月线向下意味着大趋势还是空头——就像河流的方向是往下游走的。日线的上涨只是河面上的一个小浪花，改变不了河水的流向。《趋势交易论》的多空循环理论明确指出：空头市场中的反弹是卖出机会。如果你手里还有持仓，趁反弹减仓；如果你空仓，不要被几天的上涨诱惑进去——熊市中最大的亏损往往来自「抢反弹」。",
@@ -362,7 +364,7 @@ def compute_signals(df: pd.DataFrame, m1_df: Optional[pd.DataFrame]) -> List[Sig
         s = Signal("量价结构", f"缩量上涨 (vol={vr:.1f}x){qual}", "caution",
             "缩量上涨=买盘不够强。偶尔一两天没问题，但如果连续3天以上=量价背离，警惕见顶信号。" +
             (" 当前已持续背离≥3天！" if persistent_div else ""),
-            "「缩量上涨+高乖离，量价背离风险」—推文")
+            "「缩量上涨+高乖离，量价背离风险」—《趋势交易论》")
     elif vr < VOL_SHRINK and chg < -0.005:
         s = Signal("量价结构", f"缩量下跌 (vol={vr:.1f}x)", "caution",
             "上证指数在下跌，但成交量在缩小——这就是「缩量下跌」。它说明市场上主动卖出的人不多，不是恐慌性出逃，更像是买家暂时休假了。这是止跌的必要条件，但不是反弹的充分条件。要确认反弹开始，需要等两个信号：①成交量从萎缩转为放大（有资金开始主动买入）；②价格企稳不再创新低（买方开始占优）。两个信号同时出现，才是安全入场点。在此之前继续观望。",
@@ -401,7 +403,7 @@ def compute_signals(df: pd.DataFrame, m1_df: Optional[pd.DataFrame]) -> List[Sig
     elif at_res:
         s = Signal("支撑压力", f"近20日压力 {resist:.0f} (距{last/resist-1:+.1%})", "caution",
             "价格接近20日压力位——突破需要放量配合。如果没有放量突破，可能回踩。",
-            "「打到压力位但量能不足，可能回踩，等突破确认」—推文")
+            "「打到压力位但量能不足，可能回踩，等突破确认」—《趋势交易论》")
     else:
         s = Signal("支撑压力", f"支撑{support:.0f} / 压力{resist:.0f}", "healthy",
             "价格在支撑和压力之间运行，有操作空间。",
@@ -527,122 +529,8 @@ def assess_sentiment(signals: List[Signal]) -> Dict:
 # 板块诊断增强 (利用 sector_monitor)
 # ═══════════════════════════════════════════════════════════
 
-# ═══════════════════════════════════════════════════════════
-# 推文权威信号 — 每次运行实时加载，作为最高优先级覆盖一切静态规则
-# ═══════════════════════════════════════════════════════════
-
-# 板块关键词映射（覆盖全部23个板块）
-SECTOR_KEYWORDS = {
-    "半导体": ["半导体", "芯片", "硬科技", "高位科技", "科技抱团"],
-    "互联网服务": ["互联网", "软件", "算力"],
-    "电气设备": ["电气", "新能源", "光伏", "锂电", "储能"],
-    "新能源": ["新能源"],
-    "证券": ["证券", "券商", "大金融"],
-    "保险": ["保险"],
-    "仪器仪表": ["仪器仪表", "机器人", "自动化"],
-    "通用机械": ["通用机械", "机器人", "机械"],
-    "工业机械": ["工业机械", "机器人", "机械"],
-    "农林牧渔": ["农林牧渔", "农业", "种业", "猪肉", "粮食"],
-    "家电行业": ["家电", "格力", "美的", "白电"],
-    "煤炭行业": ["煤炭", "煤", "焦煤"],
-    "船舶制造": ["船舶", "造船", "船"],
-    "食品饮料": ["食品饮料", "白酒", "食品", "消费.*底"],
-    "日用化工": ["日化", "化工"],
-    "医疗保健": ["医疗保健", "医疗", "器械"],
-    "医药": ["医药", "创新药", "中药", "CRO", "药"],
-    "酿酒行业": ["酿酒", "白酒", "茅台", "酒"],
-    "有色金属": ["有色", "铜", "铝", "稀土", "黄金"],
-    "文教休闲": ["文教", "教育", "传媒"],
-    "旅游酒店": ["旅游", "酒店", "出行"],
-    "电力行业": ["电力", "发电", "电网", "绿电"],
-    "仓储物流": ["物流", "仓储", "快递"],
-}
-
-# 信号规则 — 有序匹配，先匹配到的生效
-TWEET_SIGNAL_RULES = [
-    # 最强烈的看空
-    ("🔴 明确回避", [
-        "破势", "放弃幻想", "不要抱有任何幻想", "果断放弃",
-        "不要再碰", "坚决不碰", "清仓", "全部出掉"
-    ]),
-    # 反弹即走
-    ("🔴 反弹就撤", [
-        "反弹就先出来", "有反弹就出来", "反弹出", "逢反弹",
-        "减仓.*反弹", "反弹.*减仓"
-    ]),
-    # 高位风险/不追
-    ("🔴 高位风险不追", [
-        "不要追", "不追涨", "高位.*风险", "泡沫",
-        "抱团.*结束", "踩踏", "出货.*阶段", "主力.*出货"
-    ]),
-    # 等待反弹减仓
-    ("🟡 等反弹减仓", [
-        "等反弹", "回本", "减少亏损", "反弹.*机会",
-        "不要恐慌割肉", "被套.*不必.*悲观"
-    ]),
-    # 等调整/等回踩
-    ("🟡 等调整到位", [
-        "等回踩", "等调整", "等右侧", "不急于",
-        "横盘.*等", "耐心.*等"
-    ]),
-    # 积极信号
-    ("🟢 可以关注", [
-        "可以.*低吸", "可以.*布局", "逢低.*买", "可以.*关注",
-        "机会.*来了", "底部.*确认", "见底"
-    ]),
-]
-
-
-def load_tweet_alerts(json_path: str) -> dict:
-    """
-    每次运行仪表盘时实时调用。
-    从最新推文提取每个板块的权威判断。
-    返回 {板块名: {"rating": str, "quote": str, "date": str, "bookmarks": int}}
-    """
-    alerts = {}
-    try:
-        import json
-        data = json.load(open(json_path, encoding='utf-8'))
-    except Exception:
-        return alerts
-
-    from datetime import datetime, timedelta
-    # 最近4天（覆盖周末空窗期）
-    cutoff = (datetime.now() - timedelta(days=4)).strftime("%Y-%m-%d")
-    recent = [t for t in data if t.get('created_at_iso', '')[:10] >= cutoff]
-    if not recent:
-        cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-        recent = [t for t in data if t.get('created_at_iso', '')[:10] >= cutoff]
-
-    for board_name, keywords in SECTOR_KEYWORDS.items():
-        best = None  # 找最强烈的信号（bookmarks最高的那条）
-        for t in recent:
-            text = t['text']
-            if not any(kw in text for kw in keywords):
-                continue
-            import re
-            for rating, signals in TWEET_SIGNAL_RULES:
-                for sig in signals:
-                    if re.search(sig, text):
-                        bk = t.get('bookmarks', 0)
-                        if best is None or bk > best['bookmarks']:
-                            best = {
-                                "rating": rating,
-                                "quote": text[:150].replace('\n', ' '),
-                                "date": t.get('created_at_iso', '')[:10],
-                                "bookmarks": bk,
-                            }
-                        break
-                if best: break
-            if best: break
-        if best:
-            alerts[board_name] = best
-
-    return alerts
-
-
-def diagnose_sector_mi(s: Dict, tweet_alerts: dict) -> Dict:
-    """用《趋势交易论》框架诊断单个板块。tweet_alerts 为最高优先级权威信号。"""
+def diagnose_sector_mi(s: Dict) -> Dict:
+    """用《趋势交易论》框架诊断单个板块。"""
     tech = s.get("technical", {})
     sig = s.get("signal", {})
     fund = s.get("fund_flow", {})
@@ -674,13 +562,8 @@ def diagnose_sector_mi(s: Dict, tweet_alerts: dict) -> Dict:
     if abs(bias) > 8: tags.append(f"乖离{bias:+.0f}%")
 
     status = s.get("meeting_status", "watch")
-    # ── 权威信号：推文最新表态覆盖一切 ──
-    tweet_alert = tweet_alerts.get(s["name"])
-    if tweet_alert:
-        rating = tweet_alert["rating"]
-        tags.insert(0, f"📡 {tweet_alert['date']}: {tweet_alert['quote'][:60]}...")
-    # ── 静态规则作为兜底 ──
-    elif status == "entry" and any(t.startswith("✅") or t in ("金叉","底分型","周线↑") for t in tags):
+    # ── 纯理论规则判定 ──
+    if status == "entry" and any(t.startswith("✅") or t in ("金叉","底分型","周线↑") for t in tags):
         rating = "🟢 可入场"
     elif status == "entry" and any(t.startswith("⚠") for t in tags):
         rating = "🟡 等回踩再入"
@@ -720,7 +603,7 @@ def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         )
         recent = idx_tail.tail(5)[["date","close","volume"]].to_string()
 
-        prompt = f"""你是A股市场监测系统的AI分析师。你的分析框架来自《趋势交易论》（Mimiwftt著）和2198条推文数据。
+        prompt = f"""你是A股市场监测系统的AI分析师。你的分析框架来自《趋势交易论》（Mimiwftt著）。
 
 当前情绪周期: {cycle['emoji']} {cycle['name']}
 仓位建议: {cycle['position']}
@@ -760,12 +643,209 @@ def ai_interpret(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
 
 # ═══════════════════════════════════════════════════════════
+# 信号冲突裁决
+# ═══════════════════════════════════════════════════════════
+
+# 优先级：三周期趋势 > 量价结构 > 520战法 > MACD > RSI > 其他
+CONFLICT_PRIORITY = {
+    "三周期趋势": 1, "量价结构": 2, "520战法": 3,
+    "MACD动能": 4, "RSI": 5, "年线位置": 6,
+    "乖离率": 7, "支撑压力": 7, "波动率": 7, "M1宏观锚": 7,
+}
+
+CONFLICT_EXPLANATIONS = {
+    ("三周期趋势", "danger", "520战法", "healthy"):
+        "三周期共振向下时，日线520金叉只是反弹而非反转。**月线/周线向下压倒日线信号**——520多头让位于三周期。只能轻仓快进快出（不超过2成），不可重仓持有。",
+    ("三周期趋势", "danger", "量价结构", "healthy"):
+        "三周期向下时，即使量价正常也不能做多。**趋势是主、量价是辅**——量价正常只说明抛压不大，不代表要涨。",
+    ("量价结构", "danger", "520战法", "healthy"):
+        "放量滞涨/放量下跌 > 520多头信号。**量在价先**——主力出货时即使520还没死叉，也应立即减仓。等520死叉才走就晚了。",
+    ("量价结构", "danger", "RSI", "healthy"):
+        "放量滞涨时RSI正常只是暂时的。量价结构是领先指标，RSI是滞后指标——**量价信号优先**。",
+    ("520战法", "danger", "RSI", "healthy"):
+        "520死叉是明确的离场信号。RSI正常不能对抗死叉——死叉后即使RSI没超买也应按纪律离场。",
+    ("520战法", "danger", "MACD动能", "healthy"):
+        "520死叉 > MACD金叉。520战法纪律：死叉即离场，不等MACD确认。",
+}
+
+STATUS_LABELS = {"healthy": "🟢", "caution": "🟡", "danger": "🔴"}
+
+
+def detect_conflicts(signals: List[Signal]) -> List[str]:
+    """检测指标间的冲突，返回裁决说明列表。按优先级从高到低排列。"""
+    conflicts = []
+    sig_map = {s.name: s for s in signals}
+    names = list(sig_map.keys())
+
+    # 两两检查
+    for i in range(len(names)):
+        for j in range(i+1, len(names)):
+            a, b = names[i], names[j]
+            sa, sb = sig_map[a], sig_map[b]
+            # 只检查状态不同的指标对
+            if sa.status == sb.status:
+                continue
+
+            # 确定谁压倒谁
+            pa = CONFLICT_PRIORITY.get(a, 10)
+            pb = CONFLICT_PRIORITY.get(b, 10)
+            high_sig, low_sig = (sa, sb) if pa < pb else (sb, sa)
+            high_name, low_name = high_sig.name, low_sig.name
+
+            # 只报告高优 danger vs 低优 healthy 或相反的有意义冲突
+            if high_sig.status == "danger" and low_sig.status == "healthy":
+                pass  # 有意义的冲突：高优指标看空 vs 低优指标看多
+            elif high_sig.status == "healthy" and low_sig.status == "danger":
+                pass  # 同上但方向相反
+            else:
+                continue  # caution级的就不报告了
+
+            # 查找解释模板
+            key = (high_name, high_sig.status, low_name, low_sig.status)
+            explanation = CONFLICT_EXPLANATIONS.get(key)
+
+            if not explanation:
+                # 反向查找
+                rev_key = (low_name, low_sig.status, high_name, high_sig.status)
+                explanation = CONFLICT_EXPLANATIONS.get(rev_key)
+
+            if explanation:
+                conflicts.append(
+                    f"**{STATUS_LABELS.get(high_sig.status, '')} {high_name}** ({high_sig.value[:30]}) "
+                    f"vs **{STATUS_LABELS.get(low_sig.status, '')} {low_name}** ({low_sig.value[:30]})\n"
+                    f"> {explanation}"
+                )
+
+    if not conflicts:
+        # 检查一致性方向
+        danger_count = sum(1 for s in signals if s.status == "danger")
+        healthy_count = sum(1 for s in signals if s.status == "healthy")
+        if danger_count > healthy_count:
+            direction = "偏空——多数指标指向风险"
+        elif healthy_count > danger_count:
+            direction = "偏多——多数指标指向机会"
+        else:
+            direction = "中性——信号均衡，方向不明"
+        conflicts.append(f"**今日指标一致，无冲突**。整体方向：{direction}。")
+
+    return conflicts
+
+
+# ═══════════════════════════════════════════════════════════
+# 板块操作信号
+# ═══════════════════════════════════════════════════════════
+
+def generate_sector_ops(sectors: List[Dict]) -> List[str]:
+    """
+    将模糊的板块评级转换为具体的交易操作信号。
+    三类：🟢 可考虑买入、🔴 应考虑减仓、🟡 继续等待。
+    每条输出：具体条件 + 动作 + 止损/止盈 + 理论依据。
+    """
+    lines = []
+    buy_candidates = []
+    sell_candidates = []
+    wait_candidates = []
+
+    for s in sectors:
+        rating = s.get("rating", "")
+        tags = s.get("tags", "")
+
+        if "可入场" in rating and not any(x in tags for x in ("死叉", "持续背离", "顶分")):
+            buy_candidates.append(s)
+        elif any(x in rating for x in ("持有不动",)):
+            buy_candidates.append(s)
+        elif any(x in rating for x in ("明确回避", "反弹就撤", "高位风险", "继续回避")):
+            sell_candidates.append(s)
+        elif any(x in tags for x in ("已翻倍", "顶分+放量跌", "持续背离")):
+            if "持有" in rating:
+                sell_candidates.append(s)
+            else:
+                wait_candidates.append(s)
+        else:
+            wait_candidates.append(s)
+
+    lines.append("## 🔍 板块操作信号")
+    lines.append("")
+
+    if buy_candidates:
+        lines.append("**🟢 可考虑买入的板块**:")
+        lines.append("")
+        for s in buy_candidates[:5]:
+            tags = s.get("tags", "")
+            cond = []
+            if "金叉" in tags:
+                cond.append("520金叉已出现")
+            if "底分型" in tags:
+                cond.append("底分型形成")
+            if "站月线+季线" in tags:
+                cond.append("站上月线+季线")
+            if "周线↑" in tags:
+                cond.append("周线走好")
+            # 未满足的条件
+            missing = []
+            if "金叉" not in tags:
+                missing.append("等520金叉确认")
+            if "底分型" not in tags and "金叉" not in tags:
+                missing.append("等底部结构出现（底分型或双底）")
+            entry_cond = "、".join(cond) if cond else "等信号确认"
+            wait_cond = "、".join(missing) if missing else ""
+            action = f"👉 条件满足（{entry_cond}）→ 建1/3仓位入场。"
+            if wait_cond:
+                action += f" 还需满足：{wait_cond}。"
+            action += " 止损：近期低点下方3%。"
+            lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
+            lines.append(f"  {s.get('tags','指标正常')}")
+            lines.append(f"  {action}")
+            lines.append(f"  📖 依据：《趋势交易论》第128-129节（520战法入场条件）")
+        lines.append("")
+
+    if sell_candidates:
+        lines.append("**🔴 应考虑减仓/清仓的板块**:")
+        lines.append("")
+        for s in sell_candidates[:5]:
+            tags = s.get("tags", "")
+            if "已翻倍" in tags and ("死叉" in tags or "顶分" in tags):
+                action = "👉 **清仓。**涨幅已透支+顶部信号出现。全部卖出，锁定利润。"
+            elif "死叉" in tags:
+                action = "👉 **减仓至少一半。**死叉=按520战法纪律离场。破5日线清掉剩下的。"
+            elif "顶分+放量跌" in tags:
+                action = "👉 **减仓一半。**顶分型+放量跌=主力在出货。不等死叉，先走一半。"
+            elif "持续背离" in tags:
+                action = "👉 **逐步减仓。**量价持续背离=上涨动力衰竭。每次反弹减1/3。"
+            else:
+                action = "👉 **不要加仓，设好止损。**若破5日线→减半仓；破20日线→全清。"
+            lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')}")
+            lines.append(f"  {s.get('tags','')}")
+            lines.append(f"  {action}")
+            lines.append(f"  📖 依据：《趋势交易论》量价八诀 + 筑顶特征（第127-139节）")
+        lines.append("")
+
+    if wait_candidates:
+        lines.append("**🟡 继续等待的板块**:")
+        lines.append("")
+        for s in wait_candidates[:5]:
+            tags = s.get("tags", "")
+            if "均线压制" in tags:
+                cond = "等价格站上20日均线+放量确认"
+            elif "周线↓" in tags:
+                cond = "等周线走平不再创新低，再考虑入场"
+            elif "死叉" in tags:
+                cond = "等死叉修复+重新金叉+放量，三条件缺一不可"
+            else:
+                cond = "等520金叉或底分型出现"
+            lines.append(f"- **{s['name']}** ({s.get('category','')}) | {s.get('phase','')} → {cond}")
+        lines.append("")
+
+    return lines
+
+
+# ═══════════════════════════════════════════════════════════
 # 格式化输出
 # ═══════════════════════════════════════════════════════════
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
-                     tweet_alerts: dict = None, indices: dict = None) -> str:
+                     indices: dict = None, portfolio: Portfolio = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -900,16 +980,6 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
             idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
 
-    # 她最近的板块级表态
-    tweet_entry = []
-    tweet_exit = []
-    if tweet_alerts:
-        for name, alert in tweet_alerts.items():
-            if "可以关注" in alert["rating"] or "可以入场" in alert["rating"]:
-                tweet_entry.append(name)
-            elif "回避" in alert["rating"] or "反弹就撤" in alert["rating"] or "高位风险" in alert["rating"]:
-                tweet_exit.append(name)
-
     lines.append(f"**以上信号基于**: 上证指数（{' | '.join(idx_lines)}）")
     lines.append(f"**理论仓位**（上证）: {theory_pos}")
     lines.append("")
@@ -921,13 +991,6 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if signals_bear:
         lines.append("**🔴 出场/谨慎信号**:")
         for s in signals_bear: lines.append(f"- {s}")
-        lines.append("")
-
-    if tweet_entry:
-        lines.append(f"**📡 她看好的板块**: {', '.join(tweet_entry)}——这些板块可以重点研究，等个股出现520金叉或底分型后入场。")
-    if tweet_exit:
-        lines.append(f"**📡 她回避的板块**: {', '.join(tweet_exit)}——这些板块不要碰，即使短期反弹也不要追。")
-    if tweet_entry or tweet_exit:
         lines.append("")
 
     # 综合操作总结 — 三周期趋势权重最高，压倒一切
@@ -955,9 +1018,6 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         else:
             summary = "🟡 信号均衡。**理论建议：轻仓观望，等方向明确后再行动。**"
 
-    # 如果有推文表态与理论冲突，标注
-    if mtf_danger and tweet_entry:
-        summary += f"\n\n📡 **注意**：理论框架判定为三周期共振向下（应空仓），但她最近的推文看好 {', '.join(tweet_entry)}。两者的逻辑是——理论说的是大盘整体方向，她看好的是局部板块机会。操作上：整体仓位仍按理论控制，但可以在她看好的板块中轻仓试探（不超过总仓位2成）。"
     lines.append(f"**综合判断**: {summary}")
     lines.append("")
 
@@ -969,26 +1029,24 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append(f"- 离场：5日均线下穿20日均线（死叉） → 全部清仓")
     lines.append("")
 
+    # ── ⚔️ 信号冲突裁决 ──
+    lines.append("---")
+    lines.append("")
+    lines.append("## ⚔️ 信号冲突裁决")
+    lines.append("")
+    conflict_lines = detect_conflicts(signals)
+    for cl in conflict_lines:
+        lines.append(cl)
+        lines.append("")
+    lines.append(f"**裁决优先级**: 三周期趋势 > 量价结构 > 520战法 > MACD > RSI > 其他指标")
+    lines.append("")
+
     lines.append("---")
     lines.append("")
 
-    # ── 她最近的明确表态（板块级别） ──
-    tweet_sectors = [s for s in sectors if "📡" in s.get("tags", "")]
-    other_sectors = [s for s in sectors if "📡" not in s.get("tags", "")]
-
-    lines.append("## 📡 她最近的明确表态")
-    lines.append("")
-
-    if tweet_alerts:
-        lines.append(f"*最近4天推文中对 {len(tweet_alerts)} 个板块有明确判断：*")
-        lines.append("")
-        for board_name, alert in tweet_alerts.items():
-            lines.append(f"**{alert['rating']} — {board_name}**")
-            lines.append(f"> {alert['date']}: *{alert['quote'][:150]}*")
-            lines.append("")
-    else:
-        lines.append("*最近4天推文中未发现对具体板块的明确判断。以下为基于理论框架的板块诊断。*")
-        lines.append("")
+    # ── 🔍 板块操作信号 ──
+    sector_ops = generate_sector_ops(sectors)
+    lines.extend(sector_ops)
 
     lines.append("---")
     lines.append("")
@@ -1034,18 +1092,14 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         lines.append(f"> {ai_text}")
         lines.append("")
 
-    if sector_text:
-        lines.append("---")
-        lines.append("")
-        lines.append("<details><summary>📋 原始板块数据（6/29会议规则，仅供参考）</summary>")
-        lines.append("")
-        lines.append(sector_text)
-        lines.append("")
-        lines.append("</details>")
+    # ── 💰 模拟账户 ──
+    if portfolio:
+        pf_lines = portfolio.format_for_dashboard()
+        lines.extend(pf_lines)
         lines.append("")
 
     lines.append("---")
-    lines.append("*《趋势交易论》(710页) + 实时推文 | 每日自动*")
+    lines.append("*《趋势交易论》(710页) | 每日自动*")
 
     return "\n".join(lines)
 
@@ -1114,19 +1168,13 @@ def main():
     signals = compute_signals(idx, m1)
     for s in signals: print(f"  {s.name}: {s.value} [{s.status}]")
 
-    # 加载推文权威信号（每次运行实时读取，必须在诊断板块之前）
-    tweet_alerts = load_tweet_alerts(r"C:\Users\Administrator\Mimiwftt_clean.json")
-    print(f"  推文信号: {len(tweet_alerts)} 个板块有最新表态")
-    for k, v in tweet_alerts.items():
-        print(f"    {k}: {v['rating']} ({v['date']})")
-
     print("[3/4] 板块诊断...")
     sector_data = None; sector_text = ""; sectors_diag = []
     try:
         from sector_monitor import fetch_sector_monitor_data, format_sector_for_prompt
         sector_data = fetch_sector_monitor_data()
         sector_text = format_sector_for_prompt(sector_data)
-        sectors_diag = [diagnose_sector_mi(s, tweet_alerts) for s in sector_data.get("sectors", [])]
+        sectors_diag = [diagnose_sector_mi(s) for s in sector_data.get("sectors", [])]
         sm = sector_data.get("summary", {})
         print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
               f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
@@ -1134,14 +1182,72 @@ def main():
         print(f"  [!] 板块: {e}")
 
     cycle = assess_sentiment(signals)
-    print(f"\n[4/4] 情绪周期: {cycle['emoji']} {cycle['name']}")
+    print(f"\n[4/5] 情绪周期: {cycle['emoji']} {cycle['name']}")
     ai = ai_interpret(cycle, signals, sectors_diag, idx)
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, tweet_alerts, indices)
 
-    print("\n" + msg)
-    if args.dry_run: print("\n[i] Dry run"); return
-    ok = send_feishu(msg)
-    print(f"\n[>] 飞书: {'OK' if ok else 'FAIL'}")
+    # ── 模拟账户 ──
+    print("\n[5/5] 模拟账户...")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    pf = Portfolio(script_dir, initial_cash=1_000_000)
+
+    # 执行上次建议
+    price_map = {}
+    for tag, df in indices.items():
+        if df is not None and len(df) >= 1:
+            price_map[tag] = float(df["close"].iloc[-1])
+    # 板块价格从 sector_monitor 获取（用指数近似）
+    if sector_data:
+        for s in sector_data.get("sectors", []):
+            sname = s.get("name", "")
+            sp = s.get("technical", {}).get("last_price", 0)
+            if sp > 0:
+                price_map[sname] = sp
+    pf.update_prices(price_map)
+    pf.execute_prior_recommendations(price_map)
+
+    # 记录本次信号日志
+    pf.log_signal({
+        "type": "index", "target": "上证",
+        "cycle": cycle["name"], "position": cycle["position"],
+        "signals": {s.name: s.status for s in signals},
+    })
+
+    # 构建本次建议（供明天执行）
+    index_rec = f"{cycle['name']} → 仓位{cycle['position']} | {cycle['action']}"
+    sector_recs = {}
+    buy_ops = [s for s in sectors_diag if "可入场" in s.get("rating", "")]
+    sell_ops = [s for s in sectors_diag if any(x in s.get("rating", "") for x in ("回避", "反弹就撤"))]
+    for s in buy_ops:
+        sector_recs[s["name"]] = {"action": "考虑入场", "rating": s["rating"], "tags": s.get("tags", "")}
+    for s in sell_ops:
+        action = "清仓" if "明确回避" in s["rating"] else "减仓一半" if "反弹就撤" in s["rating"] else "减仓"
+        sector_recs[s["name"]] = {"action": action, "rating": s["rating"], "tags": s.get("tags", "")}
+    pf.save_position_state(index_rec, sector_recs)
+
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, pf)
+
+    # 飞书内容可能超长，分段发送
+    max_chars = 25000
+    if len(msg) > max_chars and not args.dry_run:
+        parts = []
+        remaining = msg
+        while len(remaining) > max_chars:
+            split_at = remaining.rfind("---", 0, max_chars)
+            if split_at < max_chars // 2:
+                split_at = remaining.rfind("\n\n", 0, max_chars)
+            if split_at < 1000:
+                split_at = max_chars
+            parts.append(remaining[:split_at])
+            remaining = remaining[split_at:]
+        parts.append(remaining)
+        for i, part in enumerate(parts):
+            ok = send_feishu(part)
+            print(f"[>] 飞书({i+1}/{len(parts)}): {'OK' if ok else 'FAIL'}")
+    else:
+        print("\n" + msg)
+        if args.dry_run: print("\n[i] Dry run"); return
+        ok = send_feishu(msg)
+        print(f"\n[>] 飞书: {'OK' if ok else 'FAIL'}")
 
 
 if __name__ == "__main__":
