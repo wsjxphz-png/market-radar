@@ -33,6 +33,7 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
