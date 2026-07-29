@@ -1379,7 +1379,7 @@ def main():
         weekday = now.weekday()
         if weekday >= 5:
             log("周末休市，不推送"); return
-        if 1 <= weekday <= 4 and now.hour < 16:
+        if 1 <= weekday <= 4 and now.hour < 15:
             log(f"交易日未收盘(当前{now.hour}:{now.minute:02d})，不推送"); return
         if weekday == 0 and now.hour < 10:
             log("周一早于10点数据可能未更新，不推送"); return
