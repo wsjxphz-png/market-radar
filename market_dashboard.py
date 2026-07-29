@@ -24,6 +24,7 @@ A股市场全景仪表盘 — 基于《趋势交易论》(710页)
 
 import os, sys, json, argparse
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass
 
@@ -1579,7 +1580,7 @@ def main():
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
-    today = datetime.now()
+    today = datetime.now(ZoneInfo("Asia/Shanghai"))
     weekday = today.weekday()
 
     # ── 开市检查 ──

@@ -15,6 +15,7 @@
 
 import os, sys, re, json, time, hashlib, argparse
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Optional, Tuple
 
 import requests
@@ -1374,7 +1375,7 @@ def main():
 
     # 开市检查
     if not args.force:
-        now = datetime.now()
+        now = datetime.now(ZoneInfo("Asia/Shanghai"))
         weekday = now.weekday()
         if weekday >= 5:
             log("周末休市，不推送"); return
