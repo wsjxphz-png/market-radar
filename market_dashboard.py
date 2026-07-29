@@ -1609,8 +1609,8 @@ def main():
     m1 = fetch_m1()
     if idx is None: print("[!!] 无数据"); return
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    if not args.force and idx["date"].iloc[-1].strftime("%Y-%m-%d") != today:
+    today_str = today.strftime("%Y-%m-%d")
+    if not args.force and idx["date"].iloc[-1].strftime("%Y-%m-%d") != today_str:
         print(f"[i] 非交易日 (最新: {idx['date'].iloc[-1].strftime('%Y-%m-%d')})"); return
 
     print("[2/4] 计算信号...")
