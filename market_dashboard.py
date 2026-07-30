@@ -663,6 +663,7 @@ def diagnose_sector_mi(s: Dict) -> Dict:
     tags = []
     if tech.get("any_golden_cross"): tags.append("金叉")
     if tech.get("dead_cross_5_20"): tags.append("⚠死叉")
+    if not tech.get("above_ma5", True): tags.append("⚠破5日线")
     if tech.get("persistent_divergence"): tags.append("⚠持续背离")
     if tech.get("long_upper_shadow"): tags.append("⚠长上影")
     if tech.get("bottom_fractal"): tags.append("底分型")
@@ -684,10 +685,11 @@ def diagnose_sector_mi(s: Dict) -> Dict:
 
     status = s.get("meeting_status", "watch")
     # ── 纯理论规则判定 ──
-    if status == "entry" and any(t.startswith("✅") or t in ("金叉","底分型","周线↑") for t in tags):
-        rating = "🟢 可入场"
-    elif status == "entry" and any(t.startswith("⚠") for t in tags):
+    # 注意：⚠ 警告信号优先检查，即使有金叉/底分型等正面信号也先降级
+    if status == "entry" and any(t.startswith("⚠") for t in tags):
         rating = "🟡 等回踩再入"
+    elif status == "entry" and any(t.startswith("✅") or t in ("金叉","底分型","周线↑") for t in tags):
+        rating = "🟢 可入场"
     elif status == "hold" and not any(t.startswith("⚠") for t in tags):
         rating = "🟢 持有不动"
     elif status == "hold":
