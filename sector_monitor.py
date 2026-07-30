@@ -4,6 +4,7 @@ A股板块异动监测模块
 """
 
 import json
+import os as _os
 import time
 import random
 import logging
@@ -11,6 +12,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
+
+# 禁用同花顺 API 的 tqdm 进度条，避免污染 CI 日志
+_os.environ.setdefault('TQDM_DISABLE', '1')
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +65,8 @@ def _install_ua_patch():
 
         _akreq.request_with_retry = patched_request
         logger.info("AKShare UA patch installed")
-    except Exception:
-        pass  # 静默失败，不影响主流程
+    except Exception as e:
+        logger.warning(f"AKShare UA patch install failed: {str(e)[:80]}")
 
 
 _install_ua_patch()
@@ -175,19 +179,86 @@ BATCH_PAUSE_SECS = 3.0       # 批次间暂停秒数
 LOOKBACK_DAYS = 120     # 历史K线回溯天数（需覆盖周线计算）
 FUND_FLOW_DAYS = 20     # 资金流向历史回溯天数
 
+# ── 东方财富 → 同花顺 板块名称映射 ──
+# 东方财富API已无法从GitHub Actions访问(2026-07-27起)，切换到同花顺数据源。
+# 两套分类体系不同，这里做近似映射。后续可手动调优。
+EM_TO_THS_SECTOR_MAP = {
+    "仪器仪表": "自动化设备",
+    "通用机械": "通用设备",
+    "工业机械": "专用设备",
+    "农林牧渔": "种植业与林业",
+    "家电行业": "白色家电",
+    "煤炭行业": "煤炭开采加工",
+    "船舶制造": "港口航运",
+    "半导体": "半导体",
+    "食品饮料": "食品加工制造",
+    "日用化工": "化学制品",
+    "医疗保健": "医疗服务",
+    "医药": "化学制药",
+    "证券": "证券",
+    "保险": "保险",
+    "文教休闲": "文化传媒",
+    "旅游酒店": "旅游及酒店",
+    "酿酒行业": "白酒",
+    "有色金属": "工业金属",
+    "电气设备": "电网设备",
+    "新能源": "光伏设备",
+    "互联网服务": "IT服务",
+    "电力行业": "电力",
+    "仓储物流": "物流",
+}
+
+
+def _lookup_ths_name(em_name: str) -> Optional[str]:
+    """将东方财富板块名映射到同花顺板块名，含模糊匹配回退"""
+    if em_name in EM_TO_THS_SECTOR_MAP:
+        return EM_TO_THS_SECTOR_MAP[em_name]
+
+    # 模糊匹配：用 difflib 找最接近的 THS 名称
+    try:
+        import akshare as ak
+        df = ak.stock_board_industry_name_ths()
+        ths_names = df["name"].tolist()
+    except Exception:
+        return None
+
+    from difflib import get_close_matches
+    matches = get_close_matches(em_name, ths_names, n=1, cutoff=0.5)
+    if matches:
+        logger.info(f"模糊匹配: '{em_name}' → '{matches[0]}'")
+        EM_TO_THS_SECTOR_MAP[em_name] = matches[0]  # 缓存
+        return matches[0]
+    return None
+
 
 def _safe_call(func, *args, **kwargs):
-    """安全调用 AKShare，失败返回 None"""
-    try:
-        return func(*args, **kwargs)
-    except Exception as e:
-        logger.warning(f"AKShare call failed: {func.__name__} | {str(e)[:80]}")
-        return None
+    """安全调用 AKShare，指数退避重试（3次），全部失败返回 None"""
+    max_retries = 3
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                delay = (2 ** attempt) + random.uniform(0.5, 1.5)
+                logger.warning(
+                    f"AKShare retry {attempt+1}/{max_retries}: {func.__name__} | "
+                    f"{str(e)[:60]} | 等待 {delay:.1f}s"
+                )
+                time.sleep(delay)
+            else:
+                logger.warning(
+                    f"AKShare call failed (exhausted): {func.__name__} | {str(e)[:80]}"
+                )
+    return None
 
 
 def fetch_industry_board_overview() -> Optional[pd.DataFrame]:
-    """获取所有行业板块当日涨跌排名（东方财富）"""
+    """获取所有行业板块当日涨跌排名 — 东方财富优先，失败回退同花顺"""
     import akshare as ak
+
+    # ── 主数据源: 东方财富 ──
     df = _safe_call(ak.stock_board_industry_name_em)
     if df is not None and len(df) > 0:
         cols_map = {
@@ -198,6 +269,32 @@ def fetch_industry_board_overview() -> Optional[pd.DataFrame]:
             "领涨股票": "lead_stock", "领涨股票-涨跌幅": "lead_change_pct",
         }
         df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
+        return df
+
+    # ── 回退: 同花顺 ──
+    logger.info("板块概览回退同花顺")
+    try:
+        import os as _os
+        _os.environ.setdefault('TQDM_DISABLE', '1')
+        df = _safe_call(ak.stock_board_industry_summary_ths)
+    except Exception:
+        return None
+
+    if df is not None and len(df) > 0:
+        # THS 列名: 序号, 板块, 涨跌幅, 总成交量, 总成交额, 净流入, 上涨家数, 下跌家数, 均价, 领涨股, 领涨股-最新价, 领涨股-涨跌幅
+        cols_map = {
+            "序号": "rank", "板块": "board_name", "名称": "board_name",
+            "涨跌幅": "change_pct",
+            "上涨家数": "up_count", "下跌家数": "down_count",
+            "领涨股": "lead_stock", "领涨股-涨跌幅": "lead_change_pct",
+        }
+        df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
+        # 补缺失列
+        for col in ["board_code", "price", "change_amount", "total_mv", "turnover"]:
+            if col not in df.columns:
+                df[col] = ""
+        if "rank" in df.columns:
+            df["rank"] = pd.to_numeric(df["rank"], errors="coerce")
     return df
 
 
@@ -240,10 +337,13 @@ def fetch_sector_fund_flow_10d() -> Optional[pd.DataFrame]:
 
 
 def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.DataFrame]:
-    """获取单个板块历史日K线"""
+    """获取单个板块历史日K线 — 东方财富优先，失败回退同花顺"""
     import akshare as ak
+
     end_date = datetime.now().strftime("%Y%m%d")
     start_date = (datetime.now() - timedelta(days=lookback + 10)).strftime("%Y%m%d")
+
+    # ── 主数据源: 东方财富 ──
     df = _safe_call(ak.stock_board_industry_hist_em, symbol=symbol, period="日k",
                     start_date=start_date, end_date=end_date)
     if df is not None and len(df) > 0:
@@ -256,14 +356,66 @@ def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd
         if "date" in df.columns:
             df["date"] = pd.to_datetime(df["date"])
             df = df.sort_values("date").tail(lookback)
+        return df
+
+    # ── 回退: 同花顺 ──
+    ths_name = _lookup_ths_name(symbol)
+    if ths_name is None:
+        logger.warning(f"板块 '{symbol}' 无同花顺映射，跳过")
+        return None
+
+    logger.info(f"板块 '{symbol}' 回退同花顺 ('{ths_name}')")
+    try:
+        import os as _os
+        _os.environ.setdefault('TQDM_DISABLE', '1')
+        df = _safe_call(ak.stock_board_industry_index_ths, symbol=ths_name,
+                        start_date=start_date, end_date=end_date)
+    except Exception:
+        return None
+
+    if df is not None and len(df) > 0:
+        # THS 列名: 日期, 开盘价, 最高价, 最低价, 收盘价, 成交量, 成交额
+        cols_map = {
+            "日期": "date", "开盘价": "open", "最高价": "high",
+            "最低价": "low", "收盘价": "close", "成交量": "volume", "成交额": "amount",
+        }
+        df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"])
+            df = df.sort_values("date").tail(lookback)
+        # THS 不提供 change_pct，从收盘价计算
+        if "close" in df.columns and "change_pct" not in df.columns:
+            df["change_pct"] = df["close"].pct_change() * 100
+        # 补缺失列
+        for col in ["change_amount", "amplitude", "turnover"]:
+            if col not in df.columns:
+                df[col] = 0.0
     return df
 
 
 def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.DataFrame]:
-    """获取指数历史日K线"""
+    """获取指数历史日K线 — stock_zh_index_daily 优先，index_zh_a_hist 回退，最后 yfinance"""
     import akshare as ak
+
     end_date = datetime.now().strftime("%Y%m%d")
     start_date = (datetime.now() - timedelta(days=lookback + 10)).strftime("%Y%m%d")
+
+    # ── 数据源 1: stock_zh_index_daily (EM 不同端点，未被封) ──
+    df = _safe_call(ak.stock_zh_index_daily, symbol=code)
+    if df is not None and len(df) >= 10:
+        # stock_zh_index_daily 已经返回英文列名
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"])
+            df = df.sort_values("date").tail(lookback).reset_index(drop=True)
+        # 补缺失列
+        for col in ["change_pct", "change_amount", "amplitude", "amount"]:
+            if col not in df.columns:
+                df[col] = 0.0
+        if "close" in df.columns and "change_pct" in df.columns:
+            pass  # change_pct may already be computed or set to 0
+        return df
+
+    # ── 数据源 2: index_zh_a_hist (EM 旧端点，可能被封) ──
     df = _safe_call(ak.index_zh_a_hist, symbol=code, period="daily",
                     start_date=start_date, end_date=end_date)
     if df is not None and len(df) > 0:
@@ -276,7 +428,42 @@ def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.D
         if "date" in df.columns:
             df["date"] = pd.to_datetime(df["date"])
             df = df.sort_values("date").tail(lookback)
-    return df
+        return df
+
+    # ── 数据源 3: yfinance ──
+    YF_MAP = {
+        "sh000001": "000001.SS", "sz399001": "399001.SZ",
+        "sz399006": "399006.SZ", "sh000688": "000688.SS",
+    }
+    yf_ticker = YF_MAP.get(code)
+    if yf_ticker:
+        try:
+            import yfinance as yf
+            yf_df = yf.download(yf_ticker, period=f"{lookback+30}d", progress=False, auto_adjust=True)
+            if yf_df is not None and len(yf_df) >= 10:
+                if isinstance(yf_df.columns, pd.MultiIndex):
+                    yf_df.columns = [c[0].lower() for c in yf_df.columns]
+                yf_df = yf_df.reset_index()
+                yf_df = yf_df.rename(columns={
+                    "Date": "date", "date": "date",
+                    "Open": "open", "open": "open",
+                    "High": "high", "high": "high",
+                    "Low": "low", "low": "low",
+                    "Close": "close", "close": "close",
+                    "Volume": "volume", "volume": "volume",
+                })
+                yf_df["date"] = pd.to_datetime(yf_df["date"])
+                yf_df = yf_df.sort_values("date").tail(lookback).reset_index(drop=True)
+                if "change_pct" not in yf_df.columns:
+                    yf_df["change_pct"] = yf_df["close"].pct_change() * 100
+                for col in ["amount", "change_amount", "amplitude"]:
+                    if col not in yf_df.columns:
+                        yf_df[col] = 0.0
+                logger.info(f"指数 {code} 回退 yfinance ({yf_ticker})")
+                return yf_df
+        except Exception:
+            pass
+    return None
 
 
 def fetch_sector_fund_flow_hist(symbol: str) -> Optional[pd.DataFrame]:
@@ -1034,17 +1221,30 @@ def fetch_sector_monitor_data() -> Dict:
             if name in real_names:
                 name_map[name] = name  # 精确匹配
             else:
-                # 模糊匹配：找包含关系
-                candidates = [n for n in real_names if name[:2] in n or n[:2] in name]
-                if len(candidates) == 1:
-                    name_map[name] = candidates[0]
-                    logger.warning(f"   ⚠️ 板块名修正: '{name}' → '{candidates[0]}'")
-                elif len(candidates) > 1:
-                    logger.warning(f"   ⚠️ '{name}' 模糊匹配多个: {candidates[:4]}，使用原名")
-                    name_map[name] = name
+                # 尝试同花顺映射
+                ths_name = _lookup_ths_name(name)
+                if ths_name and ths_name in real_names:
+                    name_map[name] = ths_name
+                    logger.info(f"   🔄 板块名映射: '{name}' → '{ths_name}' (同花顺)")
                 else:
-                    logger.warning(f"   ❌ '{name}' 在 {len(real_names)} 个板块中未找到！可能需要修正名称")
-                    name_map[name] = name
+                    # 模糊匹配：找包含关系
+                    candidates = [n for n in real_names if name[:2] in n or n[:2] in name]
+                    if len(candidates) == 1:
+                        name_map[name] = candidates[0]
+                        logger.warning(f"   ⚠️ 板块名修正: '{name}' → '{candidates[0]}'")
+                    elif len(candidates) > 1:
+                        logger.warning(f"   ⚠️ '{name}' 模糊匹配多个: {candidates[:4]}，使用原名")
+                        name_map[name] = name
+                    else:
+                        logger.warning(f"   ❌ '{name}' 在 {len(real_names)} 个板块中未找到！可能需要修正名称")
+                        name_map[name] = name
+    else:
+        # board_df 为 None：使用同花顺映射作为 name_map
+        logger.warning("   板块概况获取失败，用同花顺映射表作为后备")
+        for r in SECTOR_RULES:
+            name = r["name"]
+            ths_name = _lookup_ths_name(name)
+            name_map[name] = ths_name if ths_name else name
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 2. 获取资金流向

@@ -704,7 +704,7 @@ def diagnose_sector_mi(s: Dict) -> Dict:
     return {
         "name": s["name"], "category": s.get("category",""),
         "rating": rating, "phase": phase_cn,
-        "tags": ", ".join(tags) if tags else ("周末/节假日无实时数据" if not tech else "指标正常"),
+        "tags": ", ".join(tags) if tags else ("⚠数据获取失败" if not tech else "指标正常"),
         "note": s.get("meeting_note",""),
         # 携带原始技术数据，供 generate_sector_ops 做硬校验
         "_tech": tech,
