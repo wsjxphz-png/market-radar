@@ -956,6 +956,7 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
                     "放量滞涨（八诀#5: 主力高位出货）" if vol_stagnant else
                     "顶分型+放量跌（八诀#3: 资金出逃）"
                 )
+                s["rating"] = "🔴 建议减仓"  # 同步更新rating, 避免全貌段矛盾
                 sell_candidates.append(s)
             else:
                 wait_candidates.append(s)
@@ -963,6 +964,7 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             # 量价八诀 #4: 缩量上涨+高乖离 = 警惕见顶
             if "持有" in rating:
                 s["_sell_reason"] = "缩量上涨+乖离过高（八诀#4: 买盘不足，上涨不可持续）"
+                s["rating"] = "🔴 建议减仓"
                 sell_candidates.append(s)
             else:
                 s["_wait_reason"] = "缩量上涨（八诀#4: 等放量确认或回踩再入）"
@@ -973,6 +975,7 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
             wait_candidates.append(s)
         elif any(x in tags for x in ("已翻倍", "顶分+放量跌", "持续背离")):
             if "持有" in rating:
+                s["rating"] = "🔴 建议减仓"
                 sell_candidates.append(s)
             else:
                 wait_candidates.append(s)
