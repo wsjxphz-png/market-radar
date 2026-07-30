@@ -1183,11 +1183,12 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     # 四大指数概览
     idx_lines = []
-    for tag, df in indices.items():
-        if df is not None and len(df) >= 2:
-            c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
-            idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
-    idx_summary = "  |  ".join(idx_lines)
+    if indices:
+        for tag, df in indices.items():
+            if df is not None and len(df) >= 2:
+                c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
+                idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
+    idx_summary = "  |  ".join(idx_lines) if idx_lines else "指数数据暂不可用"
 
     icon = {"healthy":"🟢","caution":"🟡","danger":"🔴"}
     sig_map = {s.name: s for s in signals}
@@ -1408,12 +1409,13 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     # 各指数单独策略
     idx_lines = []
-    for tag, df in indices.items():
-        if df is not None and len(df) >= 2:
-            c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
-            idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
+    if indices:
+        for tag, df in indices.items():
+            if df is not None and len(df) >= 2:
+                c = df["close"].iloc[-1]; ch = (c/df["close"].iloc[-2]-1)
+                idx_lines.append(f"{tag} {c:.0f} ({ch:+.2%})")
 
-    lines.append(f"**以上信号基于**: 上证指数（{' | '.join(idx_lines)}）")
+    lines.append(f"**以上信号基于**: 上证指数{' | '.join(idx_lines) if idx_lines else ''}")
     lines.append(f"**理论仓位**（上证）: {theory_pos}")
     lines.append("")
 
