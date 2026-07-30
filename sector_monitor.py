@@ -76,82 +76,105 @@ _install_ua_patch()
 # ============================================================
 
 SECTOR_RULES = [
-    # ---- ENTRY: 可低吸入场 ----
-    {"name": "仪器仪表", "category": "机器人方向", "status": "entry",
-     "rule": "dip_buy_oscillation",
-     "note": "震荡中枢，未拉过主升，上涨趋势中可低吸"},
-    {"name": "通用机械", "category": "机器人方向", "status": "entry",
-     "rule": "dip_buy_oscillation",
-     "note": "同仪器仪表，机器人方向，震荡中枢可低吸"},
-    {"name": "工业机械", "category": "机器人方向", "status": "entry",
-     "rule": "dip_buy_oscillation",
-     "note": "同仪器仪表，机器人方向，震荡中枢可低吸"},
-    {"name": "农林牧渔", "category": "消费", "status": "entry",
-     "rule": "bottom_fishing_pullback",
-     "note": "底部资金抄底，连续3日阳线，等回踩买入，机构票当天涨超3%不追"},
-    {"name": "家电行业", "category": "消费", "status": "entry",
-     "rule": "bottom_fishing",
-     "note": "主力抄底格力，机构票只能买超跌不追涨"},
-    {"name": "煤炭行业", "category": "周期", "status": "entry",
-     "rule": "support_rebound",
-     "note": "跌到位到支撑，可加仓等反弹降成本"},
-    {"name": "船舶制造", "category": "制造", "status": "entry",
-     "rule": "double_bottom",
-     "note": "做双底，拉上去就好"},
-
-    # ---- HOLD: 趋势完好，持有不追 ----
+    # ═══ 科技 (6) — 按同花顺行业指数, 成交额排序 ═══
     {"name": "半导体", "category": "科技", "status": "hold",
      "rule": "uptrend_selective",
-     "note": "趋势完好但不可追，选底部未翻倍个股短线参与，下半年存储IPO有持续性"},
-
-    # ---- WATCH: 观察中，需要确认信号 ----
-    {"name": "食品饮料", "category": "消费", "status": "watch",
-     "rule": "bottom_confirmation",
-     "note": "见底标志，需明日继续给阳线确认底分"},
-    {"name": "日用化工", "category": "消费", "status": "watch",
+     "note": "最大科技板块(4190亿)，AI+存储双驱动"},
+    {"name": "通信设备", "category": "科技", "status": "watch",
+     "rule": "dip_buy_oscillation",
+     "note": "第二大科技板块(1894亿)，5G+光通信"},
+    {"name": "消费电子", "category": "科技", "status": "watch",
      "rule": "yang_confirmation",
-     "note": "需明日持续阳线确认"},
-    {"name": "医疗保健", "category": "医药", "status": "watch",
+     "note": "手机/可穿戴产业链(623亿)"},
+    {"name": "IT服务", "category": "科技", "status": "watch",
      "rule": "resistance_test",
-     "note": "打到压力位，若继续放量上涨则见底确认"},
-    {"name": "医药", "category": "医药", "status": "watch",
+     "note": "软件外包+云计算(464亿)"},
+    {"name": "软件开发", "category": "科技", "status": "watch",
      "rule": "resistance_test",
-     "note": "大级别趋势未扭转，短期可能回踩，震荡看待"},
+     "note": "国产软件+AI应用(453亿)"},
+
+    # ═══ 新能源+电力 (5) ═══
+    {"name": "电池", "category": "新能源", "status": "watch",
+     "rule": "support_rebound",
+     "note": "锂电池+储能(667亿)，新能源核心"},
+    {"name": "光伏设备", "category": "新能源", "status": "watch",
+     "rule": "bottom_fishing",
+     "note": "光伏产业链(291亿)"},
+    {"name": "电网设备", "category": "新能源", "status": "watch",
+     "rule": "dip_buy_oscillation",
+     "note": "特高压+配电网(436亿)"},
+    {"name": "电力", "category": "公用事业", "status": "watch",
+     "rule": "uptrend_selective",
+     "note": "火电+绿电(506亿)，高股息防御"},
+    {"name": "汽车整车", "category": "新能源", "status": "watch",
+     "rule": "bottom_confirmation",
+     "note": "新能源车整车(196亿)"},
+
+    # ═══ 制造 (4) ═══
+    {"name": "通用设备", "category": "制造", "status": "watch",
+     "rule": "dip_buy_oscillation",
+     "note": "工业母机+减速器(565亿)"},
+    {"name": "自动化设备", "category": "制造", "status": "watch",
+     "rule": "dip_buy_oscillation",
+     "note": "机器人+工控(438亿)"},
+    {"name": "汽车零部件", "category": "制造", "status": "watch",
+     "rule": "bottom_fishing_pullback",
+     "note": "汽配产业链(427亿)"},
+    {"name": "军工装备", "category": "制造", "status": "watch",
+     "rule": "resistance_test",
+     "note": "军工主机+舰船(301亿)"},
+
+    # ═══ 消费 (5) ═══
+    {"name": "白酒", "category": "消费", "status": "avoid",
+     "rule": "prolonged_consolidation",
+     "note": "白酒板块(272亿)，大级别支撑但需长时间震荡"},
+    {"name": "食品加工制造", "category": "消费", "status": "watch",
+     "rule": "bottom_confirmation",
+     "note": "食品饮料制造(136亿)"},
+    {"name": "医疗服务", "category": "医药", "status": "watch",
+     "rule": "resistance_test",
+     "note": "CXO+医院(274亿)"},
+    {"name": "医疗器械", "category": "医药", "status": "watch",
+     "rule": "resistance_test",
+     "note": "医疗设备+耗材(228亿)"},
+    {"name": "旅游及酒店", "category": "消费", "status": "avoid",
+     "rule": "just_stopped_falling",
+     "note": "旅游酒店(69亿)，弱势板块刚止跌"},
+
+    # ═══ 医药 (2) ═══
+    {"name": "化学制药", "category": "医药", "status": "watch",
+     "rule": "resistance_test",
+     "note": "化学药+原料药(404亿)"},
+    {"name": "中药", "category": "医药", "status": "watch",
+     "rule": "resistance_test",
+     "note": "中药板块(140亿)"},
+
+    # ═══ 金融 (3) ═══
+    {"name": "银行", "category": "金融", "status": "watch",
+     "rule": "uptrend_selective",
+     "note": "银行板块(460亿)，高股息防御+汇金增持"},
     {"name": "证券", "category": "金融", "status": "watch",
      "rule": "5week_ma_dip",
-     "note": "打到压力，与科技跷跷板，等5周线低吸不追"},
+     "note": "券商板块(327亿)，牛市旗手，等5周线低吸"},
     {"name": "保险", "category": "金融", "status": "watch",
      "rule": "consolidating",
-     "note": "在这个位置横住了，等方向选择"},
-    {"name": "文教休闲", "category": "消费", "status": "avoid",
-     "rule": "just_stopped_falling",
-     "note": "弱势板块刚止跌，下影线只是止跌信号，还没到入场时机"},
-    {"name": "旅游酒店", "category": "消费", "status": "avoid",
-     "rule": "just_stopped_falling",
-     "note": "同文教休闲，弱势板块刚止跌，需要更多确认信号"},
+     "note": "保险板块(116亿)，横盘等方向"},
 
-    # ---- AVOID: 回避，不入场 ----
-    {"name": "酿酒行业", "category": "消费", "status": "avoid",
-     "rule": "prolonged_consolidation",
-     "note": "大级别支撑但需长时间横盘震荡，暂时不是机会"},
-    {"name": "有色金属", "category": "周期", "status": "avoid",
+    # ═══ 周期 (3) ═══
+    {"name": "工业金属", "category": "周期", "status": "avoid",
      "rule": "downtrend_line",
-     "note": "下降趋势线压制，假突破后回落，下降趋势未改"},
-    {"name": "电气设备", "category": "新能源", "status": "avoid",
-     "rule": "trend_broken",
-     "note": "走势非常不好，阶段性筑底但立刻反转不可能"},
-    {"name": "新能源", "category": "新能源", "status": "avoid",
-     "rule": "trend_broken",
-     "note": "同电气设备，走势不好"},
-    {"name": "互联网服务", "category": "科技", "status": "avoid",
-     "rule": "multi_month_adjustment",
-     "note": "太弱，还需3-5个月调整，熬不到那个时候"},
-    {"name": "电力行业", "category": "公用事业", "status": "avoid",
-     "rule": "multi_month_consolidation",
-     "note": "跌透但需横几个月，短期反弹会被压力位压回"},
-    {"name": "仓储物流", "category": "物流", "status": "avoid",
-     "rule": "avoid",
-     "note": "垃圾板块，不参与"},
+     "note": "铜铝铅锌(359亿)，全球衰退预期压制"},
+    {"name": "煤炭开采加工", "category": "周期", "status": "watch",
+     "rule": "support_rebound",
+     "note": "煤炭板块(121亿)，高股息+夏季用电高峰"},
+    {"name": "化学制品", "category": "周期", "status": "watch",
+     "rule": "dip_buy_oscillation",
+     "note": "化工品(390亿)，周期底部"},
+
+    # ═══ 基建 (1) ═══
+    {"name": "建筑材料", "category": "基建", "status": "watch",
+     "rule": "bottom_fishing",
+     "note": "水泥+玻璃+建材(347亿)"},
 ]
 
 # 会议中提到的非板块指数/标的
@@ -163,9 +186,9 @@ MARKET_INDICES = [
 
 # 关键参考票
 KEY_STOCKS = {
-    "农林牧渔": {"code": "002714", "name": "牧原股份", "type": "机构票"},
-    "家电行业": {"code": "000651", "name": "格力电器", "type": "机构票"},
-    "农林牧渔_游资": {"code": "603336", "name": "宏辉果蔬", "type": "游资票"},
+    "半导体": {"code": "688981", "name": "中芯国际", "type": "机构票"},
+    "白酒": {"code": "600519", "name": "贵州茅台", "type": "机构票"},
+    "银行": {"code": "601398", "name": "工商银行", "type": "机构票"},
 }
 
 # ============================================================
@@ -179,56 +202,11 @@ BATCH_PAUSE_SECS = 3.0       # 批次间暂停秒数
 LOOKBACK_DAYS = 120     # 历史K线回溯天数（需覆盖周线计算）
 FUND_FLOW_DAYS = 20     # 资金流向历史回溯天数
 
-# ── 东方财富 → 同花顺 板块名称映射 ──
-# 东方财富API已无法从GitHub Actions访问(2026-07-27起)，切换到同花顺数据源。
-# 两套分类体系不同，这里做近似映射。后续可手动调优。
-EM_TO_THS_SECTOR_MAP = {
-    "仪器仪表": "自动化设备",
-    "通用机械": "通用设备",
-    "工业机械": "工程机械",
-    "农林牧渔": "种植业与林业",
-    "家电行业": "白色家电",
-    "煤炭行业": "煤炭开采加工",
-    "船舶制造": "军工装备",
-    "半导体": "半导体",
-    "食品饮料": "食品加工制造",
-    "日用化工": "化学制品",
-    "医疗保健": "医疗服务",
-    "医药": "化学制药",
-    "证券": "证券",
-    "保险": "保险",
-    "文教休闲": "文化传媒",
-    "旅游酒店": "旅游及酒店",
-    "酿酒行业": "白酒",
-    "有色金属": "工业金属",
-    "电气设备": "电网设备",
-    "新能源": "光伏设备",
-    "互联网服务": "IT服务",
-    "电力行业": "电力",
-    "仓储物流": "物流",
-}
 
 
-def _lookup_ths_name(em_name: str) -> Optional[str]:
-    """将东方财富板块名映射到同花顺板块名，含模糊匹配回退"""
-    if em_name in EM_TO_THS_SECTOR_MAP:
-        return EM_TO_THS_SECTOR_MAP[em_name]
-
-    # 模糊匹配：用 difflib 找最接近的 THS 名称
-    try:
-        import akshare as ak
-        df = ak.stock_board_industry_name_ths()
-        ths_names = df["name"].tolist()
-    except Exception:
-        return None
-
-    from difflib import get_close_matches
-    matches = get_close_matches(em_name, ths_names, n=1, cutoff=0.5)
-    if matches:
-        logger.info(f"模糊匹配: '{em_name}' → '{matches[0]}'")
-        EM_TO_THS_SECTOR_MAP[em_name] = matches[0]  # 缓存
-        return matches[0]
-    return None
+def _lookup_ths_name(name: str) -> Optional[str]:
+    """SECTOR_RULES 已用同花顺原生名称，直接返回。保留此函数以防未来需要映射。"""
+    return name
 
 
 def _safe_call(func, *args, **kwargs):
@@ -274,7 +252,6 @@ def fetch_industry_board_overview() -> Optional[pd.DataFrame]:
     # ── 回退: 同花顺 ──
     logger.info("板块概览回退同花顺")
     try:
-        import os as _os
         _os.environ.setdefault('TQDM_DISABLE', '1')
         df = _safe_call(ak.stock_board_industry_summary_ths)
     except Exception:
@@ -384,7 +361,6 @@ def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd
         return None
 
     try:
-        import os as _os
         _os.environ.setdefault('TQDM_DISABLE', '1')
         df = _safe_call(ak.stock_board_industry_index_ths, symbol=ths_name,
                         start_date=start_date, end_date=end_date)
@@ -468,6 +444,10 @@ def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.D
                 })
                 yf_df["date"] = pd.to_datetime(yf_df["date"])
                 yf_df = yf_df.sort_values("date").tail(lookback).reset_index(drop=True)
+                # yfinance 偶有 NaN (当日数据延迟), 前向填充
+                for col in ["open", "high", "low", "close", "volume"]:
+                    if col in yf_df.columns:
+                        yf_df[col] = yf_df[col].ffill()
                 if "change_pct" not in yf_df.columns:
                     yf_df["change_pct"] = yf_df["close"].pct_change() * 100
                 for col in ["amount", "change_amount", "amplitude"]:

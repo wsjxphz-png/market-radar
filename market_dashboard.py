@@ -28,7 +28,6 @@ from zoneinfo import ZoneInfo
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass
 
-from portfolio import Portfolio
 from stock_data import StockData
 
 import requests
@@ -1172,7 +1171,7 @@ def pick_daily_insight(cycle: Dict, signals: List[Signal]) -> str:
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
-                     indices: dict = None, portfolio: Portfolio = None,
+                     indices: dict = None,
                      temp_data: Dict = None, flow_data: Dict = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
@@ -1249,35 +1248,19 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             temp_lines.append(f"")
         lines.extend(temp_lines)
 
-    # ── 💰 资金地图 ──
+    # ── 💰 板块资金流向 ──
     if flow_data:
-        north = flow_data.get("north", {})
         flows = flow_data.get("sectors", [])
-        north_available = north.get("available", False)
-
-        if north_available:
-            north_flow = north.get('net_flow', 0)
-            north_label = '🟢 大幅流入' if north_flow > 50 else '🟢 小幅流入' if north_flow > 0 else '🔴 流出' if north_flow < -50 else '🟡 小幅流出'
-            north_line = f"北向资金: **{north_flow:+.0f}亿** {north_label}"
-            north_note = "> 📖 **怎么看**：北向资金是外资通过沪深港通买卖A股的钱。持续流入=外资看好中国资产；持续流出=外资在撤退或调仓。单日几十亿进出意义不大，要看趋势。"
-        else:
-            north_line = "北向资金: **数据暂不可用**（东方财富API被封）"
-            north_note = "> ⚠️ 北向资金数据源不可用。关注板块资金流向作为替代参考。"
-
-        lines.extend([
-            f"## 💰 资金地图",
-            f"",
-            north_line,
-            f"",
-            north_note,
-            f"",
-        ])
         if flows:
+            lines.extend([
+                f"## 💰 板块资金流向",
+                f"",
+            ])
             lines.append("板块资金净流入 TOP5:")
             for f in flows[:5]:
                 lines.append(f"- {f}")
             lines.append("")
-            lines.append("> 📖 **怎么看**：主力资金流入的板块=大钱正在布局的方向。和技术面共振时信号更可靠。")
+            lines.append("> 主力资金流入的板块=大钱正在布局的方向。和技术面共振时信号更可靠。")
             lines.append("")
 
     lines.extend([
@@ -1549,12 +1532,6 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         lines.append(f"{ai_text}")
         lines.append("")
 
-    # ── 💰 模拟账户 ──
-    if portfolio:
-        pf_lines = portfolio.format_for_dashboard()
-        lines.extend(pf_lines)
-        lines.append("")
-
     # ── 📖 每日一得 ──
     lines.append("---")
     lines.append("")
@@ -1699,66 +1676,7 @@ def main():
                    "net_flow": flow_data.get("north", {}).get("net_flow") if flow_data.get("north", {}).get("available") else None,
                    "sectors": flow_data.get("sectors", [])})
 
-    # ── 模拟账户 ──
-    print("\n[6/6] 模拟账户...")
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    pf = Portfolio(script_dir, initial_cash=1_000_000)
-
-    # 执行上次建议
-    price_map = {}
-    for tag, df in indices.items():
-        if df is not None and len(df) >= 1:
-            price_map[tag] = float(df["close"].iloc[-1])
-    # 板块价格从 sector_monitor 获取（用指数近似）
-    if sector_data:
-        for s in sector_data.get("sectors", []):
-            sname = s.get("name", "")
-            sp = s.get("technical", {}).get("last_price", 0)
-            if sp > 0:
-                price_map[sname] = sp
-    pf.update_prices(price_map)
-    pf.execute_prior_recommendations(price_map)
-
-    # 记录本次信号日志
-    pf.log_signal({
-        "type": "index", "target": "上证",
-        "cycle": cycle["name"], "position": cycle["position"],
-        "signals": {s.name: s.status for s in signals},
-    })
-
-    # 构建本次建议（供明天执行——明天会自动执行这些交易）
-    index_rec = f"{cycle['name']} → 仓位{cycle['position']} | {cycle['action']}"
-    sector_recs = {}
-
-    # 买入建议：只有通过入场三条件验证的才写入（明天自动买入）
-    for s in sectors_diag:
-        rating = s.get("rating", "")
-        entry_check = s.get("_entry_check", "")
-        if "可入场" in rating and entry_check.startswith("✅"):
-            sector_recs[s["name"]] = {
-                "action": "建仓入场",
-                "position_pct": 0.33,  # 1/3仓位
-                "rating": rating,
-                "entry_check": entry_check,
-            }
-
-    # 卖出建议
-    for s in sectors_diag:
-        rating = s.get("rating", "")
-        tags = s.get("tags", "")
-        if any(x in rating for x in ("明确回避", "反弹就撤", "高位风险", "继续回避")):
-            action = "清仓" if "明确回避" in rating else "减仓一半"
-        elif "死叉" in tags:
-            action = "减仓一半"
-        elif "顶分+放量跌" in tags:
-            action = "减仓一半"
-        else:
-            continue
-        sector_recs[s["name"]] = {"action": action, "rating": rating, "tags": tags}
-
-    pf.save_position_state(index_rec, sector_recs)
-
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, pf, temp_data, flow_data)
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, temp_data, flow_data)
 
     # 飞书内容可能超长，分段发送
     max_chars = 25000
