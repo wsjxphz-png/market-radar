@@ -171,24 +171,38 @@ class StockData:
     # ── 市场温度数据 ──────────────────────────────────────
 
     def get_market_breadth(self) -> Dict:
-        """获取涨跌家数、涨停跌停数"""
-        result = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "total": 0}
+        """获取涨跌家数、涨停跌停数 — 优先用非EM源，回退EM"""
+        result = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "total": 0, "available": False}
         try:
             import akshare as ak
-            df = ak.stock_zh_a_spot_em()
+            # 优先: 非东方财富源 (stock_zh_a_spot 走不同端点)
+            df = None
+            for func in [ak.stock_zh_a_spot, ak.stock_zh_a_spot_em]:
+                try:
+                    df = func()
+                    if df is not None and len(df) > 0:
+                        break
+                except Exception:
+                    continue
             if df is not None and len(df) > 0:
-                result["total"] = len(df)
-                result["up_count"] = int((df["涨跌幅"] > 0).sum())
-                result["down_count"] = int((df["涨跌幅"] < 0).sum())
-                result["limit_up"] = int((df["涨跌幅"] >= 9.9).sum())
-                result["limit_down"] = int((df["涨跌幅"] <= -9.9).sum())
+                chg_col = [c for c in df.columns if "涨跌幅" in str(c) or "change" in str(c).lower()]
+                if chg_col:
+                    chg = pd.to_numeric(df[chg_col[0]], errors="coerce")
+                    result["total"] = len(df)
+                    result["up_count"] = int((chg > 0).sum())
+                    result["down_count"] = int((chg < 0).sum())
+                    result["limit_up"] = int((chg >= 9.9).sum())
+                    result["limit_down"] = int((chg <= -9.9).sum())
+                    result["available"] = True
         except Exception:
             pass
         return result
 
-    def get_market_volume(self) -> Dict:
-        """获取全市场成交额"""
-        result = {"total_amount": 0, "avg_amount_20d": 0, "ratio": 1.0}
+    def get_market_volume(self, idx_volume: float = 0) -> Dict:
+        """获取全市场成交额 — 优先用传入的指数成交额，回退 akshare"""
+        result = {"total_amount": idx_volume, "avg_amount_20d": 0, "ratio": 1.0, "available": idx_volume > 0}
+        if idx_volume > 0:
+            return result
         try:
             import akshare as ak
             df = ak.stock_zh_index_daily(symbol="sh000001")
@@ -201,6 +215,7 @@ class StockData:
                     result["total_amount"] = float(recent.iloc[-1])
                     result["avg_amount_20d"] = float(recent.mean())
                     result["ratio"] = result["total_amount"] / result["avg_amount_20d"] if result["avg_amount_20d"] > 0 else 1.0
+                    result["available"] = True
         except Exception:
             pass
         return result

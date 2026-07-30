@@ -1200,35 +1200,52 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         lu = temp_data.get("limit_up", 0)
         ld = temp_data.get("limit_down", 0)
         total = temp_data.get("total", up+dn)
-        breadth_ok = up > dn
+        breadth_available = temp_data.get("breadth_ok", total > 0)
         vol_info = temp_data.get("volume", {})
         vol_ratio = vol_info.get("ratio", 1.0)
+        vol_available = temp_data.get("volume_ok", vol_info.get("total_amount", 0) > 0)
 
-        # 赚钱效应判断
-        if up > total * 0.7:
-            breadth_label = "🟢 极好"
-        elif up > total * 0.5:
-            breadth_label = "🟡 分化"
-        elif up > total * 0.3:
-            breadth_label = "🔴 较差"
+        if not breadth_available:
+            breadth_str = "数据暂不可用"
+            breadth_label = "—"
+            lim_str = "数据暂不可用"
+            lim_label = "—"
         else:
-            breadth_label = "🔴 极差"
+            breadth_str = f"{up}↑ / {dn}↓"
+            lim_str = f"{lu}涨停 / {ld}跌停"
+            if up > total * 0.7:
+                breadth_label = "🟢 极好"
+            elif up > total * 0.5:
+                breadth_label = "🟡 分化"
+            elif up > total * 0.3:
+                breadth_label = "🔴 较差"
+            else:
+                breadth_label = "🔴 极差"
+            lim_label = '🟢 活跃' if lu >= 40 else '🟡 一般' if lu >= 20 else '🔴 冷清'
 
-        vol_label = '🟢 放量' if vol_ratio > 1.2 else '🟡 正常' if vol_ratio > 0.8 else '🔴 缩量'
-        lim_label = '🟢 活跃' if lu >= 40 else '🟡 一般' if lu >= 20 else '🔴 冷清'
+        if not vol_available:
+            vol_str = "数据暂不可用"
+            vol_label = "—"
+        else:
+            vol_str = f"{vol_info.get('total_amount',0)/1e8:.0f}亿 (vs 20日均)"
+            vol_label = '🟢 放量' if vol_ratio > 1.2 else '🟡 正常' if vol_ratio > 0.8 else '🔴 缩量'
 
         temp_lines = [
             f"## 🔥 市场温度",
             f"",
             f"| 指标 | 数值 | 判断 |",
             f"|------|------|------|",
-            f"| 涨跌比 | {up}↑ / {dn}↓ | {breadth_label} |",
-            f"| 涨停/跌停 | {lu}涨停 / {ld}跌停 | {lim_label} |",
-            f"| 成交额 | {vol_info.get('total_amount',0)/1e8:.0f}亿 (vs 20日均) | {vol_label} |",
-            f"",
-            f"> 📖 **怎么看**：涨跌比反映赚钱效应——指数可能不跌但你手里的票全在跌（分化）。涨停数反映短线资金活跃度——少于20说明游资休息了。成交额是最诚实的指标——放量才有行情，缩量就是大家在等。三者结合判断：指数趋势告诉你方向，市场温度告诉你能不能赚钱。",
+            f"| 涨跌比 | {breadth_str} | {breadth_label} |",
+            f"| 涨停/跌停 | {lim_str} | {lim_label} |",
+            f"| 成交额 | {vol_str} | {vol_label} |",
             f"",
         ]
+        if not breadth_available:
+            temp_lines.append(f"> ⚠️ 涨跌/涨停数据源不可用（东方财富API被封）。指数趋势分析不受影响。")
+            temp_lines.append(f"")
+        else:
+            temp_lines.append(f"> 📖 **怎么看**：涨跌比反映赚钱效应——指数可能不跌但你手里的票全在跌（分化）。涨停数反映短线资金活跃度——少于20说明游资休息了。成交额是最诚实的指标——放量才有行情，缩量就是大家在等。三者结合判断：指数趋势告诉你方向，市场温度告诉你能不能赚钱。")
+            temp_lines.append(f"")
         lines.extend(temp_lines)
 
     # ── 💰 资金地图 ──
@@ -1637,18 +1654,22 @@ def main():
 
     # ── 市场温度 + 资金流向 ──
     print("\n[5/6] 市场温度+资金...")
-    temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {}}
+    idx_volume = float(idx["volume"].iloc[-1]) if idx is not None and "volume" in idx.columns and len(idx) > 0 else 0
+    temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {},
+                 "breadth_ok": False, "volume_ok": False}
     flow_data = {"north": {}, "sectors": []}
     try:
         sd = StockData()
         breadth = sd.get_market_breadth()
-        vol_info = sd.get_market_volume()
+        vol_info = sd.get_market_volume(idx_volume)
         north = sd.get_north_flow()
         temp_data = {
             "up_count": breadth["up_count"], "down_count": breadth["down_count"],
             "limit_up": breadth["limit_up"], "limit_down": breadth["limit_down"],
             "total": breadth["total"],
             "volume": {"total_amount": vol_info["total_amount"], "ratio": vol_info["ratio"]},
+            "breadth_ok": breadth.get("available", breadth["total"] > 0),
+            "volume_ok": vol_info.get("available", vol_info["total_amount"] > 0),
         }
         flow_data["north"] = north
         ff = sd.get_sector_fund_flow()
@@ -1658,7 +1679,9 @@ def main():
             if name_col and flow_col:
                 for _, row in ff.iterrows():
                     flow_data["sectors"].append(f"{row[name_col[0]]}: {row[flow_col[0]]}")
-        print(f"  温度: {breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']} | 北向{north['net_flow']:+.0f}亿")
+        breadth_str = f"{breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']}" if breadth.get("available") else "数据暂不可用"
+        north_str = f"北向{north['net_flow']:+.0f}亿" if north.get("net_flow", 0) != 0 or north.get("direction") != "neutral" else "北向数据暂不可用"
+        print(f"  温度: {breadth_str} | {north_str}")
     except Exception as e:
         print(f"  [!] 温度数据: {e}")
 
