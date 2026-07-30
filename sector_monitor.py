@@ -336,27 +336,46 @@ def fetch_sector_fund_flow_10d() -> Optional[pd.DataFrame]:
     return df
 
 
+# ── 东方财富熔断计数器 ──
+# EM 连续失败 N 次后跳过EM直通THS，避免每次等重试超时
+_em_fail_count = 0
+_EM_FAIL_FAST_AFTER = 3  # 连续失败3次后熔断
+
+
+def _reset_em_fail_count():
+    global _em_fail_count
+    _em_fail_count = 0
+
+
 def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.DataFrame]:
-    """获取单个板块历史日K线 — 东方财富优先，失败回退同花顺"""
+    """获取单个板块历史日K线 — 东方财富优先，失败回退同花顺。连续EM失败后熔断。"""
+    global _em_fail_count
     import akshare as ak
 
     end_date = datetime.now().strftime("%Y%m%d")
     start_date = (datetime.now() - timedelta(days=lookback + 10)).strftime("%Y%m%d")
 
-    # ── 主数据源: 东方财富 ──
-    df = _safe_call(ak.stock_board_industry_hist_em, symbol=symbol, period="日k",
-                    start_date=start_date, end_date=end_date)
-    if df is not None and len(df) > 0:
-        cols_map = {
-            "日期": "date", "开盘": "open", "收盘": "close", "最高": "high",
-            "最低": "low", "涨跌幅": "change_pct", "涨跌额": "change_amount",
-            "成交量": "volume", "成交额": "amount", "振幅": "amplitude", "换手率": "turnover",
-        }
-        df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
-        if "date" in df.columns:
-            df["date"] = pd.to_datetime(df["date"])
-            df = df.sort_values("date").tail(lookback)
-        return df
+    # ── 主数据源: 东方财富 (未熔断时) ──
+    if _em_fail_count < _EM_FAIL_FAST_AFTER:
+        df = _safe_call(ak.stock_board_industry_hist_em, symbol=symbol, period="日k",
+                        start_date=start_date, end_date=end_date)
+        if df is not None and len(df) > 0:
+            _em_fail_count = 0  # 成功后重置
+            cols_map = {
+                "日期": "date", "开盘": "open", "收盘": "close", "最高": "high",
+                "最低": "low", "涨跌幅": "change_pct", "涨跌额": "change_amount",
+                "成交量": "volume", "成交额": "amount", "振幅": "amplitude", "换手率": "turnover",
+            }
+            df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
+            if "date" in df.columns:
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.sort_values("date").tail(lookback)
+            return df
+        _em_fail_count += 1
+        if _em_fail_count >= _EM_FAIL_FAST_AFTER:
+            logger.warning(f"东方财富连续失败 {_em_fail_count} 次，熔断 — 后续板块直通同花顺")
+    else:
+        logger.debug(f"EM已熔断 ({_em_fail_count}次) — 直通同花顺 {symbol}")
 
     # ── 回退: 同花顺 ──
     ths_name = _lookup_ths_name(symbol)
@@ -364,7 +383,6 @@ def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd
         logger.warning(f"板块 '{symbol}' 无同花顺映射，跳过")
         return None
 
-    logger.info(f"板块 '{symbol}' 回退同花顺 ('{ths_name}')")
     try:
         import os as _os
         _os.environ.setdefault('TQDM_DISABLE', '1')
@@ -1199,6 +1217,8 @@ def analyze_fund_flow(board_name: str,
 def fetch_sector_monitor_data() -> Dict:
     """主入口：拉取板块数据 + 计算指标 + 生成信号"""
     import akshare as ak  # noqa: F811
+
+    _reset_em_fail_count()  # 每次运行重置 EM 熔断
 
     result = {
         "date": datetime.now().strftime("%Y-%m-%d"),
