@@ -729,7 +729,8 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             for s in sorted(sectors, key=lambda x: x['rating'])
         )
         temp_text = f"涨{temp_data.get('up_count',0)}家/跌{temp_data.get('down_count',0)}家, 涨停{temp_data.get('limit_up',0)}, 跌停{temp_data.get('limit_down',0)}"
-        flow_text = f"北向{flow_data.get('net_flow',0):+.0f}亿"
+        net_flow = flow_data.get('net_flow')
+        flow_text = f"北向{net_flow:+.0f}亿" if net_flow is not None else "北向数据暂不可用"
 
         prompt = f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块规则逐项评分。
 
@@ -1694,7 +1695,8 @@ def main():
         print(f"  [!] 温度数据: {e}")
 
     ai = ai_audit(cycle, signals, sectors_diag, idx, temp_data,
-                  {"north": flow_data.get("north", {}), "net_flow": flow_data.get("north", {}).get("net_flow", 0),
+                  {"north": flow_data.get("north", {}),
+                   "net_flow": flow_data.get("north", {}).get("net_flow") if flow_data.get("north", {}).get("available") else None,
                    "sectors": flow_data.get("sectors", [])})
 
     # ── 模拟账户 ──
