@@ -1362,6 +1362,14 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             lines.append(f"- {icon[s.status]} {s.name}: {s.value}")
         lines.append("")
 
+    # ── 三周期优先声明：危险周期下，所有指标的操作建议被三周期覆盖 ──
+    mtf_s = sig_map.get("三周期趋势")
+    if mtf_s and mtf_s.status == "danger":
+        lines.append("---")
+        lines.append("")
+        lines.append("> ⚠️ **三周期优先裁决**：当前三周期共振向下，上面各指标的「👉 操作」中如有「加仓」「买入」「试探性入场」等建议——**一律以三周期的「空仓或极轻仓（0-2成）」为准**。趋势是主、指标是辅。等三周期中至少两个级别转向上方后，再启用各指标的操作建议。")
+        lines.append("")
+
     # ── 入场/出场信号与仓位（理论+表态综合） ──
     lines.append("---")
     lines.append("")
