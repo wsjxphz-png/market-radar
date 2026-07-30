@@ -746,11 +746,13 @@ def calc_technical_indicators(df: pd.DataFrame) -> Dict:
     at_support = close_now <= support_20d * 1.03       # 距支撑位 ≤3%
 
     # ---- 近期涨跌幅 ----
+    chg_today = (close[-1] / close[-2] - 1) * 100 if len(close) >= 2 else 0
     chg_5d = (close_now / close[-6] - 1) * 100 if len(close) >= 6 else 0
     chg_20d = (close_now / close[-21] - 1) * 100 if len(close) >= 21 else 0
 
     return {
         "close": round(float(close_now), 2),
+        "change_pct": round(float(chg_today), 1),
         "ma5": round(float(ma5_now), 2),
         "ma10": round(float(ma10_now), 2),
         "ma20": round(float(ma20_now), 2),
