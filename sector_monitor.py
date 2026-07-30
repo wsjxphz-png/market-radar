@@ -394,28 +394,24 @@ def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd
 
 
 def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.DataFrame]:
-    """获取指数历史日K线 — stock_zh_index_daily 优先，index_zh_a_hist 回退，最后 yfinance"""
+    """获取指数历史日K线 — 东方财富端点优先，失败跳 yfinance"""
     import akshare as ak
 
     end_date = datetime.now().strftime("%Y%m%d")
     start_date = (datetime.now() - timedelta(days=lookback + 10)).strftime("%Y%m%d")
 
-    # ── 数据源 1: stock_zh_index_daily (EM 不同端点，未被封) ──
+    # ── 数据源 1: stock_zh_index_daily (EM 端点A，AKShare 1.18.81 CI 上 KeyError) ──
     df = _safe_call(ak.stock_zh_index_daily, symbol=code)
     if df is not None and len(df) >= 10:
-        # stock_zh_index_daily 已经返回英文列名
         if "date" in df.columns:
             df["date"] = pd.to_datetime(df["date"])
             df = df.sort_values("date").tail(lookback).reset_index(drop=True)
-        # 补缺失列
         for col in ["change_pct", "change_amount", "amplitude", "amount"]:
             if col not in df.columns:
                 df[col] = 0.0
-        if "close" in df.columns and "change_pct" in df.columns:
-            pass  # change_pct may already be computed or set to 0
         return df
 
-    # ── 数据源 2: index_zh_a_hist (EM 旧端点，可能被封) ──
+    # ── 数据源 2: index_zh_a_hist (EM 端点B) ──
     df = _safe_call(ak.index_zh_a_hist, symbol=code, period="daily",
                     start_date=start_date, end_date=end_date)
     if df is not None and len(df) > 0:
@@ -459,10 +455,10 @@ def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.D
                 for col in ["amount", "change_amount", "amplitude"]:
                     if col not in yf_df.columns:
                         yf_df[col] = 0.0
-                logger.info(f"指数 {code} 回退 yfinance ({yf_ticker})")
+                logger.warning(f"指数 {code} 回退 yfinance ({yf_ticker})")
                 return yf_df
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"yfinance {code} 失败: {str(e)[:80]}")
     return None
 
 
@@ -496,6 +492,11 @@ def fetch_sector_fund_flow_hist(symbol: str) -> Optional[pd.DataFrame]:
 
 def compute_ma(series: pd.Series, period: int) -> pd.Series:
     return series.rolling(window=period).mean()
+
+
+# _ma 是 compute_ma 的简化别名，用于 calc_technical_indicators 内部
+def _ma(series: pd.Series, period: int) -> np.ndarray:
+    return series.rolling(window=period).mean().values
 
 
 def _resample_weekly(df: pd.DataFrame) -> Optional[pd.DataFrame]:
