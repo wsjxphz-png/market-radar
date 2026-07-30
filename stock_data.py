@@ -221,25 +221,37 @@ class StockData:
         return result
 
     def get_north_flow(self) -> Dict:
-        """获取北向资金流向"""
-        result = {"net_flow": 0, "direction": "neutral"}
+        """获取北向资金流向 — 全部 HSGT 函数依赖东方财富，不可用时返回 unavailable"""
+        result = {"net_flow": 0, "direction": "neutral", "available": False}
         try:
             import akshare as ak
             df = ak.stock_hsgt_north_net_flow_in_em()
             if df is not None and len(df) > 0:
                 result["net_flow"] = float(df["value"].iloc[-1]) if "value" in df.columns else float(df.iloc[-1, -1])
                 result["direction"] = "inflow" if result["net_flow"] > 0 else "outflow"
+                result["available"] = True
         except Exception:
             pass
         return result
 
     def get_sector_fund_flow(self) -> pd.DataFrame:
-        """获取板块资金流向TOP"""
+        """获取板块资金流向TOP — 用 stock_fund_flow_industry (非EM源)"""
         try:
             import akshare as ak
-            df = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="行业资金流")
+            # stock_fund_flow_industry 走非东方财富端点，90个行业，含 净额 列
+            df = ak.stock_fund_flow_industry()
             if df is not None and len(df) > 0:
-                return df.head(10)
+                cols_map = {
+                    "序号": "rank", "行业": "board_name",
+                    "行业-涨跌幅": "change_pct",
+                    "流入资金": "inflow", "流出资金": "outflow",
+                    "净额": "net_flow", "公司家数": "company_count",
+                }
+                df = df.rename(columns={k: v for k, v in cols_map.items() if k in df.columns})
+                # 按净额排序，取TOP流入和流出
+                if "net_flow" in df.columns:
+                    df = df.sort_values("net_flow", ascending=False)
+                return df.head(15)
         except Exception:
             pass
         return pd.DataFrame()

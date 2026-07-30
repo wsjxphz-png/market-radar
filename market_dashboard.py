@@ -1252,22 +1252,31 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if flow_data:
         north = flow_data.get("north", {})
         flows = flow_data.get("sectors", [])
-        north_flow = north.get('net_flow', 0)
-        north_label = '🟢 大幅流入' if north_flow > 50 else '🟢 小幅流入' if north_flow > 0 else '🔴 流出' if north_flow < -50 else '🟡 小幅流出'
+        north_available = north.get("available", False)
+
+        if north_available:
+            north_flow = north.get('net_flow', 0)
+            north_label = '🟢 大幅流入' if north_flow > 50 else '🟢 小幅流入' if north_flow > 0 else '🔴 流出' if north_flow < -50 else '🟡 小幅流出'
+            north_line = f"北向资金: **{north_flow:+.0f}亿** {north_label}"
+            north_note = "> 📖 **怎么看**：北向资金是外资通过沪深港通买卖A股的钱。持续流入=外资看好中国资产；持续流出=外资在撤退或调仓。单日几十亿进出意义不大，要看趋势。"
+        else:
+            north_line = "北向资金: **数据暂不可用**（东方财富API被封）"
+            north_note = "> ⚠️ 北向资金数据源不可用。关注板块资金流向作为替代参考。"
+
         lines.extend([
             f"## 💰 资金地图",
             f"",
-            f"北向资金: **{north_flow:+.0f}亿** {north_label}",
+            north_line,
             f"",
-            f"> 📖 **怎么看**：北向资金是外资通过沪深港通买卖A股的钱。持续流入=外资看好中国资产；持续流出=外资在撤退或调仓。单日几十亿进出意义不大，要看趋势。如果北向连续3天流入+技术面走好=资金+趋势共振，可靠性大幅提升。",
+            north_note,
             f"",
         ])
         if flows:
-            lines.append("主力净流入 TOP5:")
+            lines.append("板块资金净流入 TOP5:")
             for f in flows[:5]:
                 lines.append(f"- {f}")
             lines.append("")
-            lines.append("> \U0001f4d6 **怎么看**：主力资金流入的板块=大钱正在布局的方向。把主力流入TOP5和你的板块操作信号对照——如果半导体同时出现在「主力流入TOP5」和「可买入」= 技术面和资金面共振，信号更可靠。只在一侧出现要谨慎。")
+            lines.append("> 📖 **怎么看**：主力资金流入的板块=大钱正在布局的方向。和技术面共振时信号更可靠。")
             lines.append("")
 
     lines.extend([
@@ -1673,14 +1682,13 @@ def main():
         }
         flow_data["north"] = north
         ff = sd.get_sector_fund_flow()
-        if len(ff) > 0:
-            name_col = [c for c in ff.columns if "名称" in str(c) or "板块" in str(c) or "name" in str(c).lower()]
-            flow_col = [c for c in ff.columns if "净流入" in str(c) or "主力" in str(c)]
-            if name_col and flow_col:
-                for _, row in ff.iterrows():
-                    flow_data["sectors"].append(f"{row[name_col[0]]}: {row[flow_col[0]]}")
+        if len(ff) > 0 and "board_name" in ff.columns and "net_flow" in ff.columns:
+            for _, row in ff.iterrows():
+                amt = row["net_flow"]
+                direction = "流入" if amt > 0 else "流出"
+                flow_data["sectors"].append(f"{row['board_name']}: {direction}{abs(amt):.1f}亿")
         breadth_str = f"{breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']}" if breadth.get("available") else "数据暂不可用"
-        north_str = f"北向{north['net_flow']:+.0f}亿" if north.get("net_flow", 0) != 0 or north.get("direction") != "neutral" else "北向数据暂不可用"
+        north_str = f"北向{north['net_flow']:+.0f}亿" if north.get("available", False) else "北向数据暂不可用"
         print(f"  温度: {breadth_str} | {north_str}")
     except Exception as e:
         print(f"  [!] 温度数据: {e}")
