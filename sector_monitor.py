@@ -175,7 +175,15 @@ SECTOR_RULES = [
     {"name": "建筑材料", "category": "基建", "status": "watch",
      "rule": "bottom_fishing",
      "note": "水泥+玻璃+建材(347亿)"},
+
+    # ═══ 港股 (1) — yfinance 数据源 ═══
+    {"name": "恒生科技", "category": "港股", "status": "watch",
+     "rule": "support_rebound",
+     "note": "恒生科技指数(^HSTECH)，港股AI+互联网核心(腾讯/阿里/美团等)"},
 ]
+
+# HK 指数 — 使用 yfinance 的板块（不在同花顺/东财板块列表中）
+HK_SECTORS = {"恒生科技": "^HSTECH"}
 
 # 会议中提到的非板块指数/标的
 MARKET_INDICES = [
@@ -384,6 +392,38 @@ def fetch_board_kline(symbol: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd
         for col in ["change_amount", "amplitude", "turnover"]:
             if col not in df.columns:
                 df[col] = 0.0
+    # ── 回退: yfinance (HK 指数等非A股板块) ──
+    if df is None and symbol in HK_SECTORS:
+        yf_ticker = HK_SECTORS[symbol]
+        try:
+            import yfinance as yf
+            yf_df = yf.download(yf_ticker, period=f"{lookback+30}d", progress=False, auto_adjust=True)
+            if yf_df is not None and len(yf_df) >= 10:
+                if isinstance(yf_df.columns, pd.MultiIndex):
+                    yf_df.columns = [c[0].lower() for c in yf_df.columns]
+                yf_df = yf_df.reset_index()
+                yf_df = yf_df.rename(columns={
+                    "Date": "date", "date": "date",
+                    "Open": "open", "open": "open",
+                    "High": "high", "high": "high",
+                    "Low": "low", "low": "low",
+                    "Close": "close", "close": "close",
+                    "Volume": "volume", "volume": "volume",
+                })
+                yf_df["date"] = pd.to_datetime(yf_df["date"])
+                yf_df = yf_df.sort_values("date").tail(lookback).reset_index(drop=True)
+                for col_name in ["open", "high", "low", "close", "volume"]:
+                    if col_name in yf_df.columns:
+                        yf_df[col_name] = yf_df[col_name].ffill()
+                if "change_pct" not in yf_df.columns:
+                    yf_df["change_pct"] = yf_df["close"].pct_change() * 100
+                for col_name in ["amount", "change_amount", "amplitude", "turnover"]:
+                    if col_name not in yf_df.columns:
+                        yf_df[col_name] = 0.0
+                logger.warning(f"板块 '{symbol}' 回退 yfinance ({yf_ticker})")
+                return yf_df
+        except Exception as e:
+            logger.warning(f"yfinance {symbol} ({yf_ticker}) 失败: {str(e)[:80]}")
     return df
 
 
@@ -1221,6 +1261,9 @@ def fetch_sector_monitor_data() -> Dict:
         real_names = set(board_df["board_name"].values)
         our_names = [r["name"] for r in SECTOR_RULES]
         for name in our_names:
+            if name in HK_SECTORS:  # HK 指数不在 A 股板块列表中，跳过映射
+                name_map[name] = name
+                continue
             if name in real_names:
                 name_map[name] = name  # 精确匹配
             else:
@@ -1246,6 +1289,9 @@ def fetch_sector_monitor_data() -> Dict:
         logger.warning("   板块概况获取失败，用同花顺映射表作为后备")
         for r in SECTOR_RULES:
             name = r["name"]
+            if name in HK_SECTORS:  # HK 指数跳过同花顺映射
+                name_map[name] = name
+                continue
             ths_name = _lookup_ths_name(name)
             name_map[name] = ths_name if ths_name else name
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
