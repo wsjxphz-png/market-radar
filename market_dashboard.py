@@ -178,7 +178,24 @@ TRADING_MANUAL = """
 | 8 | 量平价跌 | → | ↓ | 阴跌，没恐慌但也没人买 | 🟡 观望为主 |
 
 > 💡 **这五条规则+八种量价，每次买卖前过一遍。对就是对，错就是错。不管市场怎么走，规则不变。**
-"""
+
+---
+
+### 6. 心理纪律 — 为什么你做不到
+
+📚 **理论**：「一般人败多胜少，人性使然」（《炒股的智慧》第1章）。讨厌风险、急着发财、自以为是、赶潮跟风、因循守旧、耿于报复——六种不变的人性使股民几乎必然地成了输家。《炒股的智慧》和《趋势交易论》是配套的：趋势交易论告诉你该做什么，炒股的智慧帮你在情绪上来时真正做到。
+
+📋 **规则**（华尔街百年家训，来自《炒股的智慧》第5章）：
+- **止损是最高行为准则**——如果做不到以比进价更低的价钱卖出，就退出这行
+- **有疑问的时候，离场！**——对走势失去感觉时，赢面只剩50%，专业赌徒绝不下注
+- **忘掉你的入场价**——买卖决策只看股票现在的运动是否正常，和你什么价位进场无关
+- **别频繁交易**——股市不是每天都有盈利机会的。无聊而交易=手续费+情绪+质量三重代价
+- **不要向下摊平**——纸面无利润不加码。亏钱时补仓摊低成本=破产的捷径
+- **财不入急门**——把资本分5-10份，风险报酬比≥1:3才入场，长期下来不赚钱都难
+
+🔍 **自检**：今天有没有因为"急着发财"想追高？有没有因为"不肯吃小亏"而不止损？有没有因为"无聊"而想交易？——如果任一答案是"有"，关掉交易软件，今天不做。
+
+> 💡 *《炒股的智慧》：「败而不倒，追求卓越」+《趋势交易论》：「系统帮你排除错误，不帮你做决策」。两本书合在一起，才是一套完整的交易体系。*"""
 
 
 def fetch_index(name: str, code: str, days: int = 300) -> Optional[pd.DataFrame]:
@@ -718,7 +735,7 @@ def diagnose_sector_mi(s: Dict) -> Dict:
 
 def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
              idx_tail: pd.DataFrame, temp_data: Dict, flow_data: Dict) -> Optional[str]:
-    """AI 决策审计 — 不发表观点，只做合规检查。为五大模块逐项评分。"""
+    """AI 决策审计 — 不发表观点，只做合规检查。为六大模块逐项评分（含心理纪律）。"""
     if not DEEPSEEK_API_KEY:
         return None
     try:
@@ -731,7 +748,7 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         net_flow = flow_data.get('net_flow')
         flow_text = f"北向{net_flow:+.0f}亿" if net_flow is not None else "北向数据暂不可用"
 
-        prompt = f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块规则逐项评分。
+        prompt = f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则逐项评分。
 
 当前状态:
 {cycle['emoji']} {cycle['name']} | 仓位{cycle['position']} | {cycle['action']}
@@ -753,8 +770,9 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 资金: [X/2分] — 理由
 板块: [X/2分] — 理由
 风险: [X/2分] — 理由
+心理: [X/2分] — 理由（是否有追高/不止损/频繁交易/向下摊平等人性弱点信号）
 
-**总分: X/10**
+**总分: X/12**
 
 **规则违例:**
 - [若有违例列出，无则写"无违例"]
@@ -764,7 +782,7 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             "https://api.deepseek.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
             json={"model": "deepseek-chat", "messages": [
-                {"role": "system", "content": "你是交易纪律审计员。严格根据《趋势交易论》五大模块规则评判，不打感情分。只说事实，不发表投资建议。"},
+                {"role": "system", "content": "你是交易纪律审计员。严格根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则评判，不打感情分。只说事实，不发表投资建议。"},
                 {"role": "user", "content": prompt}
             ], "temperature": 0.3, "max_tokens": 400},
             timeout=60
@@ -1110,7 +1128,8 @@ def detect_signal_flips(signals: List[Signal]) -> List[str]:
 # 每日一得 — 从《趋势交易论》按市场状态选摘
 # ═══════════════════════════════════════════════════════════
 
-DAILY_INSIGHTS = {
+# ── 术：趋势交易论 技术层引用 ──
+DAILY_INSIGHTS_TECH = {
     "三周期向下": [
         "「大级别下跌趋势里不要抄底博弈反弹——一套一个不吱声」—《趋势交易论》三周期共振",
         "「空头市场中，反弹往往是卖出或做空的机会」—《趋势交易论》多空循环",
@@ -1122,14 +1141,14 @@ DAILY_INSIGHTS = {
     ],
     "放量滞涨": [
         "「高位放量滞涨，坚决出局观望」—口诀第4条",
-        "「放巨量但价格基本不动——往往是主力在高位出货。历史上多次大顶前都出现过放量滞涨」—《趋势交易论》筑顶特征",
+        "「放巨量但价格基本不动——往往是主力在高位出货」—《趋势交易论》筑顶特征",
     ],
     "缩量": [
         "「下跌过程中成交量持续萎缩=抛压耗尽」—《趋势交易论》底部判断",
-        "「缩量回踩不破是机会不是风险。好股票每次回踩关键均线都是加仓点」—《趋势交易论》量价八诀",
+        "「缩量回踩不破是机会不是风险」—《趋势交易论》量价八诀",
     ],
     "震荡": [
-        "「横盘的时候最考验耐心。着急的人买在最高点、卖在最低点——因为他们等不起」—《趋势交易论》中枢震荡",
+        "「横盘的时候最考验耐心」—《趋势交易论》中枢震荡",
         "「趋势不明时，做的越多错的越多。等待本身就是一种策略」—《趋势交易论》交易心理",
     ],
     "default": [
@@ -1141,32 +1160,72 @@ DAILY_INSIGHTS = {
     ],
 }
 
+# ── 道：炒股的智慧 心理层引用 ──
+DAILY_INSIGHTS_WISDOM = {
+    "三周期向下": [
+        "「有疑问的时候，离场！赢面不确定时绝不下注」—《炒股的智慧》华尔街家训",
+        "「市场从来不会错，而你的想法常常是错的」—《炒股的智慧》华尔街家训",
+        "「财不入急门——心急的人在这行不可能成功」—《炒股的智慧》华尔街家训",
+    ],
+    "三周期向上": [
+        "「一旦有了利润，就必须让利润奔跑，从小利润跑成大利润」—《炒股的智慧》临界点",
+        "「在正确的时候狠狠地捞一把」—《炒股的智慧》追求卓越",
+        "「忘掉你的入场价——决策只基于现在」—《炒股的智慧》华尔街家训",
+    ],
+    "放量滞涨": [
+        "「别让利润变成亏损！在股票运动中根据情况调整止损点」—《炒股的智慧》华尔街家训",
+        "「截短亏损，让利润奔跑——华尔街两百年的终极智慧」—《炒股的智慧》",
+    ],
+    "缩量": [
+        "「等待本身就是一种交易策略。耐心等待是抓住大机会的前提」—《炒股的智慧》抓住大机会",
+        "「善战者无赫赫之功——真正的高手不需要奇迹，他们靠小胜复利」—《炒股的智慧》",
+    ],
+    "震荡": [
+        "「别频繁交易——股市不是每天都有盈利机会的」—《炒股的智慧》华尔街家训",
+        "「频繁交易不仅损失手续费，同时使交易的质量降低」—《炒股的智慧》华尔街家训",
+    ],
+    "default": [
+        "「败而不倒，追求卓越——这八个字是炒股的最高纲领」—《炒股的智慧》投机原理",
+        "「止损，止损，止损！这是炒股行的最高行为准则」—《炒股的智慧》华尔街家训",
+        "「炒股成功的要素：知识+计划+严格执行——第三步最难」—《炒股的智慧》心理建设",
+        "「学股的过程就是克服人性弱点的过程」—《炒股的智慧》炒股的挑战",
+        "「不要向下摊平——犯了错不是认错而是摊平成本，是破产的捷径」—《炒股的智慧》华尔街家训",
+    ],
+}
+
 
 def pick_daily_insight(cycle: Dict, signals: List[Signal]) -> str:
-    """根据当日市场状态，从摘录库中选一条最相关的。"""
+    """根据当日市场状态，从两本书各选一条最相关的：术（趋势交易论）+ 道（炒股的智慧）。"""
     cycle_name = cycle.get("name", "")
 
-    # 匹配规则：优先匹配更具体的状态
     sig_map = {s.name: s for s in signals}
     if "下跌" in cycle_name:
-        pool = DAILY_INSIGHTS.get("三周期向下", DAILY_INSIGHTS["default"])
+        tech_pool = DAILY_INSIGHTS_TECH.get("三周期向下", DAILY_INSIGHTS_TECH["default"])
+        wisdom_pool = DAILY_INSIGHTS_WISDOM.get("三周期向下", DAILY_INSIGHTS_WISDOM["default"])
     elif "上涨" in cycle_name:
-        pool = DAILY_INSIGHTS.get("三周期向上", DAILY_INSIGHTS["default"])
+        tech_pool = DAILY_INSIGHTS_TECH.get("三周期向上", DAILY_INSIGHTS_TECH["default"])
+        wisdom_pool = DAILY_INSIGHTS_WISDOM.get("三周期向上", DAILY_INSIGHTS_WISDOM["default"])
     elif "震荡" in cycle_name:
-        pool = DAILY_INSIGHTS.get("震荡", DAILY_INSIGHTS["default"])
+        tech_pool = DAILY_INSIGHTS_TECH.get("震荡", DAILY_INSIGHTS_TECH["default"])
+        wisdom_pool = DAILY_INSIGHTS_WISDOM.get("震荡", DAILY_INSIGHTS_WISDOM["default"])
     else:
-        pool = DAILY_INSIGHTS["default"]
+        tech_pool = DAILY_INSIGHTS_TECH["default"]
+        wisdom_pool = DAILY_INSIGHTS_WISDOM["default"]
 
     # 叠加量价状态
     vp = sig_map.get("量价结构")
     if vp and vp.status == "danger":
-        pool = DAILY_INSIGHTS.get("放量滞涨", pool)
+        tech_pool = DAILY_INSIGHTS_TECH.get("放量滞涨", tech_pool)
+        wisdom_pool = DAILY_INSIGHTS_WISDOM.get("放量滞涨", wisdom_pool)
     elif vp and vp.status == "caution":
-        pool = DAILY_INSIGHTS.get("缩量", pool)
+        tech_pool = DAILY_INSIGHTS_TECH.get("缩量", tech_pool)
+        wisdom_pool = DAILY_INSIGHTS_WISDOM.get("缩量", wisdom_pool)
 
-    # 选一条（用日期做种子，同一天同一句）
-    day_seed = int(datetime.now().strftime("%d")) % len(pool)
-    return pool[day_seed]
+    # 用日期做种子，同一天同一句
+    day_seed = int(datetime.now().strftime("%d"))
+    tech = tech_pool[day_seed % len(tech_pool)]
+    wisdom = wisdom_pool[day_seed % len(wisdom_pool)]
+    return f"{tech}\n> {wisdom}"
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1556,7 +1615,7 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     lines.append("---")
-    lines.append("*《趋势交易论》(710页) | 每日自动*")
+    lines.append("*《趋势交易论》×《炒股的智慧》 | 术道合一 · 每日自动*")
 
     return "\n".join(lines)
 
