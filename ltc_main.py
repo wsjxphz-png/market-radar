@@ -19,12 +19,19 @@ def _safe_fetch(func, *args, default=None, **kwargs):
         logger.warning("抓取失败 %s: %s", getattr(func, "__name__", func), str(e)[:80])
         return default
 
+def _send_or_dry(msg: str, env: dict, dry_run: bool) -> bool:
+    """发送；LTC_DRY_RUN=1 时跳过发送视为成功（内容打印到日志，照常留痕）"""
+    if dry_run:
+        logger.info("LTC_DRY_RUN 生效，跳过发送（dry-run 视为成功）：\n%s", msg[:800])
+        return True
+    return send_feishu(msg, env)
+
 def send_feishu(msg: str, env: dict) -> bool:
-    """发送卡片到飞书；缺少凭据 = dry-run 成功（不发送但返回 True，留痕/重复跳过照常）"""
+    """发送卡片到飞书；缺少凭据 = 发送失败（False，告警路径）。dry-run 用 env 的 LTC_DRY_RUN 标记"""
     app_id, app_secret, chat_id = env.get("FEISHU_APP_ID", ""), env.get("FEISHU_APP_SECRET", ""), env.get("FEISHU_CHAT_ID", "")
     if not (app_id and app_secret and chat_id):
-        logger.warning("飞书环境变量缺失，跳过发送（dry-run 视为成功）")
-        return True
+        logger.warning("飞书环境变量缺失，跳过发送")
+        return False
     import requests
     r = requests.post("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
                       json={"app_id": app_id, "app_secret": app_secret}, timeout=15)
@@ -44,6 +51,7 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     state_path = os.path.join(data_dir, "state.json")
     hist_path = os.path.join(data_dir, "history.jsonl")
     state = ltc_store.load_state(state_path)
+    dry_run = bool(env.get("LTC_DRY_RUN"))
 
     trading_date = _safe_fetch(ltc_data.get_trading_date)
     southbound = _safe_fetch(ltc_data.fetch_southbound)
@@ -53,7 +61,7 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
         today_cn = bj_now().strftime("%Y-%m-%d")
         titles = _safe_fetch(ltc_news.fetch_news_titles, today_cn, 15, default=[])
         if titles:
-            send_feishu(ltc_news.format_news_card(today_cn, titles), env)
+            _send_or_dry(ltc_news.format_news_card(today_cn, titles), env, dry_run)
             return 0
         state["alert_streak"] = state.get("alert_streak", 0) + 1
         ltc_store.save_state(state_path, state)
@@ -63,15 +71,13 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     if not push:
         logger.info("跳过推送（%s）：data_date=%s", reason, data_date)
         return 0
-    if reason == "首次运行":
-        state["last_pushed_date"] = data_date
 
     flow = _safe_fetch(ltc_data.fetch_sector_flow)
     if flow is None:
         # Level 2 降级：板块流失败 → 新闻兜底，新闻也失败则跳过+告警
         titles = _safe_fetch(ltc_news.fetch_news_titles, data_date, 15, default=[])
         if titles:
-            send_feishu(ltc_news.format_news_card(data_date, titles), env)
+            _send_or_dry(ltc_news.format_news_card(data_date, titles), env, dry_run)
         state["alert_streak"] = state.get("alert_streak", 0) + 1
         ltc_store.save_state(state_path, state)
         return 0 if state["alert_streak"] < 2 else 1
@@ -105,7 +111,7 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     card = ltc_format.format_card(data_date, interp, focus, southbound, valuation,
                                   repurchase, refs)
     logger.info("卡片内容:\n%s", card[:2000])
-    if send_feishu(card, env):
+    if _send_or_dry(card, env, dry_run):
         state["last_pushed_date"] = data_date
         ltc_store.save_state(state_path, state)
         ltc_store.append_history(hist_path, {
