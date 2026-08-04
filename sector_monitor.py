@@ -36,7 +36,9 @@ def _install_ua_patch():
         from akshare.utils import request as _akreq
         _original_request_with_retry = _akreq.request_with_retry
 
-        def patched_request(url, params=None, timeout=15, max_retries=3,
+        # F6: 内层默认 max_retries 3→1 — 外层 _safe_call 已重试 3 次，
+        # 双重重试最坏 9 次/端点。内层仅负责 UA 与超时，退避逻辑保留（供显式传参场景）。
+        def patched_request(url, params=None, timeout=15, max_retries=1,
                             base_delay=1.0, random_delay_range=(0.5, 1.5)):
             import requests
             from requests.adapters import HTTPAdapter
@@ -1185,7 +1187,9 @@ def analyze_fund_flow(board_name: str,
                        fund_5d_df: Optional[pd.DataFrame],
                        fund_10d_df: Optional[pd.DataFrame],
                        fund_hist_df: Optional[pd.DataFrame]) -> Dict:
-    """汇总板块资金流向信号"""
+    """汇总板块资金流向信号。
+    注：主力/超大单为按单笔金额推断的代理指标（通常被认为代表机构行为），非实名披露。
+    数据源不可用（df 为 None）时按 0 处理，由调用方负责标注"资金流历史数据暂不可用"。"""
     result = {"main_inflow_5d": 0, "main_inflow_pct_5d": 0,
               "main_inflow_10d": 0, "main_inflow_pct_10d": 0,
               "signal": "neutral"}
@@ -1247,6 +1251,7 @@ def fetch_sector_monitor_data() -> Dict:
         "market_overview": {},
         "sectors": [],
         "flow_anomalies": [],
+        "fund_flow_hist_ok": False,  # F5: 5d/10d 资金流可用性，供推送标注"资金流历史数据暂不可用"
         "summary": {"entry": [], "hold": [], "watch": [], "avoid": [], "entry_count": 0,
                     "hold_count": 0, "watch_count": 0, "avoid_count": 0},
     }
@@ -1301,6 +1306,13 @@ def fetch_sector_monitor_data() -> Dict:
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
     fund_10d_df = fetch_sector_fund_flow_10d()
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
+    # F5: 5d/10d 任一失败 → 推送标注"资金流历史数据暂不可用"（当日资金流仍显示）
+    result["fund_flow_hist_ok"] = (
+        fund_5d_df is not None and len(fund_5d_df) > 0
+        and fund_10d_df is not None and len(fund_10d_df) > 0
+    )
+    if not result["fund_flow_hist_ok"]:
+        logger.warning("板块资金流 5d/10d 获取失败，资金流历史数据暂不可用（当日资金流不受影响）")
 
     # 3. 获取三大指数K线
     for idx_cfg in MARKET_INDICES:
@@ -1397,6 +1409,13 @@ def format_sector_for_prompt(data: Dict) -> str:
         return ""
 
     lines = []
+
+    # F5/F10: 数据可用性与代理指标限定，避免 AI 将 0 值/主力净流入当作实名事实
+    if data.get("fund_flow_hist_ok") is False:
+        lines.append("> ⚠️ 资金流历史数据暂不可用（5日/10日资金流缺失，当日资金流仍显示）")
+        lines.append("")
+    lines.append("> 说明：主力/超大单资金为按单笔金额推断的代理指标（通常被认为代表机构行为），非实名披露。")
+    lines.append("")
 
     # 市场概况
     mo = data.get("market_overview", {})

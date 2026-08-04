@@ -94,7 +94,7 @@ M1_FALL_SEVERE = -1.5
 # ═══════════════════════════════════════════════════════════
 
 TRADING_MANUAL = """
-## 📖 交易手册 — 《趋势交易论》核心规则
+## 📖 交易手册 — 《趋势交易论》核心规则（参考材料 · 非今日数据）
 
 ---
 
@@ -733,27 +733,27 @@ def diagnose_sector_mi(s: Dict) -> Dict:
 # AI 解读
 # ═══════════════════════════════════════════════════════════
 
-def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
-             idx_tail: pd.DataFrame, temp_data: Dict, flow_data: Dict) -> Optional[str]:
-    """AI 决策审计 — 不发表观点，只做合规检查。为六大模块逐项评分（含心理纪律）。"""
-    if not DEEPSEEK_API_KEY:
-        return None
-    try:
-        sig_text = "\n".join(f"- {s.name}: {s.value} [{s.status}]" for s in signals)
-        sec_text = "\n".join(
-            f"- {s['rating']} {s['name']}({s['category']}): {s['phase']} | {s['tags']}"
-            for s in sorted(sectors, key=lambda x: x['rating'])
-        )
+def build_ai_prompt(cycle: Dict, signals: List[Signal], sectors: List[Dict],
+                    temp_data: Dict) -> str:
+    """构造 AI 审计 prompt。市场宽度不可用时禁止喂 0 值兜底数据。"""
+    sig_text = "\n".join(f"- {s.name}: {s.value} [{s.status}]" for s in signals)
+    sec_text = "\n".join(
+        f"- {s['rating']} {s['name']}({s['category']}): {s['phase']} | {s['tags']}"
+        for s in sorted(sectors, key=lambda x: x['rating'])
+    )
+    # F1: 宽度不可用时不得拼"涨0家/跌0家"喂 AI，且明示本日不得据此下判断
+    breadth_ok = temp_data.get("breadth_ok", False) or temp_data.get("total", 0) > 0
+    if breadth_ok:
         temp_text = f"涨{temp_data.get('up_count',0)}家/跌{temp_data.get('down_count',0)}家, 涨停{temp_data.get('limit_up',0)}, 跌停{temp_data.get('limit_down',0)}"
-        net_flow = flow_data.get('net_flow')
-        flow_text = f"北向{net_flow:+.0f}亿" if net_flow is not None else "北向数据暂不可用"
+        temp_line = f"市场温度: {temp_text}"
+    else:
+        temp_line = "市场温度: 市场宽度数据暂不可用（本日不得据此项对市场温度/赚钱效应下判断）"
 
-        prompt = f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则逐项评分。
+    return f"""你是交易纪律审计员。不要发表个人观点，只根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则逐项评分。
 
 当前状态:
 {cycle['emoji']} {cycle['name']} | 仓位{cycle['position']} | {cycle['action']}
-市场温度: {temp_text}
-资金: {flow_text}
+{temp_line}
 
 大盘信号:
 {sig_text}
@@ -777,6 +777,15 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 **规则违例:**
 - [若有违例列出，无则写"无违例"]
 """
+
+
+def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
+             idx_tail: pd.DataFrame, temp_data: Dict) -> Optional[str]:
+    """AI 决策审计 — 不发表观点，只做合规检查。为六大模块逐项评分（含心理纪律）。"""
+    if not DEEPSEEK_API_KEY:
+        return None
+    try:
+        prompt = build_ai_prompt(cycle, signals, sectors, temp_data)
 
         resp = requests.post(
             "https://api.deepseek.com/v1/chat/completions",
@@ -893,6 +902,8 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
     三类：🟢 可考虑买入、🔴 应考虑减仓、🟡 继续等待。
     每条输出：具体条件 + 动作 + 止损/止盈 + 理论依据。
     """
+    if not sectors:
+        return []  # F2: 板块数据不可用时不再输出空标题
     lines = []
     buy_candidates = []
     sell_candidates = []
@@ -1087,15 +1098,17 @@ def generate_sector_ops(sectors: List[Dict]) -> List[str]:
 # 信号翻转检测 — 对比昨日信号，标注状态翻转
 # ═══════════════════════════════════════════════════════════
 
-def detect_signal_flips(signals: List[Signal]) -> List[str]:
-    """从 trade_log.jsonl 加载昨日信号，对比今日，检测翻转向。"""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    log_path = os.path.join(script_dir, "trade_log.jsonl")
+def detect_signal_flips(signals: List[Signal], log_path: Optional[str] = None) -> List[str]:
+    """从 trade_log.jsonl 加载昨日信号，对比今日，检测翻转向。
+    条目格式与 append_signal_snapshot 写入一致: {"type":"index","date":"YYYY-MM-DD","signals":{名:状态}}"""
+    if log_path is None:
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trade_log.jsonl")
     if not os.path.exists(log_path):
         return []
 
     try:
-        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        # 北京时间，避免 GitHub Actions UTC 环境下日期错位
+        yesterday = (datetime.now(ZoneInfo("Asia/Shanghai")) - timedelta(days=1)).strftime("%Y-%m-%d")
         yest_sigs = {}
         with open(log_path, encoding='utf-8') as f:
             for line in f:
@@ -1122,6 +1135,22 @@ def detect_signal_flips(signals: List[Signal]) -> List[str]:
         return flips
     except Exception:
         return []
+
+
+def append_signal_snapshot(date_str: str, signals: List[Signal],
+                           log_path: Optional[str] = None) -> None:
+    """F4: 推送成功后把当日信号快照 append 到 trade_log.jsonl，供次日 detect_signal_flips 对比。
+    条目格式须与 detect_signal_flips 的读取一致（type=="index" + signals 字段 + date）。"""
+    if log_path is None:
+        log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trade_log.jsonl")
+    entry = {"type": "index", "date": date_str,
+             "signals": {s.name: s.status for s in signals}}
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        print(f"[i] 信号快照已写入 {log_path}")
+    except Exception as e:
+        print(f"[!] 信号快照写入失败: {e}")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1233,9 +1262,13 @@ def pick_daily_insight(cycle: Dict, signals: List[Signal]) -> str:
 # ═══════════════════════════════════════════════════════════
 
 def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
-                     ai_text: Optional[str], idx: pd.DataFrame, sector_text: str = "",
+                     ai_text: Optional[str], idx: pd.DataFrame,
                      indices: dict = None,
-                     temp_data: Dict = None, flow_data: Dict = None) -> str:
+                     temp_data: Dict = None, flow_data: Dict = None,
+                     sector_unavailable: bool = False,
+                     sector_overview: Optional[Dict] = None,
+                     flow_anomalies: Optional[List] = None,
+                     fund_flow_hist_ok: Optional[bool] = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -1324,8 +1357,34 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             for f in flows[:5]:
                 lines.append(f"- {f}")
             lines.append("")
-            lines.append("> 主力资金流入的板块=大钱正在布局的方向。和技术面共振时信号更可靠。")
+            # F9/F10: 裸数字补参照说明 + 代理指标限定（"大钱布局"属推断，非实名披露）
+            lines.append("> 板块净流入为当日快照（解读为\"大钱正在布局\"属推断，通常认为大额资金更接近机构行为）。\"vs 近20日\"参照待 trade_log 积累后补充。和技术面共振时信号更可靠。")
             lines.append("")
+
+    # ── 📊 指数监测（板块模块） — F3: format_sector_for_prompt 的市场概况并入推送正文 ──
+    if sector_overview:
+        lines.extend([
+            "---",
+            "",
+            "## 📊 指数监测（板块模块）",
+            "",
+        ])
+        for idx_name, idx_data in sector_overview.items():
+            pos_str = "站上" if idx_data.get("above_ma5") else "跌破"
+            lines.append(f"- **{idx_name}**: 收盘{idx_data.get('close')} ({pos_str}MA5, 乖离{idx_data.get('bias_pct')}%)")
+        lines.append("")
+
+    # ── ⚠️ 资金异动 — F3: flow_anomalies 接入推送正文 ──
+    if flow_anomalies:
+        lines.extend([
+            "---",
+            "",
+            "## ⚠️ 资金异动",
+            "",
+        ])
+        for a in flow_anomalies:
+            lines.append(f"- **{a['sector']}**: {a['anomaly']} {a.get('attention','')}")
+        lines.append("")
 
     lines.extend([
         f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
@@ -1547,6 +1606,12 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # ── 🔍 板块操作信号 ──
+    if sector_unavailable:
+        # F2: 板块模块整体异常时，推送正文必须出现"板块数据暂不可用"，而非静默缺块
+        lines.append("## 📋 板块诊断")
+        lines.append("")
+        lines.append("⚠️ **板块数据暂不可用** — 板块操作信号与板块全貌本日缺失。指数信号不受影响，仍可参考。")
+        lines.append("")
     sector_ops = generate_sector_ops(sectors)
     lines.extend(sector_ops)
 
@@ -1557,6 +1622,10 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if sectors:
         lines.append(f"## 📋 板块全貌（{len(sectors)}个 · 理论框架诊断）")
         lines.append("")
+        # F5: 板块资金流 5d/10d 失败时明确标注，避免静默归零误导
+        if fund_flow_hist_ok is not None and not fund_flow_hist_ok:
+            lines.append("> ⚠️ 资金流历史数据暂不可用（5日/10日资金流缺失，当日资金流仍显示）。")
+            lines.append("")
         for label, filters in [
             ("🟢 可入场/持有", ["🟢 可入场","🟢 持有不动"]),
             ("🟡 等回踩/观察", ["🟡 等回踩再入","🟡 持有但警惕","🟡 观察中","🟡 等反弹减仓","🟡 等调整到位","🟢 可以关注"]),
@@ -1686,7 +1755,10 @@ def main():
     }
     idx = indices["上证"]  # 主指数用于信号计算
     m1 = fetch_m1()
-    if idx is None: print("[!!] 无数据"); return
+    if idx is None:
+        # F2: 无数据必须失败可见 — 非零退出 + GitHub Actions ::error:: 注解
+        print("::error::无上证指数数据（akshare/yfinance 均失败），仪表盘中止")
+        sys.exit(1)
 
     today_str = today.strftime("%Y-%m-%d")
     if not args.force and idx["date"].iloc[-1].strftime("%Y-%m-%d") != today_str:
@@ -1697,17 +1769,24 @@ def main():
     for s in signals: print(f"  {s.name}: {s.value} [{s.status}]")
 
     print("[3/4] 板块诊断...")
-    sector_data = None; sector_text = ""; sectors_diag = []
+    sector_data = None; sectors_diag = []
+    sector_unavailable = False          # F2: 板块整体异常 → 推送须出现"板块数据暂不可用"
+    sector_overview = {}                # F3: 板块模块市场概况并入推送正文
+    flow_anomalies = []                 # F3: 资金异动接入推送正文
+    fund_flow_hist_ok = None            # F5: 板块资金流 5d/10d 可用性
     try:
-        from sector_monitor import fetch_sector_monitor_data, format_sector_for_prompt
+        from sector_monitor import fetch_sector_monitor_data
         sector_data = fetch_sector_monitor_data()
-        sector_text = format_sector_for_prompt(sector_data)
         sectors_diag = [diagnose_sector_mi(s) for s in sector_data.get("sectors", [])]
         sm = sector_data.get("summary", {})
+        sector_overview = sector_data.get("market_overview", {})
+        flow_anomalies = sector_data.get("flow_anomalies", [])
+        fund_flow_hist_ok = sector_data.get("fund_flow_hist_ok", True)
         print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
               f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
     except Exception as e:
         print(f"  [!] 板块: {e}")
+        sector_unavailable = True
 
     cycle = assess_sentiment(signals)
     print(f"\n[4/6] 情绪周期: {cycle['emoji']} {cycle['name']}")
@@ -1717,12 +1796,11 @@ def main():
     idx_volume = float(idx["volume"].iloc[-1]) if idx is not None and "volume" in idx.columns and len(idx) > 0 else 0
     temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {},
                  "breadth_ok": False, "volume_ok": False}
-    flow_data = {"north": {}, "sectors": []}
+    flow_data = {"sectors": []}
     try:
         sd = StockData()
         breadth = sd.get_market_breadth()
         vol_info = sd.get_market_volume(idx_volume)
-        north = sd.get_north_flow()
         temp_data = {
             "up_count": breadth["up_count"], "down_count": breadth["down_count"],
             "limit_up": breadth["limit_up"], "limit_down": breadth["limit_down"],
@@ -1731,7 +1809,6 @@ def main():
             "breadth_ok": breadth.get("available", breadth["total"] > 0),
             "volume_ok": vol_info.get("available", vol_info["total_amount"] > 0),
         }
-        flow_data["north"] = north
         ff = sd.get_sector_fund_flow()
         if len(ff) > 0 and "board_name" in ff.columns and "net_flow" in ff.columns:
             for _, row in ff.iterrows():
@@ -1739,20 +1816,21 @@ def main():
                 direction = "流入" if amt > 0 else "流出"
                 flow_data["sectors"].append(f"{row['board_name']}: {direction}{abs(amt):.1f}亿")
         breadth_str = f"{breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']}" if breadth.get("available") else "数据暂不可用"
-        north_str = f"北向{north['net_flow']:+.0f}亿" if north.get("available", False) else "北向数据暂不可用"
-        print(f"  温度: {breadth_str} | {north_str}")
+        print(f"  温度: {breadth_str}")
     except Exception as e:
         print(f"  [!] 温度数据: {e}")
 
-    ai = ai_audit(cycle, signals, sectors_diag, idx, temp_data,
-                  {"north": flow_data.get("north", {}),
-                   "net_flow": flow_data.get("north", {}).get("net_flow") if flow_data.get("north", {}).get("available") else None,
-                   "sectors": flow_data.get("sectors", [])})
+    ai = ai_audit(cycle, signals, sectors_diag, idx, temp_data)
 
-    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, sector_text, indices, temp_data, flow_data)
+    msg = format_dashboard(cycle, signals, sectors_diag, ai, idx, indices, temp_data, flow_data,
+                           sector_unavailable=sector_unavailable,
+                           sector_overview=sector_overview,
+                           flow_anomalies=flow_anomalies,
+                           fund_flow_hist_ok=fund_flow_hist_ok)
 
     # 飞书内容可能超长，分段发送
     max_chars = 25000
+    pushed = False
     if len(msg) > max_chars and not args.dry_run:
         parts = []
         remaining = msg
@@ -1767,12 +1845,18 @@ def main():
         parts.append(remaining)
         for i, part in enumerate(parts):
             ok = send_feishu(part)
+            pushed = pushed or ok
             print(f"[>] 飞书({i+1}/{len(parts)}): {'OK' if ok else 'FAIL'}")
     else:
         print("\n" + msg)
         if args.dry_run: print("\n[i] Dry run"); return
         ok = send_feishu(msg)
+        pushed = ok
         print(f"\n[>] 飞书: {'OK' if ok else 'FAIL'}")
+
+    # F4: 推送成功后写入当日信号快照，供次日 detect_signal_flips 对比
+    if pushed:
+        append_signal_snapshot(today_str, signals)
 
 
 if __name__ == "__main__":
