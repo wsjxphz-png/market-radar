@@ -46,3 +46,19 @@ def test_pick_focus_priority():
     ]
     out = pick_focus(a, top_n=2)
     assert [x["industry"] for x in out] == ["B", "A"]
+
+def test_pick_focus_dedup_keeps_highest_priority():
+    # 同一 industry 出现多条 → 只保留优先级最高的一条（接口承诺"去重取前 N"）
+    a = [
+        {"industry": "A", "tag": "资金关注", "sl_percentile": 90.0},
+        {"industry": "A", "tag": "", "sl_percentile": 95.0},
+        {"industry": "B", "tag": "资金撤离", "sl_percentile": 10.0},
+        {"industry": "B", "tag": "逆势吸筹嫌疑", "sl_percentile": 85.0},
+        {"industry": "C", "tag": "", "sl_percentile": 60.0},
+        {"industry": "C", "tag": "", "sl_percentile": 40.0},
+    ]
+    out = pick_focus(a, top_n=10)
+    assert [x["industry"] for x in out] == ["B", "A", "C"]
+    assert out[0]["tag"] == "逆势吸筹嫌疑"      # B 取优先级最高的 tag
+    assert out[1]["tag"] == "资金关注"           # A 带 tag 的优先于无 tag 高百分位
+    assert out[2]["sl_percentile"] == 60.0      # C 两条无 tag → 取百分位高的

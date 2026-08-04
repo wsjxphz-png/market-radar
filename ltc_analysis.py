@@ -75,9 +75,18 @@ def compute_accumulation(kline: Optional[pd.DataFrame], chg: float, sl_net: floa
     return {"period": "短期行为特征", "reasons": reasons or ["单日资金行为，持续性不足"]}
 
 def pick_focus(analyses: List[dict], top_n: int = 6) -> List[dict]:
-    """优先级：逆势吸筹 > 派发嫌疑 > 资金关注 > 资金撤离 > 待观察"""
+    """优先级：逆势吸筹 > 派发嫌疑 > 资金关注 > 资金撤离 > 待观察，按 industry 去重取前 N"""
     tagged = [a for a in analyses if a.get("tag")]
     tagged.sort(key=lambda x: TAG_PRIORITY.get(x["tag"], 9))
     others = [a for a in analyses if not a.get("tag")]
     others.sort(key=lambda x: x.get("sl_percentile", 50), reverse=True)
-    return (tagged + others)[:top_n]
+    seen, out = set(), []
+    for a in tagged + others:
+        key = a.get("industry")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(a)
+        if len(out) >= top_n:
+            break
+    return out
