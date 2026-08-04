@@ -2,6 +2,7 @@
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
+import pytest
 import ltc_main
 ltc_store = __import__("ltc_store")
 
@@ -100,6 +101,38 @@ def test_run_dry_run_flag_skips_send_and_records(monkeypatch, tmp_path):
     assert state.get("last_pushed_date") == "2026-08-04"
     hist = ltc_store.load_history(str(tmp_path / "history.jsonl"))
     assert len(hist) == 1
+
+
+@pytest.mark.parametrize("val,called", [
+    ("1", False),
+    ("true", False),
+    ("True", False),
+    ("0", True),
+    ("false", True),
+    ("", True),
+])
+def test_run_dry_run_flag_truth_semantics(monkeypatch, tmp_path, val, called):
+    """复审：LTC_DRY_RUN 真值判定 — 仅 "1"/"true"（不区分大小写）视为 dry-run 跳过发送；
+    "0"/"false"/"" 一律走真实 send_feishu 路径"""
+    env = dict(_EMPTY_ENV)
+    env["LTC_DRY_RUN"] = val
+    monkeypatch.setattr(ltc_main.ltc_data, "get_trading_date", lambda: "2026-08-04")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_southbound", lambda: {"date": "2026-08-04", "southbound_net_yi": 25.7})
+    flow = pd.DataFrame([{"industry": "银行", "chg_pct": -2.0, "main_net_yi": 5.0,
+                          "super_large_net_yi": 3.0, "large_net_yi": 2.0}])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_sector_flow", lambda: flow)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_repurchase", lambda weeks: {"period": "近4周", "items": []})
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_valuation", lambda: [])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_board_kline", lambda name: None)
+    monkeypatch.setattr(ltc_main.ltc_news, "fetch_news_titles", lambda today, limit: [])
+    sent = []
+    monkeypatch.setattr(ltc_main, "send_feishu", lambda msg, env: sent.append(msg) or True)
+    code = ltc_main.run_once(env, str(tmp_path))
+    assert code == 0
+    assert (len(sent) == 1) == called, f"LTC_DRY_RUN={val!r} 应{'调用' if called else '跳过'} send_feishu"
+    if called:
+        state = ltc_store.load_state(str(tmp_path / "state.json"))
+        assert state.get("last_pushed_date") == "2026-08-04"
 
 
 def test_run_send_failure_no_state_write(monkeypatch, tmp_path):
