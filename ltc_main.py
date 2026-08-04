@@ -97,8 +97,8 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     valuation = _safe_fetch(ltc_data.fetch_valuation, default=[])  # 内部逐板块失败兜底；外层再包 _safe_fetch 防整体击穿（FR-6.3 对称性）
 
     # 承接周期（每板块 K 线 + 背书；背书来自季度实名数据，季度背景过期则不计）
-    from ltc_config import BACKING_SECTORS, QUARTERLY_CONTEXT, is_expired
-    backing_active = not is_expired(QUARTERLY_CONTEXT.get("updated", ""))
+    from ltc_config import BACKING_SECTORS, load_quarterly_context, is_expired
+    backing_active = not is_expired(load_quarterly_context().get("updated", ""))
     for f in focus:
         kline = _safe_fetch(ltc_data.fetch_board_kline, f["industry"])
         backing = backing_active and any(b in f["industry"] for b in BACKING_SECTORS)

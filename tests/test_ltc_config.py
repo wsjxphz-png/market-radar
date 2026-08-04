@@ -2,7 +2,7 @@
 import sys, os
 from datetime import timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ltc_config import GLOSSARY, BANNED_PHRASES, PHASE_LABEL, is_expired, QUARTERLY_CONTEXT, bj_now
+from ltc_config import GLOSSARY, BANNED_PHRASES, PHASE_LABEL, is_expired, QUARTERLY_CONTEXT_FALLBACK, bj_now
 
 def test_glossary_covers_key_terms():
     for term in ["超大单", "大单", "主力", "回购", "南向", "估值分位"]:
@@ -30,4 +30,4 @@ def test_expiry():
 
 def test_quarterly_has_required_keys():
     for k in ["updated", "next_update", "key_facts"]:
-        assert k in QUARTERLY_CONTEXT
+        assert k in QUARTERLY_CONTEXT_FALLBACK

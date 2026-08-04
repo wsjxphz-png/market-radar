@@ -1,0 +1,39 @@
+name: 季度背景自动刷新
+on:
+  schedule:
+    # 季报披露窗口：1月15日/4月15日/7月15日/10月15日 02:17 UTC（北京时间 10:17）
+    - cron: '17 2 15 1,4,7,10 *'
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: '报告期 YYYYMMDD（留空 = 自动取最近季度末）'
+        required: false
+        default: ''
+        type: string
+permissions:
+  contents: write
+jobs:
+  quarterly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements.txt
+      - name: 生成季度背景
+        run: |
+          python ltc_quarterly.py "${{ inputs.report_date }}"
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "::error::季度背景生成失败或存在告警（exit $code），未写入 JSON，请查看日志"
+          fi
+          exit 0
+      - name: 留痕提交
+        run: |
+          mkdir -p data/ltc
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ltc || true
+          git diff --cached --quiet || git commit -m "data: 季度背景自动刷新留痕 [skip ci]"
+          git push

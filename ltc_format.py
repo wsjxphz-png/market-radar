@@ -1,7 +1,7 @@
 # ltc_format.py
 """飞书卡片：日更/长更分离 + 术语解释 + 搭桥 + 诚实声明"""
 from typing import List
-from ltc_config import GLOSSARY, CARD_EMOJIS, QUARTERLY_CONTEXT
+from ltc_config import GLOSSARY, CARD_EMOJIS, load_quarterly_context
 
 E = CARD_EMOJIS
 
@@ -9,8 +9,8 @@ def _term(term: str) -> str:
     return f"{term}（{GLOSSARY[term]}）" if term in GLOSSARY else term
 
 def build_quarterly_block() -> tuple:
-    """季度背景块 + 过期标记（非今日数据，仅作背景）"""
-    ctx = QUARTERLY_CONTEXT
+    """季度背景块 + 过期标记（非今日数据，仅作背景；内容来自季度自动刷新 JSON，缺时回退内置默认）"""
+    ctx = load_quarterly_context()
     lines = [f"{E['long']} 季度背景（更新于 {ctx['updated']}，非今日数据，下次更新 {ctx['next_update']}）"]
     for v in ctx["key_facts"].values():
         lines.append(f"- {v}")

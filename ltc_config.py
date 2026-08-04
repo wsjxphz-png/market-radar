@@ -1,5 +1,6 @@
 # ltc_config.py
 """长线资金观察 — 配置中心：术语表/禁用词/板块/季度背景/阈值"""
+import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -55,8 +56,9 @@ def is_expired(updated: str, days: int = 14) -> bool:
     except (ValueError, TypeError):
         return True  # 无法解析/为空视为过期
 
-# 季度背景知识库 — 每季度手动更新；过期后卡片带警告（FR-6.1）
-QUARTERLY_CONTEXT = {
+# 季度背景知识库 — 内置默认（手工维护的历史版本，作为回退兜底）
+# 生产使用由 ltc_quarterly.py 每季度自动刷新生成的 data/ltc/quarterly_context.json（FR：季度背景自动刷新）
+QUARTERLY_CONTEXT_FALLBACK = {
     "updated": "2026-07-23",
     "next_update": "2026年8月底（半年报全部披露后）",
     "key_facts": {
@@ -72,3 +74,14 @@ QUARTERLY_CONTEXT = {
         "电子": "公募仓位 43.4%（历史极值），不是便宜，是贵且满仓",
     },
 }
+
+def load_quarterly_context(path: str = "data/ltc/quarterly_context.json") -> dict:
+    """优先读季度刷新生成的 JSON；缺失/损坏/缺 key_facts 键 → 回退内置默认"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            ctx = json.load(f)
+        if isinstance(ctx, dict) and "key_facts" in ctx:
+            return ctx
+    except (OSError, ValueError):
+        pass
+    return QUARTERLY_CONTEXT_FALLBACK
