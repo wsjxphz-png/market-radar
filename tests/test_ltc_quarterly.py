@@ -4,7 +4,7 @@ import sys, os, json
 import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ltc_config import load_quarterly_context, QUARTERLY_CONTEXT_FALLBACK
-from ltc_quarterly import aggregate_by_type, generate_context, validate
+from ltc_quarterly import aggregate_by_type, build_industry_map, generate_context, validate
 
 # ── 假数据：社保/养老 3、保险 1、基金 2、其他 2（个人/证券公司，应被忽略）、1 个未映射代码 ──
 def _fake_holdings() -> pd.DataFrame:
@@ -80,7 +80,7 @@ def test_generate_context_structure():
     assert ctx["updated"] == "2026-08-05"
     assert ctx["report_date"] == "20260630"
     assert ctx["next_update"] == "2026年11月中（三季报披露后）"
-    assert ctx["sources"] == ["东方财富数据中心-机构持股明细", "报告期 20260630"]
+    assert ctx["sources"] == ["东方财富数据中心-机构持股明细", "BaoStock/北交所官网 行业映射", "报告期 20260630"]
     for k in ("social_security", "insurance", "mutual_funds"):
         assert k in ctx["key_facts"]
 
@@ -142,6 +142,138 @@ def test_validate_bad_report_date_warns():
 def test_validate_empty_industry_map_warns():
     warns = validate(_agg_with(coverage=1.0), {}, "20260630")
     assert any("行业映射为空" in w for w in warns)
+
+# ── build_industry_map（BaoStock，mock 掉真实模块）──
+class _FakeRs:
+    """模拟 baostock 查询结果集：next()/get_row_data() + error_code/error_msg"""
+    def __init__(self, rows, error_code="0", error_msg="success"):
+        self._rows = list(rows)
+        self.error_code = error_code
+        self.error_msg = error_msg
+
+    def next(self):
+        if self._rows:
+            self._cur = self._rows.pop(0)
+            return True
+        return False
+
+    def get_row_data(self):
+        return self._cur
+
+
+class _FakeBs:
+    """模拟 baostock 模块：login/query_stock_industry/logout"""
+    def __init__(self, rows=None, login_code="0", login_msg="success", raise_on_login=False, raise_on_query=False):
+        self._rows = rows
+        self.login_code = login_code
+        self.login_msg = login_msg
+        self.raise_on_login = raise_on_login
+        self.raise_on_query = raise_on_query
+        self.logout_called = False
+
+    def login(self):
+        if self.raise_on_login:
+            raise ConnectionError("boom")
+        return type("LG", (), {"error_code": self.login_code, "error_msg": self.login_msg})()
+
+    def query_stock_industry(self):
+        if self.raise_on_query:
+            raise RuntimeError("query boom")
+        return _FakeRs(self._rows)
+
+    def logout(self):
+        self.logout_called = True
+
+
+def _patch_bse(monkeypatch, ind_by_code=None, code_by_name=None):
+    """BSE 官网列表默认返回空（避免单测触发真实网络请求）"""
+    monkeypatch.setattr("ltc_quarterly._bse_list",
+                        lambda: (ind_by_code or {}, code_by_name or {}))
+
+def test_build_industry_map_normalizes_and_skips_empty(monkeypatch):
+    rows = [
+        ["2026-08-03", "sh.600000", "浦发银行", "J66货币金融服务", "金融业"],
+        ["2026-08-03", "sz.300750", "宁德时代", "C39计算机、通信和其他电子设备制造业", "制造业"],
+        ["2026-08-03", "sh.600001", "某退市股", "", "制造业"],            # 空行业 → 跳过
+    ]
+    fake = _FakeBs(rows)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch)
+    m = build_industry_map()
+    # sh./sz. 前缀剥离为 6 位；GB/T 门类码（C39 等）剥离只留行业名；空行业不出现
+    assert m == {"600000": "货币金融服务", "300750": "计算机、通信和其他电子设备制造业"}
+    assert fake.logout_called
+
+def test_build_industry_map_login_failure_returns_empty(monkeypatch):
+    fake = _FakeBs(login_code="1", login_msg="网络不通")
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch)
+    assert build_industry_map() == {}
+
+def test_build_industry_map_exception_returns_empty(monkeypatch):
+    fake = _FakeBs(raise_on_login=True)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch)
+    assert build_industry_map() == {}
+    assert not fake.logout_called  # 登录未成功，不调用 logout
+
+def test_build_industry_map_query_error_logs_out(monkeypatch):
+    fake = _FakeBs(raise_on_query=True)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch)
+    assert build_industry_map() == {}
+    assert fake.logout_called  # 登录成功后查询失败，finally 仍要登出
+
+def test_build_industry_map_midstream_error_code_keeps_partial(monkeypatch):
+    rows = [["2026-08-03", "sh.600000", "浦发银行", "J66货币金融服务", "金融业"]]
+    fake = _FakeBs(rows)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch)
+    m = build_industry_map()
+    assert m == {"600000": "货币金融服务"}
+
+def test_build_industry_map_merges_bse_new_codes(monkeypatch):
+    rows = [["2026-08-03", "sh.600000", "浦发银行", "J66货币金融服务", "金融业"]]
+    fake = _FakeBs(rows)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch, ind_by_code={"920002": "通用设备制造业", "920000": "汽车制造业"})
+    m = build_industry_map()
+    # 北交所新代码段（920xxx，BaoStock 不覆盖）直接并入
+    assert m["920002"] == "通用设备制造业" and m["920000"] == "汽车制造业"
+
+def test_build_industry_map_resolves_legacy_bse_codes_by_name(monkeypatch):
+    rows = [
+        ["2026-08-03", "sh.600000", "浦发银行", "J66货币金融服务", "金融业"],
+        ["2026-08-03", "sz.300738", "奥飞数据", "I65软件和信息技术服务业", "信息传输、软件和信息技术服务业"],
+    ]
+    fake = _FakeBs(rows)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    # BSE 官网列表：新代码 + 简称
+    _patch_bse(monkeypatch, ind_by_code={"920002": "通用设备制造业"},
+               code_by_name={"万达轴承": "920002", "奥飞数据": "300738"})
+    df = pd.DataFrame([
+        {"股票代码": "832745", "股票简称": "奥飞数据"},   # 换码/转板前旧代码
+        {"股票代码": "838262", "股票简称": "万达轴承"},   # 北交所旧代码 → 新代码段
+        {"股票代码": "600000", "股票简称": "浦发银行"},   # 已映射，不动
+        {"股票代码": "874105", "股票简称": "爱舍伦"},     # 查无此名 → 保持未映射
+    ])
+    m = build_industry_map(df)
+    assert m["832745"] == "软件和信息技术服务业"          # 简称 → 当前代码(300738) → 行业
+    assert m["838262"] == "通用设备制造业"                # 简称 → BSE 新代码(920002) → 行业
+    assert m["600000"] == "货币金融服务"
+    assert "874105" not in m
+
+def test_build_industry_map_legacy_join_skips_non_bse_prefix(monkeypatch):
+    rows = [["2026-08-03", "sh.600000", "浦发银行", "J66货币金融服务", "金融业"]]
+    fake = _FakeBs(rows)
+    monkeypatch.setitem(sys.modules, "baostock", fake)
+    _patch_bse(monkeypatch, ind_by_code={}, code_by_name={"某某": "600000"})
+    df = pd.DataFrame([
+        {"股票代码": "600001", "股票简称": "某某"},       # 6 开头不是北交所旧代码段 → 不翻译
+        {"股票代码": "833454", "股票简称": ""},           # 旧代码但无简称 → 不翻译
+    ])
+    m = build_industry_map(df)
+    assert "600001" not in m and "833454" not in m
 
 # ── load_quarterly_context（ltc_config）──
 def test_load_quarterly_context_from_file(tmp_path):

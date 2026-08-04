@@ -1,12 +1,11 @@
 # ltc_quarterly.py
 """季度背景自动刷新：机构持仓 → 行业聚合 → 自动校验 → JSON 落地（替代手工维护 QUARTERLY_CONTEXT）
 用户零介入：workflow 每季度披露窗口触发，有告警只打印不写文件（异常才需人工看日志）"""
-import json, logging, os, random, re, sys, time
+import json, logging, os, re, sys
 from typing import Dict, List, Optional
 import pandas as pd
 import akshare as ak
 from ltc_config import bj_now
-from ltc_data import REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX
 
 logger = logging.getLogger(__name__)
 
@@ -38,49 +37,88 @@ def fetch_holdings(report_date: str) -> pd.DataFrame:
                 rename[a] = canon
                 break
     out = df.rename(columns=rename)
-    keep = [c for c in ("股东类型", "股东名称", "股票代码", "期末持股-数量变化",
+    keep = [c for c in ("股东类型", "股东名称", "股票代码", "股票简称", "期末持股-数量变化",
                         "期末持股-持股变动", "期末持股-流通市值") if c in out.columns]
     return out[keep].copy()
 
-def build_industry_map() -> dict:
-    """股票代码 → 东财行业。
-    首选 stock_zh_a_spot_em 全市场快照（含"行业"列时一次拉齐）；
-    失败/无行业列 → 回退 stock_board_industry_cons_em 逐行业拉成分股（约 86 行业，0.8-2s 间隔）；
-    两个方案都失败 → {}（校验会告警覆盖率不足）"""
+# 国民经济行业分类（GB/T 4754）门类码前缀：如 "C39计算机、通信和其他电子设备制造业" → "计算机、通信和其他电子设备制造业"
+_PREFIX_RE = re.compile(r"^[A-Z]\d{2}")
+
+def _bse_list() -> tuple:
+    """北交所官网上市公司列表（akshare 包装，官方数据源）→ (代码→行业, 简称→代码)。
+    失败 → ({}, {})，不阻塞主流程（校验会告警覆盖率不足）"""
     try:
-        df = ak.stock_zh_a_spot_em()
+        bj = ak.stock_info_bj_name_code()
     except Exception as e:
-        logger.warning("spot_em 全市场快照失败，走逐行业回退: %s", str(e)[:80])
-        df = None
-    if df is not None and len(df) > 1000 and "行业" in df.columns:
-        m = {}
-        for _, r in df.iterrows():
-            ind = str(r["行业"])
-            if ind != "nan" and ind:
-                m[str(r["代码"]).zfill(6)] = ind
-        if len(m) > 3000:
-            logger.info("行业映射：spot_em 快照 %d 条", len(m))
-            return m
-    # 回退：逐行业成分股
-    try:
-        names = ak.stock_board_industry_name_em()["板块名称"].astype(str).tolist()
-    except Exception as e:
-        logger.warning("行业列表拉取失败，行业映射为空: %s", str(e)[:80])
-        return {}
-    out: Dict[str, str] = {}
-    for name in names:
-        try:
-            cons = ak.stock_board_industry_cons_em(symbol=name)
-            for code in cons["代码"].astype(str):
-                out[code.zfill(6)] = name
-        except Exception as e:
-            logger.warning("行业 %s 成分股拉取失败: %s", name, str(e)[:60])
-            if not out:  # 首个行业即失败 → 判定回退通道也不可用，提前放弃（不空耗 86 次）
-                logger.warning("逐行业回退首行业失败，行业映射为空")
-                return {}
-        time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
-    logger.info("行业映射：逐行业回退 %d 条（%d 行业）", len(out), len(names))
+        logger.warning("北交所行业列表失败: %s", str(e)[:100])
+        return {}, {}
+    ind_by_code: Dict[str, str] = {}
+    code_by_name: Dict[str, str] = {}
+    for _, r in bj.iterrows():
+        ind = str(r["所属行业"])
+        code = str(r["证券代码"]).zfill(6)
+        name = str(r["证券简称"])
+        if ind != "nan" and ind:
+            ind_by_code[code] = ind
+        if name != "nan" and name:
+            code_by_name.setdefault(name, code)
+    return ind_by_code, code_by_name
+
+def _merge_supplement(mapping: Dict[str, str], name_to_code: Dict[str, str],
+                      df: Optional[pd.DataFrame]) -> Dict[str, str]:
+    """补充两处 BaoStock 覆盖不到的场景（失败均静默，覆盖率校验兜底）：
+    1) 北交所新代码段（920xxx，2024 换码后）— 北交所官网列表直接映射；
+    2) 东财持仓明细里的旧代码（43x/83x/87x：换码前北交所、转板/退市前新三板）
+       — 按"股票简称"翻译到当前代码后取行业（名称冲突取首个，找不到则跳过）"""
+    out = dict(mapping)
+    bse_ind, bse_name = _bse_list()
+    out.update(bse_ind)
+    if df is None or df.empty:
+        return out
+    for _, r in df.iterrows():
+        code = str(r.get("股票代码", "")).zfill(6)
+        if code in out or code[0] not in "48":
+            continue
+        name = str(r.get("股票简称", ""))
+        new_code = bse_name.get(name) or name_to_code.get(name)
+        if new_code and new_code in out:
+            out[code] = out[new_code]
     return out
+
+def build_industry_map(df: Optional[pd.DataFrame] = None) -> dict:
+    """行业映射：BaoStock 官方免费服务（沪深，不走爬虫、不封 IP）+ 北交所官网列表。
+    返回 {6位股票代码: 行业名}：代码带交易所前缀（sh./sz.）统一剥离为 6 位，与东财
+    持仓明细的"股票代码"对齐；行业取国民经济行业分类名并剥离开头"字母+两位数字"
+    门类码（如 C39），空行业跳过。df 为东财持仓明细（含股票简称）时补翻译旧代码。
+    登录失败/拉取异常 → {}（校验会告警覆盖率不足）"""
+    import baostock as bs
+    try:
+        lg = bs.login()
+        if lg.error_code != "0":
+            logger.warning("BaoStock 登录失败: %s", lg.error_msg)
+            return {}
+        try:
+            rs = bs.query_stock_industry()
+            mapping: Dict[str, str] = {}
+            name_to_code: Dict[str, str] = {}   # 简称 → 当前代码（换码/转板股翻译用）
+            while rs.error_code == "0" and rs.next():
+                row = rs.get_row_data()
+                # fields: updateDate, code(sh.600000), code_name, industry, industryClassification
+                code = row[1]
+                industry = row[3]
+                if not industry:
+                    continue
+                plain = code[3:]
+                mapping[plain] = _PREFIX_RE.sub("", industry)
+                name_to_code.setdefault(row[2], plain)
+            out = _merge_supplement(mapping, name_to_code, df)
+            logger.info("行业映射：BaoStock %d 条，合并补充后共 %d 条", len(mapping), len(out))
+            return out
+        finally:
+            bs.logout()
+    except Exception as e:
+        logger.warning("BaoStock 行业映射失败: %s", str(e)[:120])
+        return {}
 
 def _group_of(row: pd.Series) -> Optional[str]:
     """股东类型归类：社保|养老 / 保险 / 基金；其他忽略（类型列缺失时看股东名称）"""
@@ -160,7 +198,7 @@ def generate_context(agg: dict, report_date: str, today: str) -> dict:
         "report_date": report_date,
         "next_update": _next_update(report_date),
         "key_facts": {"social_security": ss_text, "insurance": ins_text, "mutual_funds": mf_text},
-        "sources": ["东方财富数据中心-机构持股明细", f"报告期 {report_date}"],
+        "sources": ["东方财富数据中心-机构持股明细", "BaoStock/北交所官网 行业映射", f"报告期 {report_date}"],
     }
 
 def validate(agg: dict, industry_map: dict, report_date: str) -> List[str]:
@@ -174,7 +212,7 @@ def validate(agg: dict, industry_map: dict, report_date: str) -> List[str]:
     if total and coverage < 0.95:
         warnings.append(f"行业映射覆盖率 {coverage:.0%} < 95%（映射 {meta.get('mapped')}/{total}）")
     if industry_map is None or len(industry_map) == 0:
-        warnings.append("行业映射为空（spot_em 与逐行业回退均失败）")
+        warnings.append("行业映射为空（BaoStock 拉取失败）")
     if not agg.get("social_security", {}).get("institutions"):
         warnings.append("社保|养老机构数为 0，季度背景缺失社保数据")
     if not any(agg.get(g, {}).get("institutions") for g in GROUPS):
@@ -200,7 +238,7 @@ def main(report_date: Optional[str] = None, output_path: str = DEFAULT_OUTPUT,
     report_date = report_date or _latest_report_date(today)
     print(f"[ltc_quarterly] report_date={report_date} today={today} output={output_path}")
     df = fetch_holdings(report_date)
-    industry_map = build_industry_map()
+    industry_map = build_industry_map(df)
     agg = aggregate_by_type(df, industry_map)
     print(f"[ltc_quarterly] 机构持仓 {len(df)} 行 → 聚合 {agg['_meta']['mapped']}/{agg['_meta']['total']} 已映射（覆盖率 {agg['_meta']['coverage']:.0%}）")
     warnings = validate(agg, industry_map, report_date)
