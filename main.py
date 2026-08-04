@@ -45,6 +45,45 @@ def log(msg: str):
 
 
 # ============================================================
+# 数据源状态统计（卡片头部"失败源清单"区块 + 告警卡共用）
+# ============================================================
+
+_SOURCE_STATS: Dict = {
+    "rss": {"ok": 0, "fail": 0, "opt_fail": 0, "failed_sources": []},
+    "fred": {"ok": 0, "total": 0, "failed": []},
+    "akshare": {"ok": 0, "total": 0, "failed": []},
+    "polymarket": {"ok": 0, "total": 0, "failed": []},
+    "tavily": {"ok": 0, "total": 0, "failed": []},
+}
+
+
+def render_source_failure_block() -> str:
+    """渲染数据源状态区块：各源成功/失败计数 + 失败源清单。无任何失败时返回空串。"""
+    st = _SOURCE_STATS
+    rss, fred, ak, pm, tv = st["rss"], st["fred"], st["akshare"], st["polymarket"], st["tavily"]
+    counts = []
+    if rss["ok"] or rss["fail"]:
+        counts.append(f"RSS {rss['ok']}✅/{rss['fail']}❌")
+    if fred["total"]:
+        counts.append(f"FRED {fred['ok']}/{fred['total']}")
+    if ak["total"]:
+        counts.append(f"A股 {ak['ok']}/{ak['total']}")
+    if pm["total"]:
+        counts.append(f"Polymarket {pm['ok']}/{pm['total']}")
+    if tv["total"]:
+        counts.append(f"Tavily {tv['ok']}/{tv['total']}")
+    failed = rss["failed_sources"] + fred["failed"] + ak["failed"] + pm["failed"] + tv["failed"]
+    if not counts and not failed:
+        return ""
+    lines = ["## 📡 数据源状态"]
+    if counts:
+        lines.append(" | ".join(counts))
+    if failed:
+        lines.append("❌ 失败源清单: " + "、".join(failed[:10]))
+    return "\n".join(lines)
+
+
+# ============================================================
 # 第一步：构建 RSS URL
 # ============================================================
 
@@ -104,11 +143,34 @@ def build_rss_urls(config: Dict) -> List[Dict]:
 # 第二步：RSS 抓取
 # ============================================================
 
+# RSSHub 实例级熔断状态（每进程）：
+# 死实例不再让每个源各自重试烧满 MAX_RETRIES×30s，连续 2 个源失败即熔断跳过。
+_RSS_INSTANCE_FAILS: Dict[str, int] = {}
+_RSS_INSTANCE_BLOCKED: List[str] = []
+
+
+def _instance_of(url: str) -> str:
+    """提取 URL 的 host 作为实例标识"""
+    from urllib.parse import urlparse
+    return urlparse(url).netloc
+
+
+def _mark_instance_failure(inst: str):
+    """实例失败计数；连续 2 个源失败 → 本进程熔断该实例"""
+    _RSS_INSTANCE_FAILS[inst] = _RSS_INSTANCE_FAILS.get(inst, 0) + 1
+    if _RSS_INSTANCE_FAILS[inst] >= 2 and inst not in _RSS_INSTANCE_BLOCKED:
+        log(f"⛔ RSSHub 实例 {inst} 连续 {_RSS_INSTANCE_FAILS[inst]} 个源失败，本进程熔断")
+        _RSS_INSTANCE_BLOCKED.append(inst)
+
+
 def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
     urls = [task["url"]] + task.get("alt_urls", [])
     headers = {"User-Agent": "MarketRadar/1.0"}
     headers.update(task.get("extra_headers", {}))
     for url in urls:
+        inst = _instance_of(url)
+        if inst in _RSS_INSTANCE_BLOCKED:
+            continue  # 实例已熔断，直接试下一个
         for attempt in range(MAX_RETRIES + 1):
             try:
                 resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
@@ -118,16 +180,15 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
                         if url != task["url"]:
                             task["_used_fallback"] = url
                         return feed
-                    return None
-                elif resp.status_code in (429,):
-                    time.sleep((attempt + 1) * 5); continue
-                elif resp.status_code in (403, 404):
-                    break  # 这个实例挂了，试下一个
+                    return None  # 200 但无条目：源自身问题，不计实例故障
+                elif resp.status_code == 429:
+                    time.sleep((attempt + 1) * 5); continue  # 限流：短暂等待后重试
                 else:
-                    time.sleep(REQUEST_DELAY); continue
+                    break  # 403/404/5xx：本实例本次失败，快速换下一实例
             except Exception:
-                time.sleep(REQUEST_DELAY); continue
-        # 这个 URL 的所有重试都失败了，继续试下一个 fallback
+                break  # 连接错误：不再重试烧时间，快速换下一实例
+        _mark_instance_failure(inst)
+        # 这个 URL 的所有尝试都失败了，继续试下一个 fallback
     return None
 
 
@@ -157,14 +218,19 @@ def _parse(entry, task: Dict) -> Optional[Dict]:
 
 def fetch_all(tasks: List[Dict]) -> List[Dict]:
     all_items = []
-    ok, fail, opt_fail = 0, 0, 0
+    # 重置 RSS 统计（每次调用自包含，避免跨测试污染）
+    _SOURCE_STATS["rss"] = {"ok": 0, "fail": 0, "opt_fail": 0, "failed_sources": []}
+    st = _SOURCE_STATS["rss"]
     log(f"\n🔍 抓取 {len(tasks)} 个 RSS 信息源...")
     for i, task in enumerate(tasks):
         is_opt = task.get("optional", False)
         feed = fetch_rss(task)
         if feed is None:
-            if is_opt: opt_fail += 1
-            else: fail += 1
+            if is_opt:
+                st["opt_fail"] += 1
+            else:
+                st["fail"] += 1
+                st["failed_sources"].append(task["source_name"])
             continue
         added = 0
         for entry in feed.entries:
@@ -172,7 +238,7 @@ def fetch_all(tasks: List[Dict]) -> List[Dict]:
             if item:
                 all_items.append(item)
                 added += 1
-        ok += 1
+        st["ok"] += 1
         if added:
             fb_tag = ""
             if task.get("_used_fallback"):
@@ -180,7 +246,7 @@ def fetch_all(tasks: List[Dict]) -> List[Dict]:
                 fb_tag = f" [↪{fb_host}]"
             log(f"   [{i+1}/{len(tasks)}] {task['platform']}:{task['source_name']} ✅ {added}{fb_tag}")
         time.sleep(REQUEST_DELAY)
-    log(f"\n📊 {ok}成功 {fail}失败 {opt_fail}可选跳过 → {len(all_items)}条")
+    log(f"\n📊 {st['ok']}成功 {st['fail']}失败 {st['opt_fail']}可选跳过 → {len(all_items)}条")
     return all_items
 
 
@@ -190,14 +256,18 @@ def fetch_all(tasks: List[Dict]) -> List[Dict]:
 
 def fetch_fred_data(fred_config: Dict) -> List[Dict]:
     """获取 FRED 经济指标最新值"""
+    indicators = fred_config.get("indicators", [])
+    # 重置 FRED 统计并计入失败源清单（O2）
+    _SOURCE_STATS["fred"] = {"ok": 0, "total": len(indicators), "failed": []}
     if not FRED_API_KEY:
+        _SOURCE_STATS["fred"]["failed"].append("FRED(API Key 未设置)")
         log("⚠️ FRED_API_KEY 未设置，跳过经济数据")
         return []
     try:
         from fredapi import Fred
         fred = Fred(api_key=FRED_API_KEY)
         items = []
-        for ind in fred_config.get("indicators", []):
+        for ind in indicators:
             try:
                 series = fred.get_series(ind["id"])
                 if series is not None and len(series) > 0:
@@ -213,13 +283,17 @@ def fetch_fred_data(fred_config: Dict) -> List[Dict]:
                         "change_pct": round(float(change_pct), 2),
                         "last_date": str(last_date)[:10]
                     })
+                    _SOURCE_STATS["fred"]["ok"] += 1
             except Exception as e:
+                _SOURCE_STATS["fred"]["failed"].append(ind["name"])
                 log(f"   ⚠️ FRED {ind['id']}: {str(e)[:50]}")
-        log(f"📊 FRED: {len(items)}/{len(fred_config.get('indicators',[]))} 指标获取成功")
+        log(f"📊 FRED: {len(items)}/{len(indicators)} 指标获取成功")
         return items
     except ImportError:
+        _SOURCE_STATS["fred"]["failed"].append("FRED(fredapi 未安装)")
         log("⚠️ fredapi 未安装"); return []
     except Exception as e:
+        _SOURCE_STATS["fred"]["failed"].append("FRED(请求异常)")
         log(f"⚠️ FRED 错误: {str(e)[:80]}"); return []
 
 
@@ -227,55 +301,130 @@ def fetch_fred_data(fred_config: Dict) -> List[Dict]:
 # AKShare A股数据
 # ============================================================
 
+def fetch_a_share_market_stats() -> Optional[Dict]:
+    """baostock 获取 A 股概况：全市场只数 + 沪深300/中证500 涨跌家数样本。
+
+    - 东财 push2 接口（akshare stock_zh_a_spot_em）在生产环境已被封禁，
+      故改用 baostock 官方免费源。
+    - 全量 5000+ 只逐一取日K在 CI 上耗时不可控，涨跌家数用两大指数成分样本，
+      输出时如实标注样本口径；不再输出"上涨0只/下跌0只"假数据。
+    - 任一步失败返回 None，由调用方标注"暂不可用"并计入失败源清单。
+    """
+    try:
+        import baostock as bs
+    except ImportError:
+        log("⚠️ baostock 未安装，A股概况不可用")
+        return None
+    lg = bs.login()
+    if getattr(lg, "error_code", "1") != "0":
+        log(f"⚠️ baostock 登录失败: {getattr(lg, 'error_msg', '?')}")
+        return None
+    try:
+        # 定位最近的交易日（query_all_stock 的 day 参数必须是交易日）
+        day = None
+        rows = []
+        for back in range(0, 6):
+            d = (datetime.now() - timedelta(days=back)).strftime("%Y-%m-%d")
+            rs = bs.query_all_stock(day=d)
+            rows = []
+            while getattr(rs, "error_code", "1") == "0" and rs.next():
+                rows.append(rs.get_row_data())
+            if rows:
+                day = d
+                break
+        if day is None:
+            log("⚠️ baostock query_all_stock 无数据，A股概况不可用")
+            return None
+
+        # 全市场只数（仅 A 股：sh.60*/sh.68*/sz.00*/sz.30*，且为交易状态；sz.20* 为深市B股不计）
+        total = 0
+        for r in rows:
+            if len(r) >= 3 and r[0][:5] in ("sh.60", "sh.68", "sz.00", "sz.30") and r[1] == "1":
+                total += 1
+
+        # 涨跌家数样本：沪深300 + 中证500 成分
+        sample_codes = []
+        for qf in (bs.query_hs300_stocks, bs.query_zz500_stocks):
+            r2 = qf()
+            while getattr(r2, "error_code", "1") == "0" and r2.next():
+                row = r2.get_row_data()
+                if len(row) >= 2 and row[1] not in sample_codes:
+                    sample_codes.append(row[1])
+
+        up = down = flat = 0
+        start = time.time()
+        for code in sample_codes:
+            if time.time() - start > 90:  # 防御性超时，保护 workflow 20 分钟预算
+                log("⚠️ baostock 涨跌采样超时(90s)，按已采样部分输出")
+                break
+            try:
+                k = bs.query_history_k_data_plus(code, "date,close,pctChg",
+                                                 start_date=day, end_date=day, frequency="d")
+                while getattr(k, "error_code", "1") == "0" and k.next():
+                    row = k.get_row_data()
+                    try:
+                        pct = float(row[2])
+                    except (IndexError, ValueError, TypeError):
+                        continue
+                    if pct > 0: up += 1
+                    elif pct < 0: down += 1
+                    else: flat += 1
+                    break
+            except Exception:
+                continue
+
+        log(f"🇨🇳 A股概况({day}): 全市场{total}只 | 沪深300+中证500样本{len(sample_codes)}只 上涨{up}/下跌{down}")
+        return {"day": day, "total": total, "sample_total": len(sample_codes),
+                "up": up, "down": down, "flat": flat}
+    finally:
+        try:
+            bs.logout()
+        except Exception:
+            pass
+
+
 def fetch_akshare_data(ak_config: Dict) -> str:
-    """获取 A 股市场概况"""
+    """获取 A 股市场概况 + 中国宏观数据。每个数据点失败都计入失败源清单（O2）。"""
     if not ak_config.get("enabled"):
         return ""
+    # 重置 A股 统计：A股概况 + 3 个宏观数据点
+    _SOURCE_STATS["akshare"] = {"ok": 0, "total": 4, "failed": []}
+    parts = []
+
+    # A股概况（baostock 替代被封的东财 push2 接口）
+    a_stats = fetch_a_share_market_stats()
+    if a_stats:
+        _SOURCE_STATS["akshare"]["ok"] += 1
+        parts.append(f"A股概况({a_stats['day']}): 全市场{a_stats['total']}只 | "
+                     f"沪深300+中证500样本{a_stats['sample_total']}只: 上涨{a_stats['up']}只, 下跌{a_stats['down']}只")
+    else:
+        _SOURCE_STATS["akshare"]["failed"].append("A股涨跌家数")
+        log("⚠️ A股概况数据暂不可用（baostock 失败）")
+        parts.append("A股概况: 暂不可用")
+
+    # 中国宏观数据（akshare）
     try:
         import akshare as ak
-        parts = []
-
-        # A股全市场行情概况
-        try:
-            df = ak.stock_zh_a_spot_em()
-            if df is not None and len(df) > 0:
-                up_count = int((df["涨跌幅"] > 0).sum()) if "涨跌幅" in df.columns else 0
-                down_count = int((df["涨跌幅"] < 0).sum()) if "涨跌幅" in df.columns else 0
-                total = len(df)
-                top_up = df.nlargest(3, "涨跌幅")[["代码", "名称", "涨跌幅"]].to_dict("records") if "涨跌幅" in df.columns else []
-                parts.append(f"A股全市场: {total}只, 上涨{up_count}只, 下跌{down_count}只")
-                if top_up:
-                    parts.append("涨幅前三: " + ", ".join(f"{r['代码']} {r['名称']} {r['涨跌幅']:.1f}%" for r in top_up))
-        except Exception:
-            pass
-
-        # 宏观经济数据
-        try:
-            gdp = ak.macro_china_gdp()
-            if gdp is not None and len(gdp) > 0:
-                parts.append(f"中国GDP最新: {str(gdp.iloc[-1].to_dict())}")
-        except Exception:
-            pass
-
-        try:
-            cpi = ak.macro_china_cpi_monthly()
-            if cpi is not None and len(cpi) > 0:
-                parts.append(f"中国CPI最新: {str(cpi.iloc[-1].to_dict())}")
-        except Exception:
-            pass
-
-        try:
-            pmi = ak.macro_china_pmi()
-            if pmi is not None and len(pmi) > 0:
-                parts.append(f"中国PMI最新: {str(pmi.iloc[-1].to_dict())}")
-        except Exception:
-            pass
-
-        return "\n".join(parts) if parts else ""
     except ImportError:
-        log("⚠️ akshare 未安装"); return ""
-    except Exception as e:
-        log(f"⚠️ AKShare 错误: {str(e)[:80]}"); return ""
+        _SOURCE_STATS["akshare"]["failed"].append("akshare 未安装")
+        log("⚠️ akshare 未安装，跳过中国宏观数据")
+        return "\n".join(parts) if parts else ""
+    for name, fn, label in (("GDP", "macro_china_gdp", "中国GDP最新"),
+                            ("CPI", "macro_china_cpi_monthly", "中国CPI最新"),
+                            ("PMI", "macro_china_pmi", "中国PMI最新")):
+        try:
+            df = getattr(ak, fn)()
+            if df is not None and len(df) > 0:
+                parts.append(f"{label}: {str(df.iloc[-1].to_dict())}")
+                _SOURCE_STATS["akshare"]["ok"] += 1
+            else:
+                _SOURCE_STATS["akshare"]["failed"].append(name)
+                log(f"⚠️ {label}: 空数据")
+        except Exception as e:
+            _SOURCE_STATS["akshare"]["failed"].append(name)
+            log(f"⚠️ {label} 失败: {str(e)[:60]}")
+
+    return "\n".join(parts) if parts else ""
 
 
 # ============================================================
@@ -287,6 +436,9 @@ POLYMARKET_TAGS = ["macro", "fed", "crypto", "china", "trade-war", "recession", 
 
 def fetch_polymarket_data() -> List[Dict]:
     """拉取 Polymarket 上与宏观/市场相关的预测市场数据"""
+    # 重置统计（O5：解析失败的市场直接跳过，不再输出 0% 假概率）
+    _SOURCE_STATS["polymarket"] = {"ok": 0, "total": len(POLYMARKET_TAGS), "failed": []}
+    pm_st = _SOURCE_STATS["polymarket"]
     markets = []
     for tag in POLYMARKET_TAGS:
         try:
@@ -294,6 +446,7 @@ def fetch_polymarket_data() -> List[Dict]:
             resp = requests.get(url, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
+                pm_st["ok"] += 1
                 for m in data[:3]:
                     q = m.get("question", "")
                     if len(q) < 10:
@@ -303,7 +456,11 @@ def fetch_polymarket_data() -> List[Dict]:
                         prices = json.loads(outcome_prices) if isinstance(outcome_prices, str) else outcome_prices
                         top_price = max(float(p) for p in prices) if prices else 0
                     except Exception:
-                        top_price = 0
+                        pm_st["failed"].append(f"Polymarket:{tag}")
+                        log(f"   ⚠️ Polymarket {tag} outcomePrices 解析失败，跳过该市场")
+                        continue
+                    if not top_price:
+                        continue  # 无有效价格数据：不输出"市场定价概率: 0%"假数据
                     markets.append({
                         "question": q[:200],
                         "top_probability": round(top_price * 100, 1),
@@ -311,9 +468,13 @@ def fetch_polymarket_data() -> List[Dict]:
                         "tag": tag,
                         "url": f"https://polymarket.com/event/{m.get('slug','')}"
                     })
+            else:
+                pm_st["failed"].append(f"Polymarket:{tag}")
+                log(f"   ⚠️ Polymarket {tag}: HTTP {resp.status_code}")
             time.sleep(0.3)
-        except Exception:
-            continue
+        except Exception as e:
+            pm_st["failed"].append(f"Polymarket:{tag}")
+            log(f"   ⚠️ Polymarket {tag} 请求失败: {str(e)[:60]}")
     # 按成交量降序，去重
     seen = set()
     unique = []
@@ -340,27 +501,44 @@ def format_polymarket_for_prompt(markets: List[Dict]) -> str:
 # Tavily 实时搜索
 # ============================================================
 
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
+
+
+def expand_query_template(q: str) -> str:
+    """把 sources.json 查询中的 {year}/{month} 占位符替换为当前时间，保证查询不过期（O7）"""
+    now = datetime.now()
+    return (q.replace("{year}", str(now.year))
+             .replace("{month}", MONTH_NAMES[now.month - 1]))
+
+
 def fetch_tavily_data(tavily_config: Dict) -> List[Dict]:
     """使用 Tavily API 进行定向实时搜索，补充 RSS 之外的增量信息。"""
+    queries = tavily_config.get("queries", [])
+    # 重置统计（O2）
+    _SOURCE_STATS["tavily"] = {"ok": 0, "total": len(queries), "failed": []}
     api_key = os.environ.get(tavily_config.get("api_key_env", "TAVILY_API_KEY"), "")
     if not api_key:
+        _SOURCE_STATS["tavily"]["failed"].append("Tavily(API Key 未设置)")
         log("⚠️ Tavily API Key 未配置，跳过实时搜索")
         return []
 
     try:
         from tavily import TavilyClient
     except ImportError:
+        _SOURCE_STATS["tavily"]["failed"].append("Tavily(未安装)")
         log("⚠️ tavily-python 未安装，跳过实时搜索")
         return []
 
     client = TavilyClient(api_key=api_key)
-    queries = tavily_config.get("queries", [])
     max_results = tavily_config.get("max_results_per_query", 5)
     all_items = []
 
     for q in queries:
+        query_text = expand_query_template(q["query"])
         try:
-            result = client.search(q["query"], max_results=max_results, search_depth="basic")
+            result = client.search(query_text, max_results=max_results, search_depth="basic")
+            _SOURCE_STATS["tavily"]["ok"] += 1
             for r in result.get("results", [])[:max_results]:
                 all_items.append({
                     "title": r.get("title", ""),
@@ -374,7 +552,8 @@ def fetch_tavily_data(tavily_config: Dict) -> List[Dict]:
                 })
             time.sleep(0.3)
         except Exception as e:
-            log(f"⚠️ Tavily 搜索失败 [{q['query'][:40]}...]: {e}")
+            _SOURCE_STATS["tavily"]["failed"].append(q.get("category", "search"))
+            log(f"⚠️ Tavily 搜索失败 [{query_text[:40]}...]: {e}")
 
     log(f"🔍 Tavily 实时搜索: {len(queries)} 个查询 → {len(all_items)} 条结果")
     return all_items
