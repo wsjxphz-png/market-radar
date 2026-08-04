@@ -1,7 +1,7 @@
 """新闻降级卡（Level 2）：主数据源失效时，用 RSSHub 快讯做定性兜底"""
 import json, logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List
 import feedparser, requests
 
 logger = logging.getLogger(__name__)

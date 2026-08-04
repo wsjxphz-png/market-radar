@@ -1,7 +1,8 @@
 # tests/test_ltc_config.py
 import sys, os
+from datetime import timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ltc_config import GLOSSARY, BANNED_PHRASES, PHASE_LABEL, is_expired, QUARTERLY_CONTEXT
+from ltc_config import GLOSSARY, BANNED_PHRASES, PHASE_LABEL, is_expired, QUARTERLY_CONTEXT, bj_now
 
 def test_glossary_covers_key_terms():
     for term in ["超大单", "大单", "主力", "回购", "南向", "估值分位"]:
@@ -18,9 +19,14 @@ def test_phase_label():
     assert PHASE_LABEL("") == "阶段未知"
 
 def test_expiry():
-    assert not is_expired("2026-08-04")          # 今天不算过期
-    assert is_expired("2026-07-01")              # 34 天后过期
-    assert not is_expired("2026-08-15")          # 未来日期不过期
+    # 动态日期（基于北京时间推算），固定日期会随时间变成时间炸弹
+    today = bj_now().strftime("%Y-%m-%d")
+    past = (bj_now() - timedelta(days=35)).strftime("%Y-%m-%d")   # 35 天前 → 过期
+    future = (bj_now() + timedelta(days=10)).strftime("%Y-%m-%d") # 未来日期 → 不过期
+    assert not is_expired(today)          # 今天不算过期
+    assert is_expired(past)               # 35 天前过期
+    assert not is_expired(future)         # 未来日期不过期
+    assert is_expired(None)               # None 兜底为过期（不抛 TypeError）
 
 def test_quarterly_has_required_keys():
     for k in ["updated", "next_update", "key_facts"]:

@@ -1,7 +1,6 @@
 # ltc_main.py
 """编排入口：日期判定 → 抓取 → 推送决策 → 卡片/降级 → 发送 → 留痕"""
 import json, logging, os, sys
-from typing import Dict, Optional
 import ltc_analysis, ltc_data, ltc_format, ltc_narrative, ltc_news, ltc_store
 from ltc_config import bj_now
 

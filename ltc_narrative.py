@@ -1,7 +1,7 @@
 # ltc_narrative.py
 """规则保真 + AI 润色：事实清单 → DeepSeek 解读 → 校验 → 模板回退"""
 import json, logging
-from typing import Dict, Optional
+from typing import Optional
 import requests
 from ltc_config import BANNED_PHRASES
 

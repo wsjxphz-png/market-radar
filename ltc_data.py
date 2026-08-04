@@ -1,8 +1,8 @@
 # ltc_data.py
 """数据抓取层：新浪交易日/南向/板块资金流/回购/板块K线/估值位置"""
-import json, logging, random, time
+import logging, random, time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import List, Optional
 import pandas as pd
 import akshare as ak
 from ltc_config import BOARDS, PHASE_LABEL

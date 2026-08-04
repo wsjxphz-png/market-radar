@@ -38,6 +38,6 @@ jobs:
           mkdir -p data/ltc
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/ltc
+          git add data/ltc || true
           git diff --cached --quiet || git commit -m "data: 每日资金观察留痕 [skip ci]"
           git push

@@ -1,7 +1,7 @@
 # ltc_verify.py
 """验证闭环：历史标签 vs 板块后续涨跌（10/20 交易日），相关性验证非因果证明"""
 import json, logging, os
-from typing import Dict, List, Optional
+from typing import Dict, List
 import ltc_data, ltc_store
 
 logger = logging.getLogger(__name__)

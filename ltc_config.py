@@ -52,8 +52,8 @@ def is_expired(updated: str, days: int = 14) -> bool:
     try:
         d = datetime.strptime(updated, "%Y-%m-%d").replace(tzinfo=ZoneInfo("Asia/Shanghai"))
         return (bj_now() - d).days > days
-    except ValueError:
-        return True  # 无法解析视为过期
+    except (ValueError, TypeError):
+        return True  # 无法解析/为空视为过期
 
 # 季度背景知识库 — 每季度手动更新；过期后卡片带警告（FR-6.1）
 QUARTERLY_CONTEXT = {

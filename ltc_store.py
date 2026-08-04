@@ -1,7 +1,7 @@
 # ltc_store.py
 """留痕/状态/参照计算/推送决策（JSONL + state.json）"""
 import json, os
-from typing import Dict, List, Optional
+from typing import List, Optional
 from ltc_config import REF_RATIO_HIGH, REF_RATIO_LOW
 
 def _ensure_dir(path: str) -> None:

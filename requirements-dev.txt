@@ -1,0 +1,3 @@
+# 开发/测试依赖（CI 仅装 requirements.txt；本地跑测试时装本文件）
+-r requirements.txt
+pytest>=8.0

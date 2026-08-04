@@ -1,5 +1,5 @@
 """数据驱动分类 + 资金归因 + 承接周期判断（全部推断，不带实名表述）"""
-from typing import Dict, List, Optional
+from typing import List, Optional
 import pandas as pd
 
 TAG_PRIORITY = {"逆势吸筹嫌疑": 0, "派发嫌疑": 1, "资金关注": 2, "资金撤离": 3}
