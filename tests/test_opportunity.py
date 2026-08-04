@@ -372,6 +372,79 @@ def test_fetch_akshare_data_baostock_fail_marks_unavailable(monkeypatch):
     assert "A股涨跌家数" in main._SOURCE_STATS["akshare"]["failed"]
 
 
+class _FakeBSAllFail:
+    """涨跌采样全部失败（error_code != "0"）→ 应返回 None，不输出假计数"""
+    def login(self):
+        return types.SimpleNamespace(error_code="0", error_msg="")
+    def logout(self):
+        pass
+    def query_all_stock(self, day):
+        return FakeResult([["sh.600000", "1", "浦发银行"]])
+    def query_hs300_stocks(self):
+        return FakeResult([["2026-08-05", "sh.600000", "浦发银行"]])
+    def query_zz500_stocks(self):
+        return FakeResult([["2026-08-05", "sz.000001", "平安银行"]])
+    def query_history_k_data_plus(self, code, fields, start_date, end_date, frequency="d"):
+        return types.SimpleNamespace(error_code="1")   # 全部查询失败
+
+
+def test_fetch_a_share_stats_all_fail_returns_none(monkeypatch):
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSAllFail())
+    assert main.fetch_a_share_market_stats() is None
+
+
+class _FakeBSPartial:
+    """部分采样成功：浦发成功、平安失败 → 返回统计并标注 部分采样"""
+    def login(self):
+        return types.SimpleNamespace(error_code="0", error_msg="")
+    def logout(self):
+        pass
+    def query_all_stock(self, day):
+        return FakeResult([["sh.600000", "1", "浦发银行"],
+                           ["sz.000001", "1", "平安银行"]])
+    def query_hs300_stocks(self):
+        return FakeResult([["2026-08-05", "sh.600000", "浦发银行"]])
+    def query_zz500_stocks(self):
+        return FakeResult([["2026-08-05", "sz.000001", "平安银行"]])
+    def query_history_k_data_plus(self, code, fields, start_date, end_date, frequency="d"):
+        if code == "sh.600000":
+            return FakeResult([["2026-08-05", "10.0", "1.2"]])
+        return types.SimpleNamespace(error_code="1")   # 平安失败
+
+
+def test_fetch_a_share_stats_partial_success_annotated(monkeypatch):
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSPartial())
+    stats = main.fetch_a_share_market_stats()
+    assert stats is not None
+    assert stats["up"] == 1 and stats["down"] == 0
+    assert stats["sample_attempted"] == 2
+    assert stats["sample_failed"] == 1
+    assert "部分采样" in stats["sample_note"]
+
+
+class _FakeBSQueryCrash(_FakeBS):
+    """成分查询抛异常：不能穿透，只跳过该成分"""
+    def query_zz500_stocks(self):
+        raise RuntimeError("baostock 内部错误")
+
+
+def test_fetch_a_share_stats_component_query_crash_skipped(monkeypatch):
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSQueryCrash())
+    stats = main.fetch_a_share_market_stats()
+    assert stats is not None
+    assert stats["sample_total"] == 1     # 只剩沪深300成分
+
+
+def test_fetch_akshare_data_partial_sample_annotation(monkeypatch):
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSPartial())
+    fake_ak = types.SimpleNamespace(macro_china_gdp=lambda: None,
+                                    macro_china_cpi_monthly=lambda: None,
+                                    macro_china_pmi=lambda: None)
+    monkeypatch.setitem(sys.modules, "akshare", fake_ak)
+    text = main.fetch_akshare_data({"enabled": True})
+    assert "部分采样" in text            # 卡片如实标注采样不完整
+
+
 # ============================================================
 # O10-6: Polymarket 解析失败跳过（不输出 0% 假概率）+ Tavily 日期占位符
 # ============================================================

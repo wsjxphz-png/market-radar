@@ -325,7 +325,11 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
         rows = []
         for back in range(0, 6):
             d = (datetime.now() - timedelta(days=back)).strftime("%Y-%m-%d")
-            rs = bs.query_all_stock(day=d)
+            try:
+                rs = bs.query_all_stock(day=d)
+            except Exception as e:
+                log(f"⚠️ baostock query_all_stock 异常: {str(e)[:60]}")
+                continue
             rows = []
             while getattr(rs, "error_code", "1") == "0" and rs.next():
                 rows.append(rs.get_row_data())
@@ -342,21 +346,33 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
             if len(r) >= 3 and r[0][:5] in ("sh.60", "sh.68", "sz.00", "sz.30") and r[1] == "1":
                 total += 1
 
-        # 涨跌家数样本：沪深300 + 中证500 成分
+        # 涨跌家数样本：沪深300 + 中证500 成分（任一查询抛异常只记日志，
+        # 不让它穿透拖垮整份日报）
         sample_codes = []
         for qf in (bs.query_hs300_stocks, bs.query_zz500_stocks):
-            r2 = qf()
+            try:
+                r2 = qf()
+            except Exception as e:
+                log(f"⚠️ baostock 成分查询异常: {str(e)[:60]}")
+                continue
             while getattr(r2, "error_code", "1") == "0" and r2.next():
                 row = r2.get_row_data()
                 if len(row) >= 2 and row[1] not in sample_codes:
                     sample_codes.append(row[1])
 
+        # 逐只采样，attempted/failed 如实记账。全部失败或零成功 → 返回 None，
+        # 由上层标"暂不可用"并计入失败源清单；部分失败 → 卡片标注"部分采样"。
+        # 杜绝"样本800只: 上涨0只"这类貌似真实、实则全零的假计数（O3-2）。
         up = down = flat = 0
+        attempted = failed = 0
+        timed_out = False
         start = time.time()
         for code in sample_codes:
             if time.time() - start > 90:  # 防御性超时，保护 workflow 20 分钟预算
+                timed_out = True
                 log("⚠️ baostock 涨跌采样超时(90s)，按已采样部分输出")
                 break
+            attempted += 1
             try:
                 k = bs.query_history_k_data_plus(code, "date,close,pctChg",
                                                  start_date=day, end_date=day, frequency="d")
@@ -365,17 +381,33 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
                     try:
                         pct = float(row[2])
                     except (IndexError, ValueError, TypeError):
-                        continue
+                        failed += 1
+                        break
                     if pct > 0: up += 1
                     elif pct < 0: down += 1
                     else: flat += 1
                     break
+                else:
+                    # error_code != "0" 或当日无行情数据，视为采样失败
+                    failed += 1
             except Exception:
-                continue
+                failed += 1
 
-        log(f"🇨🇳 A股概况({day}): 全市场{total}只 | 沪深300+中证500样本{len(sample_codes)}只 上涨{up}/下跌{down}")
+        success = up + down + flat
+        if success == 0:
+            log(f"⚠️ A股概况: 涨跌采样全部失败(尝试{attempted}只/失败{failed}只)，暂不可用")
+            return None
+        if failed > 0:
+            sample_note = f"(部分采样:失败{failed}/{attempted}只)"
+        elif timed_out:
+            sample_note = "(部分采样:超时截断)"
+        else:
+            sample_note = ""
+        log(f"🇨🇳 A股概况({day}): 全市场{total}只 | 沪深300+中证500样本{len(sample_codes)}只"
+            f"{sample_note} 上涨{up}/下跌{down}")
         return {"day": day, "total": total, "sample_total": len(sample_codes),
-                "up": up, "down": down, "flat": flat}
+                "up": up, "down": down, "flat": flat, "sample_note": sample_note,
+                "sample_attempted": attempted, "sample_failed": failed}
     finally:
         try:
             bs.logout()
@@ -395,8 +427,11 @@ def fetch_akshare_data(ak_config: Dict) -> str:
     a_stats = fetch_a_share_market_stats()
     if a_stats:
         _SOURCE_STATS["akshare"]["ok"] += 1
+        # O3-2：部分采样（有失败/超时截断）时如实标注，不再输出貌似完整的假计数
+        sample_note = a_stats.get("sample_note", "")
         parts.append(f"A股概况({a_stats['day']}): 全市场{a_stats['total']}只 | "
-                     f"沪深300+中证500样本{a_stats['sample_total']}只: 上涨{a_stats['up']}只, 下跌{a_stats['down']}只")
+                     f"沪深300+中证500样本{a_stats['sample_total']}只{sample_note}: "
+                     f"上涨{a_stats['up']}只, 下跌{a_stats['down']}只")
     else:
         _SOURCE_STATS["akshare"]["failed"].append("A股涨跌家数")
         log("⚠️ A股概况数据暂不可用（baostock 失败）")
