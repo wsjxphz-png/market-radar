@@ -1,6 +1,120 @@
-import sys, os, pandas as pd
+import sys, os, pytest, requests, pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import ltc_data
 from ltc_data import parse_sector_flow, parse_repurchase, _pick_kline_cols
+
+
+@pytest.fixture(autouse=True)
+def _reset_breakers():
+    """每个测试前复位熔断标志，保证用例相互独立"""
+    ltc_data._EM_AVAILABLE = True
+    ltc_data._THS_AVAILABLE = True
+    yield
+    ltc_data._EM_AVAILABLE = True
+    ltc_data._THS_AVAILABLE = True
+
+
+def _kline_df(n=130):
+    """同花顺列序的板块K线假数据（>=60 行才被视为有效响应）"""
+    dates = pd.date_range("2022-01-01", periods=n)
+    return pd.DataFrame({
+        "日期": dates.strftime("%Y-%m-%d"),
+        "开盘价": 10.0, "最高价": 11.0, "最低价": 9.0, "收盘价": 10.5,
+        "成交量": 1000, "成交额": 1e8,
+    })
+
+
+def _no_sleep(monkeypatch):
+    monkeypatch.setattr(ltc_data.time, "sleep", lambda _: None)
+
+
+def test_em_network_failure_trips_breaker_ths_fallback(monkeypatch):
+    """EM 网络异常 → 第一块板熔断 EM，第二块板直接跳过 EM（EM 全程只被调用 1 次），THS 兜底两块"""
+    calls = {"em": 0, "ths": 0}
+
+    def fake_em(*a, **k):
+        calls["em"] += 1
+        raise requests.exceptions.ConnectionError("IP blocked")
+
+    def fake_ths(*a, **k):
+        calls["ths"] += 1
+        return _kline_df()
+
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_hist_em", fake_em)
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_index_ths", fake_ths)
+    _no_sleep(monkeypatch)
+
+    r1 = ltc_data.fetch_board_kline("银行", days=1300)
+    assert r1 is not None and len(r1) >= 60
+    assert ltc_data._EM_AVAILABLE is False and ltc_data._THS_AVAILABLE is True
+
+    r2 = ltc_data.fetch_board_kline("券商", days=1300)
+    assert r2 is not None
+    assert calls["em"] == 1   # 第二块板不再探测已熔断的 EM
+    assert calls["ths"] == 2   # THS 两块板各兜底一次
+
+
+def test_both_sources_network_down_fast_none_no_api_calls(monkeypatch):
+    """EM+THS 均网络失败 → 双双熔断，后续板块零 API 调用直接返回 None（快速失败路径）"""
+    calls = {"em": 0, "ths": 0}
+
+    def fake_em(*a, **k):
+        calls["em"] += 1
+        raise requests.exceptions.ConnectionError("blocked")
+
+    def fake_ths(*a, **k):
+        calls["ths"] += 1
+        raise TimeoutError("timeout")
+
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_hist_em", fake_em)
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_index_ths", fake_ths)
+    _no_sleep(monkeypatch)
+
+    assert ltc_data.fetch_board_kline("银行", days=1300) is None
+    assert ltc_data.fetch_board_kline("券商", days=1300) is None
+    assert ltc_data.fetch_board_kline("地产", days=1300) is None
+    assert calls["em"] == 1 and calls["ths"] == 1  # 第 2、3 块板零调用
+
+
+def test_short_response_data_issue_does_not_trip_breaker(monkeypatch):
+    """EM 返回 <60 行响应（数据质量问题，非网络故障）→ 不熔断，下一块板仍探测 EM"""
+    calls = {"em": 0, "ths": 0}
+
+    def fake_em(*a, **k):
+        calls["em"] += 1
+        return _kline_df(n=30)
+
+    def fake_ths(*a, **k):
+        calls["ths"] += 1
+        return _kline_df()
+
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_hist_em", fake_em)
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_index_ths", fake_ths)
+
+    assert ltc_data.fetch_board_kline("银行", days=1300) is not None  # THS 兜底成功
+    assert ltc_data._EM_AVAILABLE is True and ltc_data._THS_AVAILABLE is True
+    ltc_data.fetch_board_kline("券商", days=1300)
+    assert calls["em"] == 2  # 数据问题不熔断 → EM 继续被探测
+
+
+def test_non_network_exception_retries_no_trip(monkeypatch):
+    """KeyError 等数据类异常 → 按 retries=1 重试（共 2 次），但不熔断"""
+    calls = {"em": 0}
+
+    def fake_em(*a, **k):
+        calls["em"] += 1
+        raise KeyError("数据列缺失")
+
+    def fake_ths(*a, **k):
+        return _kline_df()
+
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_hist_em", fake_em)
+    monkeypatch.setattr(ltc_data.ak, "stock_board_industry_index_ths", fake_ths)
+    _no_sleep(monkeypatch)
+
+    assert ltc_data.fetch_board_kline("银行", days=1300) is not None
+    assert calls["em"] == 2  # retries=1 → 首次失败后重试 1 次
+    assert ltc_data._EM_AVAILABLE is True  # 数据类异常不触发熔断
 
 def test_parse_sector_flow_position_mapping():
     df = pd.DataFrame([

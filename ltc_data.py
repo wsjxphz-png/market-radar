@@ -4,11 +4,18 @@ import logging, random, time
 from datetime import datetime, timedelta
 from typing import List, Optional
 import pandas as pd
+import requests
 import akshare as ak
 from ltc_config import BOARDS, PHASE_LABEL
 
 logger = logging.getLogger(__name__)
 REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX = 0.8, 2.0
+
+# 板块K线双源熔断标志（每进程一次）：
+# 东财 push2 / 同花顺 一旦在进程中证实网络不可达（连接/超时），后续板块直接跳过该源快速失败。
+# workflow 每天新起进程，EM/THS 恢复后次日自动重新探测，无需手动复位。
+_EM_AVAILABLE = True
+_THS_AVAILABLE = True
 
 def _safe_call(func, *args, retries=2, **kwargs):
     for i in range(retries + 1):
@@ -18,6 +25,25 @@ def _safe_call(func, *args, retries=2, **kwargs):
             logger.warning("call failed %s try %d: %s", getattr(func, "__name__", func), i + 1, str(e)[:80])
             time.sleep(2 + i * 2)
     return None
+
+def _is_network_error(exc) -> bool:
+    """仅网络类异常（连接/超时/HTTP 请求异常）触发熔断；KeyError/列缺失等数据质量问题不熔断"""
+    if exc is None:
+        return False
+    return isinstance(exc, (requests.exceptions.RequestException, ConnectionError, TimeoutError))
+
+def _probe_kline(func, *args, retries=1, **kwargs):
+    """板块K线源探测：网络异常首次出现即熔断返回，不重试死源（每尝试 8-10s 的浪费）；
+    数据类异常按 retries 重试。返回 (结果, 最后一次异常)"""
+    for i in range(retries + 1):
+        try:
+            return func(*args, **kwargs), None
+        except Exception as e:
+            if _is_network_error(e):
+                return None, e
+            logger.warning("call failed %s try %d: %s", getattr(func, "__name__", func), i + 1, str(e)[:80])
+            time.sleep(2 + i * 2)
+    return None, None
 
 def get_trading_date() -> Optional[str]:
     """新浪上证指数日K末行日期 = 最近交易日（稳定源，交易日判定用）"""
@@ -109,14 +135,30 @@ def _pick_kline_cols(df: pd.DataFrame) -> Optional[tuple]:
     return date_col, close_col, find("成交量"), find("成交额")
 
 def fetch_board_kline(board_name: str, days: int = 1300) -> Optional[pd.DataFrame]:
-    """板块K线：东财优先，同花顺兜底；返回 date/close/volume/amount（升序）"""
+    """板块K线：东财优先，同花顺兜底；返回 date/close/volume/amount（升序）
+
+    双源熔断：网络类异常（连接/超时/HTTP）首次出现即熔断该源并置 _XX_AVAILABLE=False，
+    后续板块跳过死源快速失败；数据质量问题（响应存在但 <60 行等）只算单板失败，不熔断。
+    熔断标志每进程一次——workflow 每日新起进程，源恢复后次日自动重新探测。
+    """
+    global _EM_AVAILABLE, _THS_AVAILABLE
     end = datetime.now().strftime("%Y%m%d")
     start = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
-    df = _safe_call(ak.stock_board_industry_hist_em,
-                    symbol=board_name, period="日k", start_date=start, end_date=end, retries=2)
-    if df is None or len(df) < 60:
-        df = _safe_call(ak.stock_board_industry_index_ths,
-                        symbol=board_name, start_date=start, end_date=end, retries=2)
+    df = None
+    if _EM_AVAILABLE:
+        df, exc = _probe_kline(ak.stock_board_industry_hist_em,
+                               symbol=board_name, period="日k", start_date=start, end_date=end, retries=1)
+        if _is_network_error(exc):
+            _EM_AVAILABLE = False
+            logger.error("EM 板块K线源熔断（网络异常）: %s", str(exc)[:80])
+        if df is None or len(df) < 60:
+            df = None  # 数据质量问题不熔断，继续尝试 THS
+    if df is None and _THS_AVAILABLE:
+        df, exc = _probe_kline(ak.stock_board_industry_index_ths,
+                               symbol=board_name, start_date=start, end_date=end, retries=1)
+        if _is_network_error(exc):
+            _THS_AVAILABLE = False
+            logger.error("THS 板块K线源熔断（网络异常）: %s", str(exc)[:80])
     if df is None or len(df) < 60:
         return None
     picked = _pick_kline_cols(df)
