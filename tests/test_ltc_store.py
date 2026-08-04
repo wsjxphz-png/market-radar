@@ -29,6 +29,26 @@ def test_should_push_rules():
     assert should_push("2026-08-04", {"last_pushed_date": "2026-08-04"}) == (False, "重复")
     assert should_push("2026-08-04", {"last_pushed_date": "2026-08-05"}) == (False, "数据落后")
 
+def test_compute_reference_orders_by_date_desc():
+    # 乱序追加（如补录旧日期）时，参照窗口按 date 降序取最近 days 条，而非追加序
+    hist = [
+        {"date": "2026-07-20", "southbound_net_yi": 40.0},
+        {"date": "2026-07-01", "southbound_net_yi": 10.0},   # 旧日期补录在最后
+        {"date": "2026-07-19", "southbound_net_yi": 40.0},
+    ]
+    ref = compute_reference(hist, "southbound_net_yi", days=2)
+    assert abs(ref - 40.0) < 1e-9  # 按日期最近2条=07-19/07-20→40.0；按追加序会得(40+10)/2=25
+
+def test_compute_reference_skips_non_numeric():
+    # 空串/占位文本不应崩溃，应跳过
+    hist = [
+        {"date": "2026-07-18", "southbound_net_yi": "N/A"},
+        {"date": "2026-07-19", "southbound_net_yi": 40.0},
+        {"date": "2026-07-20", "southbound_net_yi": ""},
+    ]
+    assert abs(compute_reference(hist, "southbound_net_yi") - 40.0) < 1e-9
+    assert compute_reference([{"date": "2026-07-20", "southbound_net_yi": ""}], "southbound_net_yi") is None
+
 def test_reference_and_label():
     hist = [{"date": f"2026-07-{d:02d}", "southbound_net_yi": 40.0} for d in range(1, 21)]
     ref = compute_reference(hist, "southbound_net_yi")

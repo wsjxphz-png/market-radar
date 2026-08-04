@@ -54,11 +54,18 @@ def should_push(data_date: str, state: dict) -> tuple:
     return False, "数据落后"
 
 def compute_reference(history: List[dict], key: str, days: int = 20) -> Optional[float]:
-    """取最近 days 条含非空 key 的记录求均值"""
-    vals = [float(h[key]) for h in reversed(history) if h.get(key) is not None]
-    if not vals:
-        return None
-    vals = vals[:days]
+    """按 date 降序取最近 days 条含有效数值 key 的记录求均值（乱序追加/补录不受影响）"""
+    rows = [h for h in history
+            if h.get(key) is not None and h.get("date") is not None]
+    rows.sort(key=lambda h: h["date"], reverse=True)  # 固定 YYYY-MM-DD 字符串比较
+    vals = []
+    for h in rows:
+        try:
+            vals.append(float(h[key]))
+        except (ValueError, TypeError):
+            continue  # 空串/占位文本等非数值跳过
+        if len(vals) >= days:
+            break
     return sum(vals) / len(vals) if vals else None
 
 def reference_label(today: float, ref: Optional[float]) -> str:
