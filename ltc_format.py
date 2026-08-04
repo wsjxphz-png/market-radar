@@ -1,6 +1,6 @@
 # ltc_format.py
 """飞书卡片：日更/长更分离 + 术语解释 + 搭桥 + 诚实声明"""
-from typing import Dict, List
+from typing import List
 from ltc_config import GLOSSARY, CARD_EMOJIS, QUARTERLY_CONTEXT
 
 E = CARD_EMOJIS
@@ -52,6 +52,10 @@ def format_card(data_date: str, interpretation_text: str, focus: List[dict],
     if ok_vals:
         for v in ok_vals[:6]:
             lines.append(f"- {v['board']}：价格处 5 年区间 {v['position_pct']:.0f}% 分位（vs 60日均线 {v['price_vs_ma60_pct']:+.1f}%）")
+        failed = len(valuation) - len(ok_vals)
+        if failed > 0:
+            # FR-1.4：部分板块源失败不得静默消失，明确标注（复盘发现：EM 被限流时仅银行/半导体有同花顺同名板块）
+            lines.append(f"- 另有 {failed} 个板块当日估值源不可用，未显示（不编造数据）")
     else:
         lines.append("- 暂无数据")
     lines.append("")
