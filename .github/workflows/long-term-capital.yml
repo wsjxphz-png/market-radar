@@ -32,6 +32,7 @@ jobs:
           python ltc_main.py
           code=$?
           echo "ltc_main exit: $code"
+          if [ "$code" -ne 0 ]; then echo "::error::ltc_main exit=$code (连续降级或发送失败，见运行日志)"; fi
           exit 0
       - name: 提交留痕
         run: |

@@ -14,6 +14,18 @@ def test_build_facts_only_verified_numbers():
     assert f["focus"][0]["industry"] == "半导体"
     assert f["focus"][0]["tag"] == "资金关注"
 
+def test_build_facts_includes_valuation_material():
+    """复审 Minor A：估值温度素材（今日×长期搭桥核心）进 facts，AI 可引用价格分位"""
+    data = {"data_date": "2026-08-04",
+            "southbound": {"southbound_net_yi": 25.7},
+            "repurchase": {"items": []},
+            "valuation": [{"board": "医药生物", "position_pct": 26.0},
+                          {"board": "银行", "position_pct": 23.5}]}
+    f = build_facts(data, [], {})
+    assert f["valuation"] == [{"board": "医药生物", "position_pct": 26.0},
+                              {"board": "银行", "position_pct": 23.5}]
+    assert f["valuation_note"] == ""  # 旧键保留兼容
+
 def test_template_interpretation_contains_facts():
     # 结构与 build_facts 输出一致（flattened accum_period，与 brief smoke test 相同契约）
     facts = {"data_date": "2026-08-04",

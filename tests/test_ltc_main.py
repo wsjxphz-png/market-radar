@@ -181,3 +181,109 @@ def test_run_first_run_failure_keeps_retry_chain(monkeypatch, tmp_path):
 def test_send_feishu_no_creds_returns_false():
     """生产语义：缺凭据 = 发送失败（False）；dry-run 语义由 LTC_DRY_RUN 标记承载"""
     assert ltc_main.send_feishu("x", dict(_EMPTY_ENV)) is False
+
+
+def test_southbound_none_label_never_misleading(monkeypatch, tmp_path):
+    """复审 Important 1：南向失败（None）→ refs label="南向数据暂不可用"。
+    留痕已有历史均值时也不得出现基于 0 兜底的"比平时少"，AI 事实清单拿不到误导结论"""
+    # 留痕有历史均值：旧实现 value 兜底为 0 → reference_label(0, 均值) = "比平时少"
+    ltc_store.append_history(str(tmp_path / "history.jsonl"), {
+        "date": "2026-08-03 16:00:00", "data_date": "2026-08-03",
+        "southbound_net_yi": 100.0, "tags": {}})
+    env = dict(_EMPTY_ENV)
+    monkeypatch.setattr(ltc_main.ltc_data, "get_trading_date", lambda: "2026-08-04")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_southbound", lambda: None)  # 南向源失败
+    flow = pd.DataFrame([{"industry": "银行", "chg_pct": -2.0, "main_net_yi": 5.0,
+                          "super_large_net_yi": 3.0, "large_net_yi": 2.0}])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_sector_flow", lambda: flow)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_repurchase", lambda weeks: {"period": "近4周", "items": []})
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_valuation", lambda: [])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_board_kline", lambda name: None)
+    monkeypatch.setattr(ltc_main.ltc_news, "fetch_news_titles", lambda today, limit: [])
+    captured = {}
+    real_build_facts = ltc_main.ltc_narrative.build_facts
+    def spy_build_facts(data, focus, refs):
+        captured["refs"] = dict(refs)
+        captured["facts"] = real_build_facts(data, focus, refs)
+        return captured["facts"]
+    monkeypatch.setattr(ltc_main.ltc_narrative, "build_facts", spy_build_facts)
+    sent = []
+    monkeypatch.setattr(ltc_main, "send_feishu", lambda msg, env: sent.append(msg) or True)
+    code = ltc_main.run_once(env, str(tmp_path))
+    assert code == 0
+    assert captured["refs"]["southbound_label"] == "南向数据暂不可用"
+    assert "比平时" not in captured["refs"]["southbound_label"]
+    assert captured["facts"]["southbound"]["value"] is None
+    assert captured["facts"]["southbound"]["ref_label"] == "南向数据暂不可用"
+
+
+def test_signal_config_removed_tag_blanked(monkeypatch, tmp_path):
+    """复审 Important 2：signals_config.json 移除"资金撤离"→ 该 tag 输出置空落回待观察，其余标签不动"""
+    ltc_store.save_state(str(tmp_path / "signals_config.json"),
+                         {"active": ["资金关注", "逆势吸筹嫌疑", "派发嫌疑"],
+                          "consecutive_invalid": 2, "removed": ["资金撤离"]})
+    env = dict(_EMPTY_ENV)
+    monkeypatch.setattr(ltc_main.ltc_data, "get_trading_date", lambda: "2026-08-04")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_southbound", lambda: {"date": "2026-08-04", "southbound_net_yi": 25.7})
+    flow = pd.DataFrame([
+        {"industry": "银行", "chg_pct": -2.0, "main_net_yi": 5.0, "super_large_net_yi": 5.0, "large_net_yi": 2.0},
+        {"industry": "半导体", "chg_pct": 1.5, "main_net_yi": 4.0, "super_large_net_yi": 4.0, "large_net_yi": 1.0},
+        {"industry": "家电", "chg_pct": 1.0, "main_net_yi": 2.0, "super_large_net_yi": 2.0, "large_net_yi": 0.0},
+        {"industry": "有色", "chg_pct": 0.5, "main_net_yi": -1.0, "super_large_net_yi": -1.0, "large_net_yi": -0.5},
+        {"industry": "券商", "chg_pct": -3.0, "main_net_yi": -9.0, "super_large_net_yi": -9.0, "large_net_yi": -3.0},
+    ])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_sector_flow", lambda: flow)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_repurchase", lambda weeks: {"period": "近4周", "items": []})
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_valuation", lambda: [])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_board_kline", lambda name: None)
+    monkeypatch.setattr(ltc_main.ltc_news, "fetch_news_titles", lambda today, limit: [])
+    sent = []
+    monkeypatch.setattr(ltc_main, "send_feishu", lambda msg, env: sent.append(msg) or True)
+    code = ltc_main.run_once(env, str(tmp_path))
+    assert code == 0
+    hist = ltc_store.load_history(str(tmp_path / "history.jsonl"))
+    assert len(hist) == 1
+    tags = hist[0]["tags"]
+    assert tags["银行"]["tag"] == "逆势吸筹嫌疑"  # 未移除标签原样输出
+    assert tags["券商"]["tag"] == ""             # 被移除的 tag 置空 → 落回待观察
+
+
+def test_signal_config_missing_tags_untouched(monkeypatch, tmp_path):
+    """复审 Important 2：signals_config.json 不存在 → 视为全部信号可用，标签不动"""
+    env = dict(_EMPTY_ENV)
+    monkeypatch.setattr(ltc_main.ltc_data, "get_trading_date", lambda: "2026-08-04")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_southbound", lambda: {"date": "2026-08-04", "southbound_net_yi": 25.7})
+    flow = pd.DataFrame([{"industry": "银行", "chg_pct": -2.0, "main_net_yi": 5.0,
+                          "super_large_net_yi": 3.0, "large_net_yi": 2.0}])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_sector_flow", lambda: flow)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_repurchase", lambda weeks: {"period": "近4周", "items": []})
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_valuation", lambda: [])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_board_kline", lambda name: None)
+    monkeypatch.setattr(ltc_main.ltc_news, "fetch_news_titles", lambda today, limit: [])
+    sent = []
+    monkeypatch.setattr(ltc_main, "send_feishu", lambda msg, env: sent.append(msg) or True)
+    code = ltc_main.run_once(env, str(tmp_path))
+    assert code == 0
+    hist = ltc_store.load_history(str(tmp_path / "history.jsonl"))
+    assert hist[0]["tags"]["银行"]["tag"] == "逆势吸筹嫌疑"
+
+
+def test_run_valuation_exception_degrades(monkeypatch, tmp_path):
+    """复审 Minor B：fetch_valuation 抛异常不击穿 run_once（FR-6.3 对称性），估值按空处理"""
+    env = dict(_EMPTY_ENV)
+    monkeypatch.setattr(ltc_main.ltc_data, "get_trading_date", lambda: "2026-08-04")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_southbound", lambda: {"date": "2026-08-04", "southbound_net_yi": 25.7})
+    flow = pd.DataFrame([{"industry": "银行", "chg_pct": -2.0, "main_net_yi": 5.0,
+                          "super_large_net_yi": 3.0, "large_net_yi": 2.0}])
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_sector_flow", lambda: flow)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_repurchase", lambda weeks: {"period": "近4周", "items": []})
+    def boom_valuation():
+        raise RuntimeError("估值温度源挂了")
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_valuation", boom_valuation)
+    monkeypatch.setattr(ltc_main.ltc_data, "fetch_board_kline", lambda name: None)
+    monkeypatch.setattr(ltc_main.ltc_news, "fetch_news_titles", lambda today, limit: [])
+    sent = []
+    monkeypatch.setattr(ltc_main, "send_feishu", lambda msg, env: sent.append(msg) or True)
+    code = ltc_main.run_once(env, str(tmp_path))
+    assert code == 0
+    assert len(sent) == 1 and "暂无数据" in sent[0]  # 估值失败 → 空估值不阻塞卡片

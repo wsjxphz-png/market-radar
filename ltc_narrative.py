@@ -24,6 +24,9 @@ def build_facts(data: dict, focus: list, refs: dict) -> dict:
         },
         "repurchase_top": [{"name": i["name"], "amount_yi": i["amount_yi"], "phase": i["phase"]}
                            for i in (data.get("repurchase") or {}).get("items", [])[:3]],
+        # 估值温度（FR-4.5 搭桥素材）：只含核验数字（板块 + 价格分位），来源方已过滤 ok 板块
+        "valuation": [{"board": v.get("board"), "position_pct": v.get("position_pct")}
+                      for v in data.get("valuation") or []],
         "valuation_note": data.get("valuation_note", ""),
     }
     return facts

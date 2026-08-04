@@ -23,7 +23,7 @@ def build_quarterly_block() -> tuple:
 
 def format_card(data_date: str, interpretation_text: str, focus: List[dict],
                 southbound: dict, valuation: List[dict], repurchase: dict,
-                references: dict, quarterly_expired: bool = False) -> str:
+                references: dict) -> str:
     lines = []
     lines.append(f"{E['header']} 每日资金观察 · {data_date}")
     lines.append("")
@@ -63,10 +63,8 @@ def format_card(data_date: str, interpretation_text: str, focus: List[dict],
     for i in repurchase.get("items", [])[:3]:
         lines.append(f"- {i['name']}：{i['amount_yi']:.1f}亿（{i['phase']}）")
     lines.append("")
-    qb, _ = build_quarterly_block()
+    qb, _ = build_quarterly_block()  # 过期警告由本函数内部单通道输出
     lines.append(qb)
-    if quarterly_expired:
-        lines.append(f"{E['warn']} 季度背景已过期")
     lines.append("")
     lines.append(f"━━━ {E['honest']} 诚实声明 ━━━")
     lines.append("资金流按交易金额大小推断资金类型（超大单≈机构），不是实名数据；唯一实名披露是季报，每季度更新。承接周期判断为推断。本内容不构成任何买卖建议。")

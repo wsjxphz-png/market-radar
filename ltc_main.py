@@ -84,9 +84,17 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
 
     analyses = ltc_analysis.analyze_flows(flow)
     focus = ltc_analysis.pick_focus(analyses, top_n=6)
+    # FR-5.4 调优闭环：signals_config.json（ltc_verify 维护）移除的信号不输出，
+    # tag 置空落回待观察，其余字段不动；配置缺失 = 全部信号可用（active 列表不在此硬编码）
+    signals_cfg = ltc_store.load_state(os.path.join(data_dir, "signals_config.json"))
+    active_tags = signals_cfg.get("active") if isinstance(signals_cfg, dict) else None
+    if active_tags:
+        for f in focus:
+            if f.get("tag") and f["tag"] not in active_tags:
+                f["tag"] = ""
     repurchase = _safe_fetch(ltc_data.fetch_repurchase, weeks=4,
                              default={"period": "近4周", "items": []})
-    valuation = ltc_data.fetch_valuation()  # 内部逐板块失败兜底，无需外层再包
+    valuation = _safe_fetch(ltc_data.fetch_valuation, default=[])  # 内部逐板块失败兜底；外层再包 _safe_fetch 防整体击穿（FR-6.3 对称性）
 
     # 承接周期（每板块 K 线 + 背书；背书来自季度实名数据，季度背景过期则不计）
     from ltc_config import BACKING_SECTORS, QUARTERLY_CONTEXT, is_expired
@@ -99,14 +107,24 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
 
     history = ltc_store.load_history(hist_path)
     sb_ref = ltc_store.compute_reference(history, "southbound_net_yi")
-    sb_label = ltc_store.reference_label((southbound or {}).get("southbound_net_yi", 0), sb_ref)
+    sb_value = (southbound or {}).get("southbound_net_yi")
+    # 数据诚实（复审 Important 1）：南向失败时 value 为 None，不参与参照比对，
+    # 绝不让"比平时少/多"这种基于 0 兜底的结论流向 AI
+    if sb_value is not None:
+        sb_label = ltc_store.reference_label(sb_value, sb_ref)
+    else:
+        sb_label = "南向数据暂不可用"
     refs = {"southbound_label": sb_label}
 
+    # 估值温度素材（FR-4.5 今日×长期搭桥核心，只含核验数字，最多 5 板块）
+    valuation_facts = [{"board": v["board"], "position_pct": v["position_pct"]}
+                       for v in valuation if v.get("ok")][:5]
     facts = ltc_narrative.build_facts(
-        {"data_date": data_date, "southbound": southbound, "repurchase": repurchase}, focus, refs)
+        {"data_date": data_date, "southbound": southbound, "repurchase": repurchase,
+         "valuation": valuation_facts}, focus, refs)
     interp = ltc_narrative.interpretation(facts, env.get("DEEPSEEK_API_KEY", ""))
 
-    # 过期警告由 format_card 内部 build_quarterly_block 自带，不重复传 quarterly_expired
+    # 过期警告由 build_quarterly_block 内部自带，format_card 无独立过期参数（单通道）
     card = ltc_format.format_card(data_date, interp, focus, southbound, valuation,
                                   repurchase, refs)
     logger.info("卡片内容:\n%s", card[:2000])
