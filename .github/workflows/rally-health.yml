@@ -11,6 +11,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+
 jobs:
   monitor:
     runs-on: ubuntu-latest
@@ -34,5 +37,21 @@ jobs:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-        run: python market_dashboard.py ${{ inputs.force && '--force' || '' }}
+        run: |
+          python market_dashboard.py ${{ inputs.force && '--force' || '' }}
+          code=$?
+          if [ $code -ne 0 ]; then
+            echo "::error::全景仪表盘运行失败或存在告警（exit $code），请查看日志"
+          fi
+          # F2: 失败已留痕，仍 exit 0 以执行后续留痕提交
+          exit 0
+
+      - name: 信号留痕提交
+        # F4: trade_log.jsonl 随 workflow 持久化，供次日 detect_signal_flips 对比信号翻转
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add trade_log.jsonl || true
+          git diff --cached --quiet || git commit -m "data: 仪表盘信号留痕 [skip ci]"
+          git push
 
