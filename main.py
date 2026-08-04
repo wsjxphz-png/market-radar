@@ -1239,6 +1239,83 @@ def format_calibration_for_prompt(stats: Dict) -> str:
     return "\n".join(parts)
 
 
+# ============================================================
+# AI 输出后置校验（O3）：结构校验 + 禁用词过滤，失败走模板卡降级路径
+# ============================================================
+
+# 卡片渲染所需顶层字段，任一缺失/类型错误 → 整体降级为模板卡
+REQUIRED_TOP_KEYS = ["key_changes", "expectation_gaps", "opportunity_ranking",
+                     "deep_dives", "watchlist_30d", "cross_sectional_patterns",
+                     "logic_tracker", "barbell", "final_advice"]
+
+# 买卖指令 / 绝对化断言。用模式匹配避免误伤描述性语句
+# （如"机构加仓白酒"是事实描述，不算建议）。
+BANNED_ADVICE_PATTERNS = [
+    r"(?:建议|尽快|立即|马上|果断|抓紧|赶紧|务必|现在就想)\s*(买入|卖出|加仓|减仓|重仓|清仓|满仓|建仓|补仓|梭哈|离场|抄底)",
+    r"稳赚|稳赢|稳赚不赔|必涨|必跌|必然|梭哈|全仓押注",
+    r"一定(?:会|能|要|是|赚|涨|跌|亏)",
+]
+_BANNED_RE = [re.compile(p) for p in BANNED_ADVICE_PATTERNS]
+
+
+def contains_banned_advice(text: str) -> bool:
+    """判断文本是否含买卖建议/绝对化断言"""
+    return any(r.search(text or "") for r in _BANNED_RE)
+
+
+def _clean_advice_items(items: List[Dict]) -> Tuple[List[Dict], int]:
+    """过滤带买卖建议/绝对化断言的条目，返回 (保留列表, 移除数)"""
+    kept, removed = [], 0
+    for it in items:
+        if not isinstance(it, dict):
+            removed += 1
+            continue
+        blob = " ".join(str(v) for v in it.values())
+        if contains_banned_advice(blob):
+            removed += 1
+            continue
+        kept.append(it)
+    return kept, removed
+
+
+def validate_ai_result(result) -> Optional[Dict]:
+    """结构校验 + 禁用词过滤。返回清洗后的结果；失败返回 None（降级为模板卡）。"""
+    if not isinstance(result, dict):
+        log("❌ AI 输出不是 JSON 对象，降级为模板卡")
+        return None
+    for key in REQUIRED_TOP_KEYS:
+        if key not in result or not isinstance(result[key], (dict, list)):
+            log(f"❌ AI 输出缺少必需字段 {key}，降级为模板卡")
+            return None
+    # 逐条目清洗：含禁用词 → 丢弃；机会类条目缺可证伪条件 → 丢弃
+    removed_total = 0
+    for key in ("opportunity_ranking", "deep_dives", "key_changes",
+                "expectation_gaps", "watchlist_30d", "cross_sectional_patterns"):
+        items = result[key]
+        if not isinstance(items, list):
+            continue
+        kept, removed = _clean_advice_items(items)
+        removed_total += removed
+        if key in ("opportunity_ranking", "deep_dives"):
+            kept2, removed2 = [], 0
+            for it in kept:
+                if not str(it.get("falsification_condition", "")).strip():
+                    removed2 += 1
+                else:
+                    kept2.append(it)
+            removed_total += removed2
+            kept = kept2
+        result[key] = kept
+    # 最终建议等文本字段
+    fa = result.get("final_advice")
+    if isinstance(fa, dict) and contains_banned_advice(" ".join(str(v) for v in fa.values())):
+        result["final_advice"] = {}
+        removed_total += 1
+    if removed_total:
+        log(f"⚠️ AI 输出后置校验: 过滤 {removed_total} 条（含禁用词/缺可证伪条件）")
+    return result
+
+
 def call_deepseek(user_content: str) -> Optional[Dict]:
     if not DEEPSEEK_API_KEY:
         log("❌ DEEPSEEK_API_KEY 未设置"); return None
@@ -1258,6 +1335,10 @@ def call_deepseek(user_content: str) -> Optional[Dict]:
                 if content.startswith("```"): content = content.split("\n", 1)[1] if "\n" in content else content; content = content[:-3].strip() if content.endswith("```") else content; content = content[4:].strip() if content.startswith("json") else content
                 result = json.loads(content)
                 log(f"   ✅ Tokens: {data.get('usage',{}).get('total_tokens','?')}")
+                result = validate_ai_result(result)
+                if result is None:
+                    log("❌ AI 输出未通过后置校验，走模板卡降级路径")
+                    return None
                 return result
             elif resp.status_code == 429: time.sleep((attempt+1)*10); continue
             elif resp.status_code >= 500: time.sleep((attempt+1)*5); continue
@@ -1333,6 +1414,14 @@ def send_feishu_webhook(card: Dict) -> bool:
     return False
 
 
+def build_alert_card(title: str, body: str) -> Dict:
+    """构建告警卡片（无内容/数据源全挂等异常场景，复用飞书发送）"""
+    return {"msg_type": "interactive",
+            "card": {"header": {"template": "red",
+                     "title": {"tag": "plain_text", "content": title}},
+                     "elements": [{"tag": "markdown", "content": body}]}}
+
+
 def send_feishu_image(image_key: str, chat_id: str) -> bool:
     """通过 Bot API 发送图片消息到指定群聊"""
     token = _get_feishu_token()
@@ -1369,6 +1458,11 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
     date_str = d.strftime("%Y.%m.%d")
     weekday = ["一","二","三","四","五","六","日"][d.weekday()]
     md = [f"📊 **市场机会发现系统** · {date_str} 周{weekday}", f"从 {stats['filtered']} 条信息中为你发现机会", "━━━━━━━━━━━━━━━━━━━"]
+
+    # 卡片头部：数据源状态 / 失败源清单（O2，无失败时不显示）
+    fail_block = render_source_failure_block()
+    if fail_block:
+        md.append(fail_block)
 
     # 一、市场最重要的变化
     kc = ai.get("key_changes", [])
@@ -1455,6 +1549,9 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
             pot = t.get("one_year_return_potential","")
             if pot: lines.append(f"   一年回报潜力: {pot}")
             lines.append("")
+        # O8：回报潜力是研究假设，非配置建议
+        if any(str(t.get("one_year_return_potential", "")).strip() for t in deep):
+            lines.append("> ⚠️ 以上回报潜力为研究假设，非配置建议")
         md.append(section("四、深度研究机会", "\n".join(lines)))
 
     # 五、杠铃配置观察
@@ -1467,6 +1564,8 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
         if deff: lines.append(f"🛡️ 防守端: {' | '.join(deff)}")
         lines.append(f"🎯 环境判断: {barbell.get('environment_judgment','')}")
         lines.append(f"   倾向: {barbell.get('bias','?')} — {barbell.get('rationale','')}")
+        # O8：杠铃观察是研究假设，非配置建议
+        lines.append("> ⚠️ 本板块为研究观察，非配置建议")
         lines.append("")
         md.append(section("五、杠铃配置观察", "\n".join(lines)))
 
@@ -1584,10 +1683,26 @@ def main():
 
     all_items = fetch_all(tasks)
 
-    if not all_items: log("\n❌ 无内容"); sys.exit(1)
+    if not all_items:
+        log("\n❌ 无内容")
+        fail = render_source_failure_block()
+        card = build_alert_card("⚠️ 市场机会日报 · 无内容",
+                                "今日所有 RSS 信息源均未抓取到内容。\n\n" + (fail or "数据源状态正常，请人工检查。"))
+        send_feishu_card(card)
+        send_feishu_webhook(card)
+        sys.exit(1)
 
     filtered, _, _ = pre_filter(all_items)
-    if not filtered: log("\n⚠️ 过滤后无内容"); sys.exit(0)
+    if not filtered:
+        # O2：不再静默 exit 0 —— 推送告警卡 + 非零退出码让 workflow 显式失败
+        log("\n⚠️ 过滤后无内容")
+        fail = render_source_failure_block()
+        body = (f"今日抓取 {len(all_items)} 条，但 24h 时效/去重/噪音过滤后为 0，今日无内容。\n\n"
+                + (fail or "各数据源状态正常。"))
+        card = build_alert_card("⚠️ 市场机会日报 · 今日无内容", body)
+        send_feishu_card(card)
+        send_feishu_webhook(card)
+        sys.exit(1)
 
     if args.dry_run:
         log("\n--- DRY RUN 预览 ---")
@@ -1619,8 +1734,11 @@ def main():
              "calibration": get_calibration_stats()}
 
     if ai_result is None:
-        content_md = f"📊 市场机会发现系统 · {datetime.now().strftime('%Y.%m.%d')}\n\n⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n请检查 DeepSeek API。"
-        card = {"msg_type":"interactive","card":{"header":{"template":"red","title":{"tag":"plain_text","content":"📊 市场机会发现"}},"elements":[{"tag":"markdown","content":content_md}]}}
+        fail = render_source_failure_block()
+        content_md = (f"📊 市场机会发现系统 · {datetime.now().strftime('%Y.%m.%d')}\n\n"
+                      f"⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n请检查 DeepSeek API。\n\n"
+                      + (fail or ""))
+        card = build_alert_card("⚠️ 市场机会发现 · AI 暂不可用", content_md)
     else:
         card = format_feishu(ai_result, stats)
 
