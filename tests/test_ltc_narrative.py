@@ -8,9 +8,9 @@ def test_build_facts_only_verified_numbers():
             "repurchase": {"items": [{"name": "宁德时代", "amount_yi": 400.0, "phase": "董事会预案"}]}}
     focus = [{"industry": "半导体", "tag": "资金关注", "sl_net": 1218.1, "chg_pct": 6.01, "sl_percentile": 100.0,
               "accum": {"period": "短期行为特征", "reasons": []}}]
-    f = build_facts(data, focus, {"southbound_ref": (None, "参照积累中")})
+    f = build_facts(data, focus, {"southbound_label": "比平时多"})
     assert f["southbound"]["value"] == 25.7
-    assert f["southbound"]["ref_label"] == "参照积累中"
+    assert f["southbound"]["ref_label"] == "比平时多"
     assert f["focus"][0]["industry"] == "半导体"
     assert f["focus"][0]["tag"] == "资金关注"
 
