@@ -1243,10 +1243,21 @@ def format_calibration_for_prompt(stats: Dict) -> str:
 # AI 输出后置校验（O3）：结构校验 + 禁用词过滤，失败走模板卡降级路径
 # ============================================================
 
-# 卡片渲染所需顶层字段，任一缺失/类型错误 → 整体降级为模板卡
-REQUIRED_TOP_KEYS = ["key_changes", "expectation_gaps", "opportunity_ranking",
-                     "deep_dives", "watchlist_30d", "cross_sectional_patterns",
-                     "logic_tracker", "barbell", "final_advice"]
+# 卡片渲染所需顶层字段 → 期望类型。dict 字段下游用 .get() 链式取子键，
+# list 字段下游逐条迭代。任一缺失/类型不匹配 → 整体降级为模板卡。
+# 类型必须逐一强校验：若 barbell 是 list、key_changes 是 dict 仍放行，
+# format_feishu 会直接抛 AttributeError/TypeError，整卡不发（O3 要防的故障模式）。
+REQUIRED_TOP_KEY_TYPES = {
+    "key_changes": list,
+    "expectation_gaps": list,
+    "opportunity_ranking": list,
+    "deep_dives": list,
+    "watchlist_30d": list,
+    "cross_sectional_patterns": list,
+    "logic_tracker": dict,
+    "barbell": dict,
+    "final_advice": dict,
+}
 
 # 买卖指令 / 绝对化断言。用模式匹配避免误伤描述性语句
 # （如"机构加仓白酒"是事实描述，不算建议）。
@@ -1283,9 +1294,9 @@ def validate_ai_result(result) -> Optional[Dict]:
     if not isinstance(result, dict):
         log("❌ AI 输出不是 JSON 对象，降级为模板卡")
         return None
-    for key in REQUIRED_TOP_KEYS:
-        if key not in result or not isinstance(result[key], (dict, list)):
-            log(f"❌ AI 输出缺少必需字段 {key}，降级为模板卡")
+    for key, expected in REQUIRED_TOP_KEY_TYPES.items():
+        if key not in result or not isinstance(result[key], expected):
+            log(f"❌ AI 输出缺少/类型错误必需字段 {key}，降级为模板卡")
             return None
     # 逐条目清洗：含禁用词 → 丢弃；机会类条目缺可证伪条件 → 丢弃
     removed_total = 0

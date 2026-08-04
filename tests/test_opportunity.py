@@ -205,6 +205,20 @@ def test_validate_ai_result_drops_items_without_falsification():
     assert len(out["opportunity_ranking"]) == 1
 
 
+def test_validate_ai_result_rejects_wrong_field_types():
+    # O3-1：类型契约强校验 —— 畸形形状不能穿透到 format_feishu（那里无兜底，
+    # 会抛 AttributeError 整卡不发）。dict 字段来了 list / list 字段来了 dict → None。
+    r = _valid_ai()
+    r["barbell"] = ["offense", "defense"]   # 应为 dict，却给了 list
+    assert main.validate_ai_result(r) is None
+    r2 = _valid_ai()
+    r2["key_changes"] = {"change": "x"}     # 应为 list，却给了 dict
+    assert main.validate_ai_result(r2) is None
+    r3 = _valid_ai()
+    r3["logic_tracker"] = []                # 应为 dict，却给了 list
+    assert main.validate_ai_result(r3) is None
+
+
 def test_contains_banned_advice():
     assert main.contains_banned_advice("建议买入白酒")
     assert main.contains_banned_advice("稳赚不赔")
