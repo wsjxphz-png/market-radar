@@ -56,11 +56,12 @@ def update_signal_config(verdict: str, diff: float) -> None:
     cfg = ltc_store.load_state(cfg_path) or {"active": ACTIVE_SIGNALS, "consecutive_invalid": 0}
     if verdict == "有效":
         cfg["consecutive_invalid"] = 0
-    else:
+    elif verdict == "无效":  # "数据不足"（窗口未满）不计 strike，避免闭环未给出真实判断前误杀信号
         cfg["consecutive_invalid"] = cfg.get("consecutive_invalid", 0) + 1
         if cfg["consecutive_invalid"] >= 2:
             cfg["active"] = ["资金关注", "逆势吸筹嫌疑", "派发嫌疑"]  # 资金撤离信号降级移除
-            cfg["removed"] = cfg.get("removed", []) + ["资金撤离"]
+            if "资金撤离" not in cfg.get("removed", []):
+                cfg["removed"] = cfg.get("removed", []) + ["资金撤离"]
     ltc_store.save_state(cfg_path, cfg)
 
 def main() -> int:

@@ -1,6 +1,6 @@
-import sys, os
+import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ltc_verify import forward_returns, differentiation
+from ltc_verify import forward_returns, differentiation, update_signal_config
 
 def test_forward_returns_window():
     hist = [{"data_date": "2026-07-01", "tags": {"半导体": {"tag": "资金关注", "sl_net": 100.0, "accum": ""}}}]
@@ -23,3 +23,36 @@ def test_differentiation_verdict():
     out = differentiation(results)
     assert out["verdict"] == "有效"
     assert abs(out["diff_20"] - 3.25) < 1e-9  # (8+6)/2 - (8+6+1+0)/4 = 7 - 3.75
+
+def test_update_signal_config_insufficient_no_strike(tmp_path, monkeypatch):
+    # 复审 Issue 1：窗口未满的"数据不足"不计入降级 strike，否则闭环在给出真实判断前就误杀信号
+    monkeypatch.chdir(tmp_path)
+    update_signal_config("数据不足", 0.0)
+    cfg = json.load(open("data/ltc/signals_config.json", encoding="utf-8"))
+    assert cfg["consecutive_invalid"] == 0
+    assert cfg["active"] == ["资金关注", "逆势吸筹嫌疑", "派发嫌疑", "资金撤离"]
+
+def test_update_signal_config_two_invalid_removes_signal(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    update_signal_config("无效", 0.0)
+    update_signal_config("无效", 0.0)
+    cfg = json.load(open("data/ltc/signals_config.json", encoding="utf-8"))
+    assert cfg["consecutive_invalid"] == 2
+    assert "资金撤离" not in cfg["active"]
+    assert cfg["removed"] == ["资金撤离"]
+
+def test_update_signal_config_removed_no_duplicate(tmp_path, monkeypatch):
+    # 复审 Issue 2：连续第 3 个无效期不得重复追加 removed
+    monkeypatch.chdir(tmp_path)
+    for _ in range(3):
+        update_signal_config("无效", 0.0)
+    cfg = json.load(open("data/ltc/signals_config.json", encoding="utf-8"))
+    assert cfg["removed"] == ["资金撤离"]
+
+def test_update_signal_config_valid_resets_counter(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    update_signal_config("无效", 0.0)
+    update_signal_config("无效", 0.0)
+    update_signal_config("有效", 5.0)
+    cfg = json.load(open("data/ltc/signals_config.json", encoding="utf-8"))
+    assert cfg["consecutive_invalid"] == 0
