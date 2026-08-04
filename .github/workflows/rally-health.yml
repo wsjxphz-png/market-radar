@@ -38,6 +38,9 @@ jobs:
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
         run: |
+          # F2/D1: Actions bash 默认 -eo pipefail — 不 set +e 则 python 非零退出时
+          # step 立即中止，下方 code=$? / ::error:: / exit 0 全部不可达（死代码）
+          set +e
           python market_dashboard.py ${{ inputs.force && '--force' || '' }}
           code=$?
           if [ $code -ne 0 ]; then
