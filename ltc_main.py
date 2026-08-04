@@ -51,7 +51,7 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     state_path = os.path.join(data_dir, "state.json")
     hist_path = os.path.join(data_dir, "history.jsonl")
     state = ltc_store.load_state(state_path)
-    dry_run = bool(env.get("LTC_DRY_RUN"))
+    dry_run = env.get("LTC_DRY_RUN", "").lower() in ("1", "true")
 
     trading_date = _safe_fetch(ltc_data.get_trading_date)
     southbound = _safe_fetch(ltc_data.fetch_southbound)
