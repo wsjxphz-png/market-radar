@@ -93,12 +93,12 @@
       "api_key_env": "TAVILY_API_KEY",
       "max_results_per_query": 5,
       "queries": [
-        {"query": "stock market moving events today 2026", "category": "market"},
-        {"query": "Federal Reserve interest rate policy June 2026", "category": "macro"},
-        {"query": "major corporate earnings surprises revenue guidance 2026", "category": "equity"},
-        {"query": "geopolitical risk trade war tariffs affecting markets 2026", "category": "macro"},
+        {"query": "stock market moving events {month} {year}", "category": "market"},
+        {"query": "Federal Reserve interest rate policy {month} {year}", "category": "macro"},
+        {"query": "major corporate earnings surprises revenue guidance {year}", "category": "equity"},
+        {"query": "geopolitical risk trade war tariffs affecting markets {year}", "category": "macro"},
         {"query": "sector rotation unusual market activity this week", "category": "market"},
-        {"query": "China stock market A-share policy stimulus 2026", "category": "news_cn"},
+        {"query": "China stock market A-share policy stimulus {year}", "category": "news_cn"},
         {"query": "commodity prices oil gold copper moves this week", "category": "macro"}
       ]
     },
@@ -109,12 +109,6 @@
         "stock_zh_a_spot_em", "stock_sse_summary", "macro_china_gdp",
         "macro_china_cpi_monthly", "macro_china_pmi", "macro_china_money_supply"
       ]
-    },
-    "sector_monitor": {
-      "enabled": true,
-      "note": "A股板块异动监测，基于2026-06-29会议交易框架，拉取板块K线+资金流向+技术指标",
-      "lookback_days": 60,
-      "fund_flow_indicators": ["5日", "10日"]
     }
   }
 }
