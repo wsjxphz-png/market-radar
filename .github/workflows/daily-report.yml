@@ -52,7 +52,11 @@ jobs:
           mkdir -p archive/expired archive/falsified
           git config user.name "market-radar-bot"
           git config user.email "market-radar-bot@users.noreply.github.com"
-          git add active_theses.json archive/ data/
+          # 降级日不生成 active_theses.json：单独 add 并容错，避免 pathspec
+          # "did not match any files" fatal 拖累 archive/ data/ 的持久化提交
+          # （git add --ignore-errors 不覆盖 pathspec 错误，实测仍 fatal 全中止）。
+          git add active_theses.json || true
+          git add archive/ data/
           if git diff --cached --quiet; then
             echo "无追踪数据变更，跳过提交"
           else
