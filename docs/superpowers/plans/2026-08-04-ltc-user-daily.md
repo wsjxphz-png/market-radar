@@ -1,6 +1,8 @@
 # 长线资金监测 → 小白版每日资金观察日报 实现计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> 执行方式判断（2026-08-05，非模板默认）：采用**本会话内联执行**而非子代理驱动。理由：① 任务间接口强耦合（11 个模块签名互相咬合），内联保持签名一致成本最低；② 执行中的细节决策依赖本会话积累的产品意图与接口实测知识（需求修正历史、东财/新浪接口实测结论、卡片样张反馈），子代理只有计划文档、判断基准不足。原模板默认推荐（subagent-driven）未针对本项目评估，已修正。
 
 **Goal:** 将 long_term_capital.py 重构为面向零基础用户的小白版每日资金观察产品（数据诚实化 + 观察对象日期规则 + 资金归因与承接周期 + AI 解读层 + 验证闭环 + 新闻降级）。
 
