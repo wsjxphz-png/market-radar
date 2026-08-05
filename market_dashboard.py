@@ -1808,21 +1808,45 @@ def compute_fund_state(history: list, sector: str, days: int = 3) -> str:
 
 
 def build_merged_card(data: dict) -> str:
-    """合并卡片：估值判断 → 大盘概况 → 板块异动+操作建议 → 今日资金 → AI 解读 → 诚实声明"""
+    """合并卡片组装：format_dashboard 原仪表盘全量渲染 + 新增区块插入，原区块一个不丢。
+
+    ⚠️ 内容丢失修复（feat/board-overview）：旧六区块简化版丢弃了交易手册/每日一得/
+    指数监测/资金异动/信号翻转/冲突裁决/板块全貌/板块观察池等全部原区块，本函数改为
+    base = format_dashboard(...) 全量渲染，估值判断区块插入顶部，资金观察增强区块追加
+    尾部（南向/回购/承接 — 原「板块资金流向」区块保留在 base 内不动），诚实声明收尾。
+
+    data 键（与 merge_main 的组装一一对应）：
+    cycle/signals/sectors/ai_text/idx/indices/temp_data/flow_data/
+    sector_unavailable/sector_overview/flow_anomalies/fund_flow_hist_ok/board_ok
+    → 透传 format_dashboard（原卡片全部内容）；
+    valuation_judgements/valuation_snapshots → 估值判断区块（顶部，format_valuation_block）；
+    fund_observation → 资金观察增强区块（南向/回购/承接，尾部）；
+    honest → 诚实声明（覆盖估值/资金推断与操作信号理论性）。"""
     from val_format import format_valuation_block
+    base = format_dashboard(
+        cycle=data["cycle"], signals=data["signals"], sectors=data.get("sectors", []),
+        ai_text=data.get("ai_text"), idx=data["idx"],
+        indices=data.get("indices"), temp_data=data.get("temp_data"),
+        flow_data=data.get("flow_data"),
+        sector_unavailable=data.get("sector_unavailable", False),
+        sector_overview=data.get("sector_overview"),
+        flow_anomalies=data.get("flow_anomalies"),
+        fund_flow_hist_ok=data.get("fund_flow_hist_ok"),
+        board_ok=data.get("board_ok"),
+    )
     parts = []
+    # 估值判断区块：插入顶部（独立成表：东财口径 12 板块，不挂仪表盘板块列表）
     val = format_valuation_block(data.get("valuation_judgements", []),
                                  data.get("valuation_snapshots", []))
     if val:
         parts.append(val)
-    if data.get("market_overview"):
-        parts.append(f"━━━ 📈 大盘概况 ━━━\n{data['market_overview']}")
-    if data.get("sector_ops"):
-        parts.append(f"━━━ 🎯 板块异动与操作建议 ━━━\n{data['sector_ops']}")
-    if data.get("fund_section"):
-        parts.append(f"━━━ 📊 今日资金 ━━━\n{data['fund_section']}")  # 📊 与估值区块头 💰 去重
-    if data.get("interpretation"):
-        parts.append(data["interpretation"])
+    # 原仪表盘全量区块（估值/资金新增之外的顺序与文案完全保留）
+    parts.append(base)
+    # 资金观察增强区块：追加尾部（南向/回购/承接 — 原「板块资金流向」区块保留在 base 内不动）
+    fund_obs = data.get("fund_observation")
+    if fund_obs:
+        parts.append(f"━━━ 📈 资金观察（南向/回购/承接） ━━━\n{fund_obs}")
+    # 诚实声明：原合并卡保留（覆盖估值/资金推断，均属推断非实名）
     if data.get("honest"):
         parts.append(f"━━━ 🔎 诚实声明 ━━━\n{data['honest']}")
     return "\n\n".join(parts)
@@ -1849,27 +1873,6 @@ def _safe_ltc(func, *args, default=None, **kwargs):
     except Exception as e:
         print(f"  [!] 资金源 {getattr(func, '__name__', func)}: {str(e)[:80]}")
         return default
-
-
-def _market_overview_text(indices: dict, temp_data: dict) -> str:
-    """大盘概况区块：四大指数快照 + 市场温度（复用 main 的抓取变量）"""
-    idx_lines = []
-    if indices:
-        for tag, df in indices.items():
-            if df is not None and len(df) >= 2:
-                c = df["close"].iloc[-1]
-                idx_lines.append(f"{tag} {c:.0f} ({c/df['close'].iloc[-2]-1:+.2%})")
-    lines = ["  |  ".join(idx_lines) if idx_lines else "指数数据暂不可用"]
-    if temp_data:
-        up, dn = temp_data.get("up_count", 0), temp_data.get("down_count", 0)
-        lu, ld = temp_data.get("limit_up", 0), temp_data.get("limit_down", 0)
-        if temp_data.get("breadth_ok"):
-            vol = temp_data.get("volume", {})
-            vol_str = f"{vol.get('total_amount', 0)/1e8:.0f}亿" if temp_data.get("volume_ok") else "数据暂不可用"
-            lines.append(f"涨跌比 {up}↑/{dn}↓（涨停 {lu} / 跌停 {ld}）｜成交额 {vol_str}（vs 20日均）")
-        else:
-            lines.append("市场温度：涨跌/涨停数据源不可用（东方财富API被封）")
-    return "\n".join(lines)
 
 
 def _annotate_empty_fund_section(fund_section: str, flow_ok: bool) -> str:
@@ -1969,9 +1972,11 @@ def _record_merge_success(data_date: str, sb_value, focus: list, snapshots: list
 
 
 def merge_main():
-    """合并入口：仪表盘骨架 + 估值判断表 + 资金观察区块 + AI 解读（事实清单模式）
+    """合并入口：format_dashboard 原仪表盘全量（全部区块）+ 估值判断表 + 资金观察区块 + AI 解读
 
-    复用现有 main 的抓取（指数/信号/板块/温度）与推送去重（data/dashboard/state.json）；
+    复用现有 main 的抓取（指数/信号/板块/温度/资金流向）与推送去重（data/dashboard/state.json）；
+    卡片组装 = format_dashboard 原卡片全部内容（一个区块都不丢）+ 估值判断表插入顶部
+    + 资金观察增强区块（南向/回购/承接）追加尾部 + 诚实声明收尾；
     估值表独立成表（东财口径 12 板块，val_config.INDEX_MAP，与仪表盘板块口径分离）；
     北向相关内容一律不出现；操作建议保留（仪表盘定位）。
     调用：python market_dashboard.py --merge [--dry-run] [--force]
@@ -2030,16 +2035,25 @@ def merge_main():
     print("[3/7] 板块诊断...")
     sector_data = None; sectors_diag = []
     sector_unavailable = False
+    sector_overview = {}                # F3: 板块模块市场概况并入推送正文（原 main 同构）
+    flow_anomalies = []                 # F3: 资金异动接入推送正文（原 main 同构）
+    fund_flow_hist_ok = None            # F5: 板块资金流 5d/10d 可用性（原 main 同构）
+    board_ok = True                     # D3: 板块概览（当日涨跌/领涨）可用性（原 main 同构）
     try:
         from sector_monitor import fetch_sector_monitor_data
         sector_data = fetch_sector_monitor_data()
         sectors_diag = [diagnose_sector_mi(s) for s in sector_data.get("sectors", [])]
         sm = sector_data.get("summary", {})
+        sector_overview = sector_data.get("market_overview", {})
+        flow_anomalies = sector_data.get("flow_anomalies", [])
+        fund_flow_hist_ok = sector_data.get("fund_flow_hist_ok", True)
+        board_ok = sector_data.get("board_ok", True)
         print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
               f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
     except Exception as e:
         print(f"  [!] 板块: {e}")
         sector_unavailable = True
+        board_ok = False                # 异常路径板块亦视为不可用（原 main 同构）
 
     cycle = assess_sentiment(signals)
     print(f"[4/7] 情绪周期: {cycle['emoji']} {cycle['name']}")
@@ -2049,6 +2063,7 @@ def merge_main():
     idx_volume = float(idx["volume"].iloc[-1]) if idx is not None and "volume" in idx.columns and len(idx) > 0 else 0
     temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {},
                  "breadth_ok": False, "volume_ok": False}
+    flow_data = {"sectors": []}          # 板块资金流向 TOP5（原 main 同构构造）
     try:
         sd = StockData()
         breadth = sd.get_market_breadth()
@@ -2061,21 +2076,16 @@ def merge_main():
             "breadth_ok": breadth.get("available", breadth["total"] > 0),
             "volume_ok": vol_info.get("available", vol_info["total_amount"] > 0),
         }
+        ff = sd.get_sector_fund_flow()
+        if len(ff) > 0 and "board_name" in ff.columns and "net_flow" in ff.columns:
+            for _, row in ff.iterrows():
+                amt = row["net_flow"]
+                direction = "流入" if amt > 0 else "流出"
+                flow_data["sectors"].append(f"{row['board_name']}: {direction}{abs(amt):.1f}亿")
         breadth_str = f"{breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']}" if breadth.get("available") else "数据暂不可用"
         print(f"  温度: {breadth_str}")
     except Exception as e:
         print(f"  [!] 温度数据: {e}")
-
-    # ── 大盘概况 / 板块异动+操作建议（复用 main 的抓取变量） ──
-    market_overview = _market_overview_text(indices, temp_data)
-    ops_lines = []
-    if sector_unavailable:
-        ops_lines.append("⚠️ 板块数据暂不可用 — 板块异动与操作建议本日缺失。指数信号不受影响，仍可参考。")
-    else:
-        ops_lines.append(f"**{cycle['emoji']} {cycle['name']}** ｜ 建议仓位 **{cycle['position']}**（理论判断，推断）")
-        ops_lines.append("")
-        ops_lines.extend(generate_sector_ops(sectors_diag))
-    sector_ops = "\n".join(ops_lines)
 
     # ── 估值判断表（独立成表：东财口径 12 板块，不挂仪表盘板块列表） ──
     print("\n[6/7] 估值判断（12 东财板块，独立成表）...")
@@ -2145,12 +2155,24 @@ def merge_main():
         fund_section = _annotate_empty_fund_section(fund_section, flow_ok)
 
     card = build_merged_card({
+        # ── format_dashboard 全量参数（原仪表盘全部区块一个不丢） ──
+        "cycle": cycle,
+        "signals": signals,
+        "sectors": sectors_diag,
+        "ai_text": interpretation,       # ltc AI 解读（事实清单模式）→ 原 AI 判定位置（每日一得前）
+        "idx": idx,
+        "indices": indices,
+        "temp_data": temp_data,
+        "flow_data": flow_data,          # 板块资金流向 TOP5（原 main 同构构造）
+        "sector_unavailable": sector_unavailable,
+        "sector_overview": sector_overview,
+        "flow_anomalies": flow_anomalies,
+        "fund_flow_hist_ok": fund_flow_hist_ok,
+        "board_ok": board_ok,
+        # ── 新增区块：估值判断（顶部）+ 资金观察增强（尾部，南向/回购/承接） ──
         "valuation_judgements": judgements,
         "valuation_snapshots": snapshots,
-        "market_overview": market_overview,
-        "sector_ops": sector_ops,
-        "fund_section": fund_section,
-        "interpretation": interpretation,
+        "fund_observation": fund_section,
         "honest": MERGED_HONEST,
     })
     print(f"\n合并卡片长度: {len(card)} 字符")

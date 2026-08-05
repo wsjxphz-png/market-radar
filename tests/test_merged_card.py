@@ -1,46 +1,161 @@
 # -*- coding: utf-8 -*-
-"""合并卡片纯函数测试 — build_merged_card 六区块顺序/无北向 + compute_fund_state 资金维确认。
-原则：注入假数据，不触网。"""
+"""合并卡片纯函数测试 — build_merged_card 全量保留原仪表盘区块 + 估值/资金新增区块 + 无北向
++ compute_fund_state 资金维确认。
+原则：注入假数据，不触网。内容丢失修复（feat/board-overview）：原六区块简化版已废弃，
+合并卡 = format_dashboard 全量（原 14+ 区块一个不丢）+ 估值判断（顶部）+ 资金观察（尾部）。
+"""
 import json, sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from market_dashboard import build_merged_card, compute_fund_state, _with_metric_disclosure
+import pandas as pd
+from market_dashboard import (build_merged_card, compute_fund_state,
+                              _with_metric_disclosure, compute_signals,
+                              SENTIMENT_CYCLE)
 
 
-def test_merged_card_sections_order():
-    data = {
+# ═══════════════════════════════════════════════════════════
+# 假数据构造（与 test_dashboard 同构，不触网）
+# ═══════════════════════════════════════════════════════════
+
+def _idx_df(n=300, uptrend=0.001):
+    """构造指数日线假数据（无网络）：强上升趋势 → 三周期/年线 healthy"""
+    dates = pd.date_range("2024-01-01", periods=n, freq="B")
+    close = [100 * (1 + uptrend) ** i for i in range(n)]
+    return pd.DataFrame({"date": dates, "open": [c * 0.99 for c in close],
+                         "close": close, "high": [c * 1.02 for c in close],
+                         "low": [c * 0.98 for c in close], "volume": [1e9] * n})
+
+
+def _full_card_data():
+    """构造 build_merged_card 全量入参（覆盖原仪表盘全部区块 + 新增区块）"""
+    from ltc_format import build_fund_section
+    idx = _idx_df()
+    signals = compute_signals(idx, None)
+    sectors = [
+        {"name": "半导体", "category": "科技", "rating": "🟡 观察中", "phase": "震荡",
+         "tags": "指标正常", "_entry_check": "❌ 年线下方——手册第2节：选股需五条件全满足"},
+    ]
+    focus, southbound, refs, repurchase = _fund_fixture()
+    return {
+        # ── format_dashboard 全量参数（原仪表盘全部区块） ──
+        "cycle": dict(SENTIMENT_CYCLE["startup"]),
+        "signals": signals,
+        "sectors": sectors,
+        "ai_text": "AI 解读文本（事实清单模式）",
+        "idx": idx,
+        "indices": {"上证": idx, "深证": idx, "创业板": idx, "科创50": idx},
+        "temp_data": {"up_count": 3200, "down_count": 1900, "limit_up": 45, "limit_down": 3,
+                      "total": 5100, "volume": {"total_amount": 1.2e12, "ratio": 1.1},
+                      "breadth_ok": True, "volume_ok": True},
+        "flow_data": {"sectors": ["半导体: 流入43.5亿", "银行: 流出12.3亿"]},
+        "sector_unavailable": False,
+        "sector_overview": {"上证指数": {"close": 3450.0, "above_ma5": True, "bias_pct": 1.2}},
+        "flow_anomalies": [{"sector": "半导体",
+                            "anomaly": "资金面反转：此前持续流出，近期转为流入"}],
+        "fund_flow_hist_ok": True,
+        "board_ok": True,
+        # ── 新增区块 ──
         "valuation_judgements": [
             {"board": "银行", "verdict": "便宜", "dominant": "估值+资金", "confidence": "高",
              "action": "full", "note": "推断"}],
         "valuation_snapshots": [
-            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 0.42,
+            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 42.0,
              "pe_pct": None, "trend": "flat", "note": "PB=0.42（成分中位数）"}],
-        "market_overview": "上证 +0.33%",
-        "sector_ops": "半导体 hold",
-        "fund_section": "今日资金：银行 逆势吸筹嫌疑",
-        "interpretation": "今日解读文本",
+        "fund_observation": build_fund_section(focus, southbound, repurchase, refs),
         "honest": "诚实声明",
     }
+
+
+# ═══════════════════════════════════════════════════════════
+# 内容丢失修复：原仪表盘全部区块必须在合并卡中出现，一个不能丢
+# ═══════════════════════════════════════════════════════════
+
+def test_merged_card_keeps_all_original_dashboard_blocks(monkeypatch):
+    """合并卡必须包含原 format_dashboard 全部区块（交易手册/每日一得/指数监测/资金异动/
+    信号翻转/今日信号/入场出场/冲突裁决/板块诊断/板块全貌/综合策略/观察池/资金流向TOP5/
+    市场温度"怎么看"说明等）"""
+    monkeypatch.setattr("market_dashboard.detect_signal_flips",
+                        lambda signals, log_path=None: ["量价结构: healthy→danger ↓"])
+    card = build_merged_card(_full_card_data())
+    for marker in [
+        "## 🔥 市场温度",                       # 市场温度
+        "**怎么看**",                          # 市场温度"怎么看"说明
+        "## 💰 板块资金流向",                  # 板块资金流向 TOP5
+        "半导体: 流入43.5亿",                  # 板块资金流向 TOP5 内容
+        "## 📊 指数监测（板块模块）",           # 指数监测
+        "## ⚠️ 资金异动",                      # 资金异动
+        "## 📖 交易手册",                      # 交易手册
+        "## ⚠️ 信号翻转 — 与昨日对比",         # 信号翻转
+        "## 📊 今日信号",                      # 今日信号
+        "## 🎯 入场/出场信号与仓位",           # 入场/出场信号
+        "## ⚔️ 信号冲突裁决",                  # 冲突裁决
+        "## 🔍 板块操作信号",                  # 板块诊断（正常路径）
+        "## 📋 板块全貌",                      # 板块全貌
+        "## 🎯 综合策略",                      # 综合策略
+        "## 👀 板块观察池",                    # 板块观察池
+        "## 📖 每日一得",                      # 每日一得
+    ]:
+        assert marker in card, f"原仪表盘区块丢失: {marker}"
+
+
+def test_merged_card_order_valuation_top_fund_observation_tail():
+    """区块顺序：估值判断(顶部) → 原仪表盘全量 → 资金观察(尾部) → 诚实声明"""
+    card = build_merged_card(_full_card_data())
+    assert card.startswith("━━━ 💰 估值判断")     # 估值判断区块在卡片顶部
+    i_val = card.find("估值判断")
+    i_temp = card.find("## 🔥 市场温度")
+    i_fund_obs = card.find("资金观察（南向/回购/承接）")
+    i_honest = card.find("诚实声明")
+    assert 0 <= i_val < i_temp < i_fund_obs < i_honest
+
+
+def test_merged_card_fund_observation_enhanced_block():
+    """资金观察增强区块（南向/回购/承接）存在 — 新增区块；原「板块资金流向」保留不动"""
+    card = build_merged_card(_full_card_data())
+    assert "━━━ 📈 资金观察（南向/回购/承接） ━━━" in card
+    assert "南向" in card
+    assert "回购" in card
+    assert "承接" in card
+    # 原「板块资金流向」区块保留（与新增区块并存，非替换）
+    assert "## 💰 板块资金流向" in card
+    assert "板块资金净流入 TOP5:" in card
+
+
+def test_merged_card_sector_unavailable_block():
+    """板块模块整体异常 → 合并卡出现「板块诊断」+「板块数据暂不可用」（F2 不静默缺块）"""
+    data = _full_card_data()
+    data["sector_unavailable"] = True
+    data["sectors"] = []
     card = build_merged_card(data)
-    # 注：brief 原测试用 "market_overview"/"fund_section"/"interpretation" 作 find 目标，
-    # 但实现按 brief 逐字渲染中文标题（大盘概况/今日资金）与数据值（今日解读文本），
-    # 字面 key 永不出现 → 按 Task 3/4 先例改为真实渲染标记，断言意图不变（区块顺序）
-    order = [card.find(s) for s in ["估值判断", "大盘概况", "今日资金", "今日解读文本", "诚实声明"]]
-    assert all(o >= 0 for o in order)
-    assert order == sorted(order)  # 区块顺序：估值→概况→资金→解读→声明
+    assert "## 📋 板块诊断" in card
+    assert "板块数据暂不可用" in card
+    assert "## 🔍 板块操作信号" not in card  # 空板块不输出空标题
 
 
 def test_merged_card_has_no_northbound():
-    data = {"valuation_judgements": [], "valuation_snapshots": [],
-            "market_overview": "x", "sector_ops": "y", "fund_section": "z",
-            "interpretation": "w", "honest": "h"}
-    card = build_merged_card(data)
+    """北向硬性不出现：卡片任何位置不得出现"北向" """
+    card = build_merged_card(_full_card_data())
     assert "北向" not in card
 
 
-def test_merged_card_skips_empty_blocks():
-    """缺块不得输出占位标题（F2：数据不可用不得静默缺块，也不得编造）"""
-    card = build_merged_card({})
-    assert card == ""
+def test_merged_card_no_empty_new_blocks():
+    """新增区块数据缺失时不得输出空标题（F2：不静默缺块，也不得编造）"""
+    data = _full_card_data()
+    data["valuation_judgements"] = []
+    data["valuation_snapshots"] = []
+    data["fund_observation"] = ""
+    data["honest"] = ""
+    card = build_merged_card(data)
+    assert "估值判断" not in card
+    assert "资金观察" not in card
+    assert "诚实声明" not in card
+    assert "## 🔥 市场温度" in card          # 原区块仍然在
+
+
+def test_fund_observation_header_emoji_no_collision():
+    """新增资金观察区块头部 emoji 与估值(💰)/板块资金流向(💰) 去重 → 资金观察用 📈"""
+    card = build_merged_card(_full_card_data())
+    assert "━━━ 📈 资金观察" in card
+    assert "━━━ 💰 估值判断" in card
 
 
 def test_compute_fund_state_inflow_confirm():
@@ -131,11 +246,9 @@ def test_merged_and_ltc_card_fund_section_same_caliber():
     from market_dashboard import build_merged_card
     focus, southbound, refs, repurchase = _fund_fixture()
     ltc = ltc_format_card("2026-08-04", "解读", focus, southbound, [], repurchase, refs)
-    merged = build_merged_card({
-        "valuation_judgements": [], "valuation_snapshots": [],
-        "market_overview": "x", "sector_ops": "y",
-        "fund_section": build_fund_section(focus, southbound, repurchase, refs),
-        "interpretation": "w", "honest": "h"})
+    data = _full_card_data()
+    data["fund_observation"] = build_fund_section(focus, southbound, repurchase, refs)
+    merged = build_merged_card(data)
     for key in ["净额（板块资金流入-流出",
                 "承接：偏长期布局特征（推断）｜ 价格处于 1 年低位区",
                 "南向（内地资金买入港股市场",
@@ -143,21 +256,6 @@ def test_merged_and_ltc_card_fund_section_same_caliber():
         assert key in ltc and key in merged
     # 旧的双轨口径（合并卡裸写"（超大单 X亿，股价"）不得再现（净额口径断言见 test_ltc_narrative）
     assert "（超大单 173.9亿，股价" not in merged
-
-
-def test_fund_section_emoji_dedup():
-    """Minor：资金区块头与估值区块头 emoji 去重（💰 估值判断 / 📊 今日资金，飞书保守集合）"""
-    card = build_merged_card({
-        "valuation_judgements": [
-            {"board": "银行", "verdict": "便宜", "dominant": "估值", "confidence": "高",
-             "action": "full", "note": "推断"}],
-        "valuation_snapshots": [
-            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 0.42,
-             "pe_pct": None, "trend": "flat", "note": "PB=0.42"}],
-        "fund_section": "x"})
-    assert "💰 估值判断" in card
-    assert "📊 今日资金" in card
-    assert card.count("💰") == 1
 
 
 def test_empty_fund_annotation_distinguishes_empty_vs_failure():
