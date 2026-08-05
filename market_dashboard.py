@@ -1760,6 +1760,350 @@ def send_feishu(content: str) -> bool:
 
 
 # ═══════════════════════════════════════════════════════════
+# 合并推送（估值×资金×仪表盘）— merge_main 专用纯函数
+# ═══════════════════════════════════════════════════════════
+
+# 合并模式数据路径（与 ltc_main 同源：资金留痕 / 信号调优配置）
+LTC_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ltc", "history.jsonl")
+LTC_SIGNALS_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ltc", "signals_config.json")
+
+# 合并卡片诚实声明：覆盖资金推断 / 估值推断 / 操作信号理论性
+MERGED_HONEST = ("资金流按交易金额大小推断资金类型（超大单≈机构），不是实名数据；"
+                 "估值分位基于中证指数 PE/PB 历史与成分股聚合，属推断；"
+                 "板块操作信号基于《趋势交易论》规则，理论判断非保证；"
+                 "本内容不构成任何买卖建议。")
+
+
+def compute_fund_state(history: list, sector: str, days: int = 3) -> str:
+    """资金维状态：连续 ≥3 日主力净流入/流出确认；单日=观察；无留痕=冷启动
+    返回 inflow_confirm / outflow_confirm / single_day / cold_start / unknown"""
+    flows = []
+    for h in reversed(history):
+        tags = h.get("tags", {})
+        entry = tags.get(sector)
+        if entry and entry.get("sl_net") is not None:
+            flows.append(float(entry["sl_net"]))
+        if len(flows) >= days:
+            break
+    if not flows:
+        return "cold_start" if history else "unknown"
+    if len(flows) >= days and all(f > 0 for f in flows[:days]):
+        return "inflow_confirm"
+    if len(flows) >= days and all(f < 0 for f in flows[:days]):
+        return "outflow_confirm"
+    return "single_day"
+
+
+def build_merged_card(data: dict) -> str:
+    """合并卡片：估值判断 → 大盘概况 → 板块异动+操作建议 → 今日资金 → AI 解读 → 诚实声明"""
+    from val_format import format_valuation_block
+    parts = []
+    val = format_valuation_block(data.get("valuation_judgements", []),
+                                 data.get("valuation_snapshots", []))
+    if val:
+        parts.append(val)
+    if data.get("market_overview"):
+        parts.append(f"━━━ 📈 大盘概况 ━━━\n{data['market_overview']}")
+    if data.get("sector_ops"):
+        parts.append(f"━━━ 🎯 板块异动与操作建议 ━━━\n{data['sector_ops']}")
+    if data.get("fund_section"):
+        parts.append(f"━━━ 💰 今日资金 ━━━\n{data['fund_section']}")
+    if data.get("interpretation"):
+        parts.append(data["interpretation"])
+    if data.get("honest"):
+        parts.append(f"━━━ 🔎 诚实声明 ━━━\n{data['honest']}")
+    return "\n\n".join(parts)
+
+
+def _with_metric_disclosure(judgements: list, snapshots: list) -> list:
+    """估值判定披露主指标降级：val_format 对 source=pe 只渲染分位数字，
+    val_data 的降级 note（周期板块 PB 分位积累中等）会静默丢失 → 显式并入判定 note。
+    否则读者会把"主指标=PE"这一临时降级误认为框架结论（audit 输出内容）。"""
+    out = []
+    for j in judgements:
+        snap = next((s for s in snapshots if s["board"] == j["board"]), {})
+        if snap.get("source") == "pe" and "降级" in (snap.get("note") or ""):
+            j = dict(j)
+            j["note"] = f"{j['note']}｜{snap['note']}"
+        out.append(j)
+    return out
+
+
+def _safe_ltc(func, *args, default=None, **kwargs):
+    """合并模式抓取兜底：任何异常视为该源失败返回 default，不阻塞整体编排"""
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        print(f"  [!] 资金源 {getattr(func, '__name__', func)}: {str(e)[:80]}")
+        return default
+
+
+def _market_overview_text(indices: dict, temp_data: dict) -> str:
+    """大盘概况区块：四大指数快照 + 市场温度（复用 main 的抓取变量）"""
+    idx_lines = []
+    if indices:
+        for tag, df in indices.items():
+            if df is not None and len(df) >= 2:
+                c = df["close"].iloc[-1]
+                idx_lines.append(f"{tag} {c:.0f} ({c/df['close'].iloc[-2]-1:+.2%})")
+    lines = ["  |  ".join(idx_lines) if idx_lines else "指数数据暂不可用"]
+    if temp_data:
+        up, dn = temp_data.get("up_count", 0), temp_data.get("down_count", 0)
+        lu, ld = temp_data.get("limit_up", 0), temp_data.get("limit_down", 0)
+        if temp_data.get("breadth_ok"):
+            vol = temp_data.get("volume", {})
+            vol_str = f"{vol.get('total_amount', 0)/1e8:.0f}亿" if temp_data.get("volume_ok") else "数据暂不可用"
+            lines.append(f"涨跌比 {up}↑/{dn}↓（涨停 {lu} / 跌停 {ld}）｜成交额 {vol_str}（vs 20日均）")
+        else:
+            lines.append("市场温度：涨跌/涨停数据源不可用（东方财富API被封）")
+    return "\n".join(lines)
+
+
+def _build_fund_section(focus: list, southbound: dict, repurchase: dict, refs: dict) -> str:
+    """今日资金区块：板块归因 + 南向 + 回购（复用 ltc_main/ltc_format 组装口径；不含北向）"""
+    lines = []
+    for f in focus[:6]:
+        acc = f.get("accum", {})
+        acc_txt = f"，承接：{acc.get('period', '')}（推断）" if acc.get("period") else ""
+        lines.append(f"• {f['industry']}：{f.get('tag') or '资金动作'}"
+                     f"（超大单 {f['sl_net']:+.1f}亿，股价 {f['chg_pct']:+.1f}%，"
+                     f"分位 {f['sl_percentile']:.0f}%）{acc_txt}")
+    sb = (southbound or {}).get("southbound_net_yi")
+    if sb is not None:
+        lines.append(f"• 南向资金：{sb:+.1f}亿（{(refs or {}).get('southbound_label', '参照积累中')}）")
+    items = (repurchase or {}).get("items", [])[:3]
+    if items:
+        lines.append("• 近4周回购：" + "；".join(f"{i['name']} {i['amount_yi']:.1f}亿" for i in items))
+    return "\n".join(lines) if lines else "板块资金流数据暂不可用（数据源故障）"
+
+
+def _send_merged_card(msg: str) -> bool:
+    """合并卡片发送：超长分段（复用 main 的分段策略，≤25000 字符单段）"""
+    max_chars = 25000
+    if len(msg) <= max_chars:
+        return send_feishu(msg)
+    parts = []
+    remaining = msg
+    while len(remaining) > max_chars:
+        split_at = remaining.rfind("---", 0, max_chars)
+        if split_at < max_chars // 2:
+            split_at = remaining.rfind("\n\n", 0, max_chars)
+        if split_at < 1000:
+            split_at = max_chars
+        parts.append(remaining[:split_at])
+        remaining = remaining[split_at:]
+    parts.append(remaining)
+    pushed = False
+    for i, part in enumerate(parts):
+        ok = send_feishu(part)
+        pushed = pushed or ok
+        print(f"[>] 飞书({i+1}/{len(parts)}): {'OK' if ok else 'FAIL'}")
+    return pushed
+
+
+def merge_main():
+    """合并入口：仪表盘骨架 + 估值判断表 + 资金观察区块 + AI 解读（事实清单模式）
+
+    复用现有 main 的抓取（指数/信号/板块/温度）与推送去重（data/dashboard/state.json）；
+    估值表独立成表（东财口径 12 板块，val_config.INDEX_MAP，与仪表盘板块口径分离）；
+    北向相关内容一律不出现；操作建议保留（仪表盘定位）。
+    调用：python market_dashboard.py --merge [--dry-run] [--force]
+    """
+    parser = argparse.ArgumentParser(description="合并推送：仪表盘×估值×资金观察")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--merge", action="store_true", help=argparse.SUPPRESS)  # 入口路由标记，本身无作用
+    args = parser.parse_args()
+
+    today = datetime.now(ZoneInfo("Asia/Shanghai"))
+    weekday = today.weekday()
+
+    # ── 开市检查 ──
+    if not args.force:
+        if weekday >= 5:
+            print(f"[i] 周末休市 (周{['一','二','三','四','五','六','日'][weekday]})，不推送"); return 0
+        if weekday == 0 and today.hour < 10:
+            print(f"[i] 周一早于10点，数据可能未更新，不推送"); return 0
+        if 1 <= weekday <= 4 and today.hour < 16:
+            print(f"[i] 交易日未收盘 (当前{today.hour}:{today.minute:02d})，不推送"); return 0
+
+    print("=" * 50)
+    print("  A股全景仪表盘 · 合并版（估值+资金）")
+    print(f"  {today.strftime('%Y-%m-%d %H:%M')}")
+    print("=" * 50)
+
+    print("\n[1/7] 数据...")
+    indices = {
+        "上证": fetch_index("上证指数", "sh000001", days=300),
+        "深证": fetch_index("深证成指", "sz399001", days=300),
+        "创业板": fetch_index("创业板指", "sz399006", days=300),
+        "科创50": fetch_index("科创50", "sh000688", days=300),
+    }
+    idx = indices["上证"]  # 主指数用于信号计算
+    m1 = fetch_m1()
+    if idx is None:
+        print("::error::无上证指数数据（akshare/yfinance 均失败），仪表盘中止")
+        return 1
+
+    today_str = today.strftime("%Y-%m-%d")
+    if not args.force and idx["date"].iloc[-1].strftime("%Y-%m-%d") != today_str:
+        print(f"[i] 非交易日 (最新: {idx['date'].iloc[-1].strftime('%Y-%m-%d')})"); return 0
+
+    # F10: 推送去重 — 同一交易日数据已成功推送过则跳过；dry-run 只预览不推送，不做去重
+    data_date = idx["date"].iloc[-1].strftime("%Y-%m-%d")
+    push_state = _load_push_state(PUSH_STATE_PATH)
+    if not args.dry_run and is_already_pushed(data_date, push_state):
+        print(f"[i] {data_date} 数据已推送过 (last_pushed_date="
+              f"{push_state.get('last_pushed_date', '')})，跳过本次推送"); return 0
+
+    print("[2/7] 计算信号...")
+    signals = compute_signals(idx, m1)
+    for s in signals: print(f"  {s.name}: {s.value} [{s.status}]")
+
+    print("[3/7] 板块诊断...")
+    sector_data = None; sectors_diag = []
+    sector_unavailable = False
+    try:
+        from sector_monitor import fetch_sector_monitor_data
+        sector_data = fetch_sector_monitor_data()
+        sectors_diag = [diagnose_sector_mi(s) for s in sector_data.get("sectors", [])]
+        sm = sector_data.get("summary", {})
+        print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
+              f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
+    except Exception as e:
+        print(f"  [!] 板块: {e}")
+        sector_unavailable = True
+
+    cycle = assess_sentiment(signals)
+    print(f"[4/7] 情绪周期: {cycle['emoji']} {cycle['name']}")
+
+    # ── 市场温度 + 资金流向（复用 main 的抓取结构） ──
+    print("\n[5/7] 市场温度+资金...")
+    idx_volume = float(idx["volume"].iloc[-1]) if idx is not None and "volume" in idx.columns and len(idx) > 0 else 0
+    temp_data = {"up_count": 0, "down_count": 0, "limit_up": 0, "limit_down": 0, "volume": {},
+                 "breadth_ok": False, "volume_ok": False}
+    try:
+        sd = StockData()
+        breadth = sd.get_market_breadth()
+        vol_info = sd.get_market_volume(idx_volume)
+        temp_data = {
+            "up_count": breadth["up_count"], "down_count": breadth["down_count"],
+            "limit_up": breadth["limit_up"], "limit_down": breadth["limit_down"],
+            "total": breadth["total"],
+            "volume": {"total_amount": vol_info["total_amount"], "ratio": vol_info["ratio"]},
+            "breadth_ok": breadth.get("available", breadth["total"] > 0),
+            "volume_ok": vol_info.get("available", vol_info["total_amount"] > 0),
+        }
+        breadth_str = f"{breadth['up_count']}↑/{breadth['down_count']}↓ 涨停{breadth['limit_up']}" if breadth.get("available") else "数据暂不可用"
+        print(f"  温度: {breadth_str}")
+    except Exception as e:
+        print(f"  [!] 温度数据: {e}")
+
+    # ── 大盘概况 / 板块异动+操作建议（复用 main 的抓取变量） ──
+    market_overview = _market_overview_text(indices, temp_data)
+    ops_lines = []
+    if sector_unavailable:
+        ops_lines.append("⚠️ 板块数据暂不可用 — 板块异动与操作建议本日缺失。指数信号不受影响，仍可参考。")
+    else:
+        ops_lines.append(f"**{cycle['emoji']} {cycle['name']}** ｜ 建议仓位 **{cycle['position']}**（理论判断，推断）")
+        ops_lines.append("")
+        ops_lines.extend(generate_sector_ops(sectors_diag))
+    sector_ops = "\n".join(ops_lines)
+
+    # ── 估值判断表（独立成表：东财口径 12 板块，不挂仪表盘板块列表） ──
+    print("\n[6/7] 估值判断（12 东财板块，独立成表）...")
+    import ltc_store, val_data, val_judge
+    from val_config import INDEX_MAP
+    # load_history 仅过滤 JSON 解析失败，非 dict 行（数组/标量）会击穿下游三个消费者
+    # （compute_fund_state / _pb_reference / compute_reference 均做 h.get）→ 加载处归一化
+    history = [h for h in ltc_store.load_history(LTC_HISTORY_FILE) if isinstance(h, dict)]
+    boards = list(INDEX_MAP.keys())
+    snapshots = val_data.fetch_valuation_snapshot(boards, history)
+    judgements = []
+    for s in snapshots:
+        fund_state = compute_fund_state(history, s["board"])
+        judgements.append(val_judge.judge_valuation(
+            s["board"], s["main_pct"], s["trend"], s["pb_pct"], fund_state,
+            val_data._pb_reference(history, s["board"])))
+    judgements = _with_metric_disclosure(judgements, snapshots)
+    print(f"  估值判定: {len(judgements)} 个板块")
+
+    # ── 资金观察（归因/南向/回购 + AI 解读，复用 ltc_main 组装逻辑） ──
+    print("\n[7/7] 资金观察（归因/南向/回购 + AI 解读）...")
+    import ltc_analysis, ltc_data, ltc_narrative
+    from ltc_config import BACKING_SECTORS, load_quarterly_context, is_expired
+    southbound = _safe_ltc(ltc_data.fetch_southbound)
+    sb_value = (southbound or {}).get("southbound_net_yi")
+    if sb_value is not None:
+        sb_ref = ltc_store.compute_reference(history, "southbound_net_yi")
+        sb_label = ltc_store.reference_label(sb_value, sb_ref)
+    else:
+        sb_label = "南向数据暂不可用"
+    repurchase = _safe_ltc(ltc_data.fetch_repurchase, weeks=4,
+                           default={"period": "近4周", "items": []})
+    refs = {"southbound_label": sb_label}
+
+    flow = _safe_ltc(ltc_data.fetch_sector_flow)
+    flow_ok = flow is not None
+    focus = []
+    if flow_ok:
+        analyses = ltc_analysis.analyze_flows(flow)
+        focus = ltc_analysis.pick_focus(analyses, top_n=6)
+        # FR-5.4 调优闭环（与 ltc_main 一致）：signals_config.json 移除的信号不输出
+        signals_cfg = ltc_store.load_state(LTC_SIGNALS_CFG)
+        active_tags = signals_cfg.get("active") if isinstance(signals_cfg, dict) else None
+        if active_tags:
+            for f in focus:
+                if f.get("tag") and f["tag"] not in active_tags:
+                    f["tag"] = ""
+        backing_active = not is_expired(load_quarterly_context().get("updated", ""))
+        for f in focus:
+            kline = _safe_ltc(ltc_data.fetch_board_kline, f["industry"])
+            backing = backing_active and any(b in f["industry"] for b in BACKING_SECTORS)
+            f["accum"] = ltc_analysis.compute_accumulation(kline, f["chg_pct"], f["sl_net"], backing, None)
+    fund_section = _build_fund_section(focus, southbound, repurchase, refs)
+
+    interpretation = ""
+    if focus:
+        # AI 解读：事实清单模式（只含核验数字；估值素材仅用价格位置口径的降级条目）
+        facts = ltc_narrative.build_facts(
+            {"data_date": data_date, "southbound": southbound, "repurchase": repurchase,
+             "valuation": [{"board": s["board"], "position_pct": s["main_pct"]}
+                           for s in snapshots
+                           if s.get("source") == "price" and s.get("main_pct") is not None]},
+            focus, refs)
+        interpretation = ltc_narrative.interpretation(facts, DEEPSEEK_API_KEY)
+        if "北向" in interpretation:
+            # 北向硬性不出现：AI 越界引用事实外内容 → 回退事实模板（事实清单不包含北向）
+            interpretation = ltc_narrative.template_interpretation(facts)
+    elif fund_section.startswith("•"):
+        # 资金流源故障但南向/回购可用：明确标注缺失原因，不静默缺块（F2）
+        fund_section += "\n（板块资金流数据源故障，今日无资金归因与 AI 解读）"
+
+    card = build_merged_card({
+        "valuation_judgements": judgements,
+        "valuation_snapshots": snapshots,
+        "market_overview": market_overview,
+        "sector_ops": sector_ops,
+        "fund_section": fund_section,
+        "interpretation": interpretation,
+        "honest": MERGED_HONEST,
+    })
+    print(f"\n合并卡片长度: {len(card)} 字符")
+    if args.dry_run:
+        print("\n" + card)
+        print("\n[i] Dry run")
+        return 0
+    ok = _send_merged_card(card)
+    print(f"\n[>] 飞书: {'OK' if ok else 'FAIL'}")
+    if ok:
+        # F4/F10: 推送成功后写入信号快照 + 记录数据日期（与 main 一致）
+        append_signal_snapshot(today_str, signals)
+        _save_push_state(PUSH_STATE_PATH, data_date)
+    return 0 if ok else 1
+
+
+# ═══════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════
 
@@ -1919,4 +2263,6 @@ def main():
 if __name__ == "__main__":
     import sys, io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    if "--merge" in sys.argv:
+        sys.exit(merge_main() or 0)
     main()
