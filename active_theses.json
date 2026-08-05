@@ -1,0 +1,155 @@
+{
+  "updated": "2026-08-05",
+  "theses": [
+    {
+      "id": "098de7cd2ea3",
+      "name": "黄金突破后的趋势性机会",
+      "category": "E防御",
+      "signal_strength": "强",
+      "core_logic": "黄金在经历大幅回撤后完成技术性突破，宏观面（美联储加息预期降温、地缘风险）与资金面（央行购金、投机空头回补）形成共振，有望开启新一轮上行。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息并大幅收紧货币政策，美元指数大幅走强，金价跌破4000美元/盎司",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-15",
+          "event": "美国7月CPI数据",
+          "what_to_watch": "通胀是否回落，影响美联储加息预期"
+        },
+        {
+          "date": "2026-09-16",
+          "event": "美联储FOMC会议",
+          "what_to_watch": "点阵图及声明是否暗示加息"
+        }
+      ],
+      "created_date": "2026-08-05",
+      "expiry_date": "2027-02-01",
+      "history": [
+        {
+          "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "81f7586b00c1",
+      "name": "霍尔木兹海峡缓和带来的油价下行交易",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "伊朗与阿曼就航运路线达成一致，特朗普称协议可能数日内达成。若海峡重新开放，原油供应恢复，油价将大幅回落，缓解全球通胀压力。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊谈判破裂，海峡局势再度升级，油价突破前高",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-07",
+          "event": "美伊协议谈判进展",
+          "what_to_watch": "是否达成正式协议"
+        },
+        {
+          "date": "2026-08-15",
+          "event": "EIA原油库存数据",
+          "what_to_watch": "库存是否回升，反映供应恢复"
+        }
+      ],
+      "created_date": "2026-08-05",
+      "expiry_date": "2026-11-03",
+      "history": [
+        {
+          "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "f9a4a0ce363c",
+      "name": "AI ASIC定制芯片需求加速",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Anthropic组建内部芯片团队，叠加此前OpenAI、谷歌等自研芯片，AI ASIC需求有望加速增长，增速为GPU的两倍。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "ASIC芯片性能不及预期，或英伟达GPU持续主导市场",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-15",
+          "event": "Anthropic芯片团队招聘进展",
+          "what_to_watch": "是否招募到关键人才"
+        },
+        {
+          "date": "2026-10-01",
+          "event": "AI芯片相关公司财报",
+          "what_to_watch": "ASIC业务收入增速"
+        }
+      ],
+      "created_date": "2026-08-05",
+      "expiry_date": "2027-07-31",
+      "history": [
+        {
+          "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "6bfed27dede5",
+      "name": "中国光伏供给侧拐点",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "多晶硅交易暂停，企业主动减产，价格低于成本，行业自律性拐点出现。若减产落地，价格有望见底回升，利好龙头。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "减产执行不力，价格继续下跌，行业库存继续累积",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-15",
+          "event": "多晶硅报价恢复情况",
+          "what_to_watch": "价格是否企稳回升"
+        },
+        {
+          "date": "2026-09-01",
+          "event": "行业月度产量数据",
+          "what_to_watch": "减产是否落地"
+        }
+      ],
+      "created_date": "2026-08-05",
+      "expiry_date": "2027-02-01",
+      "history": [
+        {
+          "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "381e4ae80419",
+      "name": "SpaceX解禁后的做空机会",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "SpaceX 8月6日迎来史上最大解禁，约9.1亿股、市值1160亿美元，叠加AI支出超预期、估值争议，股价面临巨大抛售压力。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "解禁后股价不跌反涨，或公司发布超预期利好",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-06",
+          "event": "SpaceX解禁日",
+          "what_to_watch": "成交量及股价反应"
+        },
+        {
+          "date": "2026-08-15",
+          "event": "解禁后持仓变化",
+          "what_to_watch": "内部人是否减持"
+        }
+      ],
+      "created_date": "2026-08-05",
+      "expiry_date": "2026-11-03",
+      "history": [
+        {
+          "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    }
+  ]
+}
