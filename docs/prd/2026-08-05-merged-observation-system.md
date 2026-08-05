@@ -1,6 +1,6 @@
 # PRD：合并系统 — A股全景观察（仪表盘 × 每日资金观察 × 估值判断）
 
-日期：2026-08-05 · 状态：已实现（单卡单推已在 GH Actions 排期，验收待真实运行）· 模块：market-radar
+日期：2026-08-05 · 状态：已实现（板块总览重构完成 2026-08-06，单卡单推已在 GH Actions 排期，验收待真实运行）· 模块：market-radar
 
 ## 问题陈述
 
@@ -121,6 +121,23 @@
 
 ### 裁决原则
 长期锚定 + 短期尊重 + 矛盾显式化；趋势是骨架（仪表盘基于趋势交易论搭建），估值/资金不覆盖趋势结论。
+
+### 验收对照（板块总览重构完成，2026-08-06）
+
+| # | 最终形态要素 | 状态 | 证据 |
+|---|---|---|---|
+| 1 | 三层结构（事实→说明→判断）每板块完整渲染 | ✅ | val_format.build_board_overview + val_explain.synthesize；tests/test_val_explain.py + test_merged_card.py（test_board_overview_*） |
+| 2 | 判断可缺席（"无法判断：…，等待证据"照常渲染，不强行凑结论） | ✅ | val_explain judge_short_term/judge_dca 无法裁决分支；test_board_overview_judgment_can_be_absent |
+| 3 | 场景分流（趋势定短线/估值定定投，冲突时按用途分流不互相覆盖） | ✅ | val_explain._conflict_note；test_scene_split_trend_down_valuation_cheap / *_up_expensive |
+| 4 | 板块口径：THS→EM 12 板块映射（含子行业补全） | ✅ | val_config.THS_TO_EM=35 个同花顺名（Task 6 补 14 个，对照 stock_fund_flow_industry 90 行业实测名单）；tests/test_val_config.py |
+| 5 | 资金维 12 板块全覆盖（focus 之外也留痕，防 cold_start 永久化） | ✅ | market_dashboard._build_fund_by_board + compute_fund_state 优先读 fund_by_board；test_record_merge_success_includes_all_12_boards / test_ths_em_extension_subindustries_aggregate |
+| 6 | 数据窗口诚实性（指数历史年数标注 / 不虚构窗口） | ✅ | val_data.pe_percentile years + val_format（指数历史 N 年）；test_pe_percentile_reports_years / test_synthesize_price_position_metric |
+| 7 | 北向不再出现 | ✅ | tests/test_merged_card.py::test_merged_card_has_no_northbound；dry-run 通读 grep 北向=0 |
+| 8 | 单板块异常兜底（synthesize 抛错/缺 key → 该板块降级，不击穿整卡） | ✅ | val_format.build_board_overview per-board try/except + .get 兜底（Task 6 审查 Important 修复）；test_board_overview_per_board_exception_degraded / test_board_overview_syn_missing_key_fallback |
+| 9 | 生产推送验证（16:15 单卡单推，无重复） | ⏳ 待真实运行 | rally-health.yml cron `15 8 * * 1-5`=北京 16:15 + F10 is_already_pushed 去重；等待首次真实推送成功 + 次日无重复推送 |
+| 10 | 判断措辞带框架（趋势交易论/微笑曲线名词解释） | ✅ | val_explain.GLOSSARY + judge 模板；test_glossary_* / test_board_overview_trend_framework_loaded |
+
+基准测试：259 → **262 passed**（+3：异常兜底 ×2、子行业聚合锁定 ×1）。
 
 ## 校准计划
 
