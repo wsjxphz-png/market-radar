@@ -232,7 +232,9 @@ def synthesize(facts: dict) -> dict:
 
 def _fact_valuation(main_pct, metric, years) -> str:
     if main_pct is None:
-        return "分位数据不可用"
+        # 带上指标名（Task 6 审查 Minor）：metric 缺省降级为 PE 时，事实层必须确定性地
+        # 出现 "PE"——"分位数据不可用" 不带指标名，断言只能写弱析取
+        return f"{metric} 分位数据不可用"
     if metric == "价格位置":
         return f"价格位置 {main_pct:.0f}%"
     s = f"{metric} 分位 {main_pct:.0f}%"

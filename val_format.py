@@ -1,5 +1,8 @@
 """估值判断区块渲染（卡片顶部）+ 板块总览区块渲染（三层结构：事实→说明→判断）"""
+import logging
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 ACTION_TEXT = {"full": "按计划定投", "half": "半额定投/等资金确认", "skip": "只观察，不买", "none": "不追加"}
 
@@ -57,16 +60,33 @@ def build_board_overview(board_facts: list) -> str:
     for i, facts in enumerate(board_facts, 1):
         if not isinstance(facts, dict):
             continue
-        syn = synthesize(facts)
+        conflict = None
+        try:
+            syn = synthesize(facts)
+            header = syn.get("board", "未知板块") or "未知板块"
+            facts_block = syn["facts"]
+            explanation = syn.get("explanation") or "（数据不足，暂无说明）"
+            short_judge = syn.get("short_term_judge") or "无法判断：数据异常（推断）"
+            dca_judge = syn.get("dca_judge") or "无法判断：数据异常（推断）"
+            conflict = syn.get("conflict_note")
+        except Exception as exc:
+            # 单板块异常兜底（Task 6 审查 Important）：synthesize 抛错或输出缺 key
+            # → 该板块降级"无法判断：数据异常"，其余板块照常渲染，不击穿整卡
+            logger.warning("板块总览渲染降级 board=%s: %s", facts.get("board", "?"), exc)
+            header = str(facts.get("board", "未知板块"))
+            facts_block = "（数据异常，事实层缺失）"
+            explanation = "（数据异常，说明层缺失）"
+            short_judge = "无法判断：数据异常（推断）"
+            dca_judge = "无法判断：数据异常（推断）"
         lines.append("")
-        lines.append(f"▌{i}. {syn.get('board', '未知板块')}")
+        lines.append(f"▌{i}. {header}")
         lines.append("◆ 事实")
-        lines.append(syn["facts"])
+        lines.append(facts_block)
         lines.append("◆ 说明")
-        lines.append(syn["explanation"] if syn["explanation"] else "（数据不足，暂无说明）")
+        lines.append(explanation)
         lines.append("◆ 判断")
-        lines.append(f"・ {syn['short_term_judge']}")
-        lines.append(f"・ {syn['dca_judge']}")
-        if syn.get("conflict_note"):
-            lines.append(f"・ {syn['conflict_note']}")
+        lines.append(f"・ {short_judge}")
+        lines.append(f"・ {dca_judge}")
+        if conflict:
+            lines.append(f"・ {conflict}")
     return "\n".join(lines)

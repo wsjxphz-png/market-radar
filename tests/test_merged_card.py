@@ -624,6 +624,41 @@ def test_board_overview_renders_all_synthesize_keys():
     assert "场景分流（推断）" in out
 
 
+def test_board_overview_per_board_exception_degraded(monkeypatch):
+    """Task 6 审查 Important：单板块 synthesize 抛错 → 该板块降级"无法判断：数据异常（推断）"，
+    其余板块三层照常渲染，不击穿整卡（val_format.py 裸下标 KeyError 击穿修复）"""
+    from val_format import build_board_overview
+    import val_explain
+    real = val_explain.synthesize
+    def flaky(facts):
+        if facts.get("board") == "煤炭":
+            raise ValueError("模拟 synthesize 异常")
+        return real(facts)
+    monkeypatch.setattr(val_explain, "synthesize", flaky)
+    out = build_board_overview(_board_facts_fixture())
+    assert out.count("◆ 事实") == 3                 # 3 板块都渲染（煤炭降级，不击穿整卡）
+    assert "无法判断：数据异常（推断）" in out        # 煤炭降级文案
+    assert "数据异常，事实层缺失" in out             # 事实层降级标注
+    assert "只有 50% 的时间比现在便宜" in out         # 银行（正常板块）说明层照常
+    assert "不破 20 日线" in out                     # 银行判断层照常（永不下跌补仓在降级板块上）
+
+
+def test_board_overview_syn_missing_key_fallback(monkeypatch):
+    """Task 6 审查 Important：synthesize 输出缺 key（契约违反）→ .get 兜底降级而非 KeyError"""
+    from val_format import build_board_overview
+    import val_explain
+    real = val_explain.synthesize
+    def partial(facts):
+        syn = real(facts)
+        if facts.get("board") == "煤炭":
+            del syn["dca_judge"]                    # 模拟契约违反：判断 key 缺失
+        return syn
+    monkeypatch.setattr(val_explain, "synthesize", partial)
+    out = build_board_overview(_board_facts_fixture())
+    assert "无法判断：数据异常（推断）" in out        # 缺 key 板块降级
+    assert out.count("◆ 判断") == 3                  # 三板块判断层仍在
+
+
 def test_trend_state_map():
     """sector_monitor trend_phase → val_explain TREND_STATE 词表（渲染层映射）：
     topping（筑顶）在 20 日线上方应归"震荡"而非"上升"（val_explain docstring 标注）"""

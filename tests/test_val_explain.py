@@ -273,7 +273,7 @@ def test_synthesize_missing_key_logs_warning(caplog):
         out = synthesize({"board": "银行", "trend_state": "above20_rising"})
     assert "数据不可用" in out["facts"]                            # fund_state 降级 unknown
     assert "无法判断：估值证据不足" in out["dca_judge"]             # valuation 降级 观察
-    assert "PE" in out["facts"] or "趋势" in out["facts"]           # metric 降级 PE
+    assert "PE" in out["facts"]                                     # metric 降级 PE（收紧：只断 PE）
     msgs = [r.message for r in caplog.records]
     assert any("fund_state" in m for m in msgs)
     assert any("valuation" in m for m in msgs)
