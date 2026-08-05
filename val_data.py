@@ -112,7 +112,7 @@ def fetch_price_position(sector: str) -> Optional[dict]:
 def _pb_reference(history: List[dict], sector: str) -> Optional[float]:
     """留痕近 20 日板块 PB 均值（冷启动 None）"""
     vals = [h["sector_pb"][sector] for h in reversed(history)
-            if h.get("sector_pb", {}).get(sector) is not None]
+            if (h.get("sector_pb") or {}).get(sector) is not None]
     if not vals:
         return None
     vals = vals[:20]
@@ -136,7 +136,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
             continue
         pb = _safe(fetch_sector_pb, board)
         if pb is not None:
-            ref = _pb_reference(history, board)
+            ref = _safe(_pb_reference, history, board)
             entry = {
                 "board": board, "source": "pb",
                 "main_pct": None, "pe_pct": None, "pb_pct": pb["pb"],

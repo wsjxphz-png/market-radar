@@ -58,6 +58,35 @@ def test_fetch_valuation_snapshot_all_fail_price_fallback(monkeypatch):
     assert out[0]["main_pct"] == 12.0
     assert out[0]["note"] == "基于价格位置，非 PE/PB"
 
+def test_fetch_valuation_snapshot_pb_branch(monkeypatch):
+    # PE 不可用 → PB 可用：走中段 PB 分支，价格兜底不应被调用
+    calls = {"price": 0}
+    def fake_price(s):
+        calls["price"] += 1
+        return {"position_pct": 12.0}
+    monkeypatch.setattr("val_data.fetch_pe_series", lambda code: None)
+    monkeypatch.setattr("val_data.fetch_sector_pb", lambda s: {"pb": 1.0, "method": "成分中位数", "n": 5})
+    monkeypatch.setattr("val_data.fetch_price_position", fake_price)
+    # 无留痕：note 含"积累中"
+    out = fetch_valuation_snapshot(["银行"], [])
+    assert out[0]["source"] == "pb"
+    assert out[0]["pb_pct"] == 1.0
+    assert out[0]["main_pct"] is None and out[0]["pe_pct"] is None
+    assert out[0]["trend"] == "flat"
+    assert "成分中位数" in out[0]["note"]
+    assert "积累中" in out[0]["note"]
+    # 有留痕：note 含"近20日均值"
+    hist = [{"date": "2026-07-01", "sector_pb": {"银行": 0.9}}] * 25
+    out2 = fetch_valuation_snapshot(["银行"], hist)
+    assert "近20日均值 0.90" in out2[0]["note"]
+    assert calls["price"] == 0
+
+def test_pb_reference_sector_pb_none():
+    # 回归：sector_pb 显式为 None 时不应崩溃（h.get("sector_pb", {}) 返回 None 后 .get 抛 AttributeError）
+    hist = [{"date": "2026-07-01", "sector_pb": None},
+            {"date": "2026-07-01", "sector_pb": {"银行": 0.5}}]
+    assert _pb_reference(hist, "银行") == 0.5
+
 def test_fetch_constituents_zfill(monkeypatch):
     # 数值型存储的 cons 文件丢前导零（000983→983），必须补零后再归类
     fake = pd.DataFrame({i: ["x"] * 5 for i in range(4)} | {4: ["601398", "983", "000001", "300750", "830799"]})
