@@ -2,8 +2,8 @@ name: A股市场全景仪表盘
 
 on:
   schedule:
-    # 北京时间 16:00 (UTC 08:00), 周一至周五
-    - cron: '0 8 * * 1-5'
+    # 北京时间 16:15 (UTC 08:15), 周一至周五（合并推送：估值+资金单卡单推）
+    - cron: '15 8 * * 1-5'
   workflow_dispatch:
     inputs:
       force:
@@ -31,7 +31,7 @@ jobs:
       - name: 安装依赖
         run: pip install -r requirements.txt
 
-      - name: 运行全景仪表盘
+      - name: 运行全景仪表盘（合并推送：估值+资金单卡）
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
@@ -41,10 +41,10 @@ jobs:
           # F2/D1: Actions bash 默认 -eo pipefail — 不 set +e 则 python 非零退出时
           # step 立即中止，下方 code=$? / ::error:: / exit 0 全部不可达（死代码）
           set +e
-          python market_dashboard.py ${{ inputs.force && '--force' || '' }}
+          python market_dashboard.py --merge ${{ inputs.force && '--force' || '' }}
           code=$?
           if [ $code -ne 0 ]; then
-            echo "::error::全景仪表盘运行失败或存在告警（exit $code），请查看日志"
+            echo "::error::全景仪表盘（合并推送）运行失败或存在告警（exit $code），请查看日志"
           fi
           # F2: 失败已留痕，仍 exit 0 以执行后续留痕提交
           exit 0
@@ -53,12 +53,14 @@ jobs:
         # F4: trade_log.jsonl 随 workflow 持久化，供次日 detect_signal_flips 对比信号翻转
         # D2: data/dashboard/state.json 随 workflow 持久化 — 否则每次运行都是全新检出，
         #     手动重跑（workflow_dispatch）时去重状态丢失，仍会重复推送
+        # D3: data/ltc/ 随 workflow 持久化（资金观察独立 workflow 已停用，留痕由合并推送统一兜底）
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # 分开 add：任一文件缺失时另一文件照常暂存（合并 add 遇缺失 pathspec 会整体失败）
           git add trade_log.jsonl || true
           git add data/dashboard/state.json || true
+          git add data/ltc || true
           git diff --cached --quiet || git commit -m "data: 仪表盘信号留痕 [skip ci]"
           git push
 

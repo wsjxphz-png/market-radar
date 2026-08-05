@@ -1776,13 +1776,26 @@ MERGED_HONEST = ("资金流按交易金额大小推断资金类型（超大单�
 
 def compute_fund_state(history: list, sector: str, days: int = 3) -> str:
     """资金维状态：连续 ≥3 日主力净流入/流出确认；单日=观察；无留痕=冷启动
-    返回 inflow_confirm / outflow_confirm / single_day / cold_start / unknown"""
+    返回 inflow_confirm / outflow_confirm / single_day / cold_start / unknown
+    嵌套异常防护（Task 6 Important 2）：行非 dict / tags 非 dict / 板块条目非 dict /
+    sl_net 非数值 → 跳过该条不计数，不得击穿 merge_main"""
     flows = []
     for h in reversed(history):
+        if not isinstance(h, dict):
+            continue
         tags = h.get("tags", {})
+        if not isinstance(tags, dict):
+            continue
         entry = tags.get(sector)
-        if entry and entry.get("sl_net") is not None:
-            flows.append(float(entry["sl_net"]))
+        if not isinstance(entry, dict):
+            continue
+        sl_net = entry.get("sl_net")
+        if sl_net is None:
+            continue
+        try:
+            flows.append(float(sl_net))
+        except (TypeError, ValueError):
+            continue
         if len(flows) >= days:
             break
     if not flows:
@@ -1807,7 +1820,7 @@ def build_merged_card(data: dict) -> str:
     if data.get("sector_ops"):
         parts.append(f"━━━ 🎯 板块异动与操作建议 ━━━\n{data['sector_ops']}")
     if data.get("fund_section"):
-        parts.append(f"━━━ 💰 今日资金 ━━━\n{data['fund_section']}")
+        parts.append(f"━━━ 📊 今日资金 ━━━\n{data['fund_section']}")  # 📊 与估值区块头 💰 去重
     if data.get("interpretation"):
         parts.append(data["interpretation"])
     if data.get("honest"):
@@ -1859,22 +1872,34 @@ def _market_overview_text(indices: dict, temp_data: dict) -> str:
     return "\n".join(lines)
 
 
-def _build_fund_section(focus: list, southbound: dict, repurchase: dict, refs: dict) -> str:
-    """今日资金区块：板块归因 + 南向 + 回购（复用 ltc_main/ltc_format 组装口径；不含北向）"""
-    lines = []
-    for f in focus[:6]:
-        acc = f.get("accum", {})
-        acc_txt = f"，承接：{acc.get('period', '')}（推断）" if acc.get("period") else ""
-        lines.append(f"• {f['industry']}：{f.get('tag') or '资金动作'}"
-                     f"（超大单 {f['sl_net']:+.1f}亿，股价 {f['chg_pct']:+.1f}%，"
-                     f"分位 {f['sl_percentile']:.0f}%）{acc_txt}")
-    sb = (southbound or {}).get("southbound_net_yi")
-    if sb is not None:
-        lines.append(f"• 南向资金：{sb:+.1f}亿（{(refs or {}).get('southbound_label', '参照积累中')}）")
-    items = (repurchase or {}).get("items", [])[:3]
-    if items:
-        lines.append("• 近4周回购：" + "；".join(f"{i['name']} {i['amount_yi']:.1f}亿" for i in items))
-    return "\n".join(lines) if lines else "板块资金流数据暂不可用（数据源故障）"
+def _annotate_empty_fund_section(fund_section: str, flow_ok: bool) -> str:
+    """空资金归因标注（focus 为空时调用，merge_main 专用纯函数）：
+    源正常但当日无数据（空 DataFrame）→ "板块资金数据为空"；源故障 → "数据源故障"。
+    南向/回购可用时保留并追加说明；否则整段替换（仅有桥接行时无资金数据可观察，无意义）。"""
+    note = "板块资金数据为空" if flow_ok else "板块资金流数据源故障"
+    if fund_section.startswith("•"):
+        return fund_section + f"\n（{note}，今日无资金归因与 AI 解读）"
+    return f"{note}（今日无资金归因与 AI 解读）"
+
+
+def _judge_boards(snapshots: list, history: list) -> list:
+    """估值判定循环（merge_main 专用纯函数，可测）：单板块异常不得击穿合并推送。
+    history 嵌套异常（tags 非 dict / sl_net 非数值 / sector_pb 损坏）→ 该板块降级为
+    "数据不足"占位，不静默消失（F2）"""
+    import val_data, val_judge
+    judgements = []
+    for s in snapshots:
+        try:
+            fund_state = compute_fund_state(history, s["board"])
+            judgements.append(val_judge.judge_valuation(
+                s["board"], s["main_pct"], s["trend"], s["pb_pct"], fund_state,
+                val_data._pb_reference(history, s["board"])))
+        except Exception as e:
+            print(f"  [!] 估值判定 {s['board']} 异常已跳过: {str(e)[:80]}")
+            judgements.append({"board": s["board"], "verdict": "观察", "dominant": "数据不足",
+                               "confidence": "低", "action": "skip",
+                               "note": f"估值判定异常：{str(e)[:50]}（推断）"})
+    return judgements
 
 
 def _send_merged_card(msg: str) -> bool:
@@ -2012,19 +2037,15 @@ def merge_main():
 
     # ── 估值判断表（独立成表：东财口径 12 板块，不挂仪表盘板块列表） ──
     print("\n[6/7] 估值判断（12 东财板块，独立成表）...")
-    import ltc_store, val_data, val_judge
+    import ltc_store, val_data
     from val_config import INDEX_MAP
     # load_history 仅过滤 JSON 解析失败，非 dict 行（数组/标量）会击穿下游三个消费者
     # （compute_fund_state / _pb_reference / compute_reference 均做 h.get）→ 加载处归一化
     history = [h for h in ltc_store.load_history(LTC_HISTORY_FILE) if isinstance(h, dict)]
     boards = list(INDEX_MAP.keys())
     snapshots = val_data.fetch_valuation_snapshot(boards, history)
-    judgements = []
-    for s in snapshots:
-        fund_state = compute_fund_state(history, s["board"])
-        judgements.append(val_judge.judge_valuation(
-            s["board"], s["main_pct"], s["trend"], s["pb_pct"], fund_state,
-            val_data._pb_reference(history, s["board"])))
+    # Task 6 Important 2：估值判定循环嵌套异常防护（_judge_boards 内逐板块 try，板块降级不击穿）
+    judgements = _judge_boards(snapshots, history)
     judgements = _with_metric_disclosure(judgements, snapshots)
     print(f"  估值判定: {len(judgements)} 个板块")
 
@@ -2032,6 +2053,7 @@ def merge_main():
     print("\n[7/7] 资金观察（归因/南向/回购 + AI 解读）...")
     import ltc_analysis, ltc_data, ltc_narrative
     from ltc_config import BACKING_SECTORS, load_quarterly_context, is_expired
+    from ltc_format import build_fund_section  # 资金区块与 ltc 卡共用口径（Task 6 Important 1）
     southbound = _safe_ltc(ltc_data.fetch_southbound)
     sb_value = (southbound or {}).get("southbound_net_yi")
     if sb_value is not None:
@@ -2061,7 +2083,7 @@ def merge_main():
             kline = _safe_ltc(ltc_data.fetch_board_kline, f["industry"])
             backing = backing_active and any(b in f["industry"] for b in BACKING_SECTORS)
             f["accum"] = ltc_analysis.compute_accumulation(kline, f["chg_pct"], f["sl_net"], backing, None)
-    fund_section = _build_fund_section(focus, southbound, repurchase, refs)
+    fund_section = build_fund_section(focus, southbound, repurchase, refs)
 
     interpretation = ""
     if focus:
@@ -2076,9 +2098,9 @@ def merge_main():
         if "北向" in interpretation:
             # 北向硬性不出现：AI 越界引用事实外内容 → 回退事实模板（事实清单不包含北向）
             interpretation = ltc_narrative.template_interpretation(facts)
-    elif fund_section.startswith("•"):
-        # 资金流源故障但南向/回购可用：明确标注缺失原因，不静默缺块（F2）
-        fund_section += "\n（板块资金流数据源故障，今日无资金归因与 AI 解读）"
+    else:
+        # 空归因标注：源正常但无数据（空 DataFrame）≠ 源故障；南向/回购可用时保留（F2）
+        fund_section = _annotate_empty_fund_section(fund_section, flow_ok)
 
     card = build_merged_card({
         "valuation_judgements": judgements,

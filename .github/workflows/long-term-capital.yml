@@ -1,9 +1,7 @@
 name: 每日资金观察
 
 on:
-  schedule:
-    # 北京时间 16:30 (UTC 08:30), 周一至周五（节假日由数据日期规则自动跳过）
-    - cron: '30 8 * * 1-5'
+  # schedule 已停用（Task 6：合并系统上线后单卡单推，资金观察内容并入 rally-health 16:15 卡片）
   workflow_dispatch:
 
 permissions:

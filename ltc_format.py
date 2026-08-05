@@ -21,6 +21,28 @@ def build_quarterly_block() -> tuple:
         lines.append(f"{E['warn']} 季度背景已过期，请尽快更新")
     return "\n".join(lines), expired
 
+def build_fund_section(focus: List[dict], southbound: dict = None,
+                       repurchase: dict = None, refs: dict = None) -> str:
+    """今日资金区块（ltc 卡与合并卡共用口径 — Task 6 统一双轨漂移）：
+    板块归因（术语表展开 + 承接 reasons）+ 南向（术语表展开 + 参照标签）+ 回购（可选）+ 桥接行。
+    回购由调用方决定：ltc 卡回购在长期数据区块 → 传 None；合并卡资金区块内 → 传实际数据。"""
+    lines = []
+    for f in focus[:6]:
+        acc = f.get("accum", {})
+        lines.append(f"• {f['industry']}：{f['tag'] or '资金动作'}")
+        lines.append(f"  {_term('超大单')} {f['sl_net']:+.1f}亿 ｜ 股价 {f['chg_pct']:+.1f}% ｜ 分位 {f['sl_percentile']:.0f}%")
+        if acc.get("reasons"):
+            lines.append(f"  承接：{acc.get('period', '')}（推断）｜ " + "；".join(acc["reasons"][:2]))
+    sb = (southbound or {}).get("southbound_net_yi")
+    if sb is not None:
+        label = (refs or {}).get("southbound_label", "参照积累中")
+        lines.append(f"• {_term('南向')}：{sb:+.1f}亿（{label}）")
+    items = ((repurchase or {}).get("items") or [])[:3]
+    if items:
+        lines.append("• 近4周回购：" + "；".join(f"{i['name']} {i['amount_yi']:.1f}亿" for i in items))
+    lines.append(f"{E['bridge']} 对你意味着什么：单日资金信号不等于趋势，观察是否连续多日出现。")
+    return "\n".join(lines)
+
 def format_card(data_date: str, interpretation_text: str, focus: List[dict],
                 southbound: dict, valuation: List[dict], repurchase: dict,
                 references: dict) -> str:
@@ -29,21 +51,9 @@ def format_card(data_date: str, interpretation_text: str, focus: List[dict],
     lines.append("")
     lines.append(interpretation_text.strip())
     lines.append("")
-    # ── 今日数据 ──
+    # ── 今日数据（与合并卡共用 build_fund_section 口径） ──
     lines.append(f"━━━ {E['daily']} 今日数据（当日更新） ━━━")
-    for f in focus[:6]:
-        acc = f.get("accum", {})
-        lines.append(f"• {f['industry']}：{f['tag'] or '资金动作'}")
-        lines.append(f"  {_term('超大单')} {f['sl_net']:+.1f}亿 ｜ 股价 {f['chg_pct']:+.1f}% ｜ 分位 {f['sl_percentile']:.0f}%")
-        if acc.get("reasons"):
-            lines.append(f"  承接：{acc['period']}（推断）｜ " + "；".join(acc["reasons"][:2]))
-    if southbound:
-        sb = southbound.get("southbound_net_yi")
-        if sb is not None:
-            label = references.get("southbound_label", "参照积累中")
-            lines.append(f"• {_term('南向')}：{sb:+.1f}亿（{label}）")
-    lines.append("")
-    lines.append(f"{E['bridge']} 对你意味着什么：单日资金信号不等于趋势，观察是否连续多日出现。")
+    lines.append(build_fund_section(focus, southbound, None, references))
     lines.append("")
     # ── 长期数据 ──
     lines.append(f"━━━ {E['long']} 长期数据 ━━━")
