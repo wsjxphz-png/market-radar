@@ -27,7 +27,7 @@
 
 ---
 
-### Task V1: val_config.py — 映射表/分类表/阈值
+### Task 1: val_config.py — 映射表/分类表/阈值
 
 **Files:**
 - Create: `market-radar/val_config.py`
@@ -140,7 +140,7 @@ git commit -m "feat: val_config 估值配置 — 板块→中证指数映射/周
 
 ---
 
-### Task V2: val_data.py — 估值数据源（PE 分位/PB 聚合/三级降级链）
+### Task 2: val_data.py — 估值数据源（PE 分位/PB 聚合/三级降级链）
 
 **Files:**
 - Create: `market-radar/val_data.py`
@@ -405,7 +405,7 @@ git commit -m "feat: val_data 估值数据源 — 中证PE分位/成分PB聚合/
 
 ---
 
-### Task V3: val_judge.py — 判定框架（第三版）
+### Task 3: val_judge.py — 判定框架（第三版）
 
 **Files:**
 - Create: `market-radar/val_judge.py`
@@ -589,7 +589,7 @@ git commit -m "feat: val_judge 估值判定框架（第三版）— 主指标/�
 
 ---
 
-### Task V4: val_format.py — 估值表渲染
+### Task 4: val_format.py — 估值表渲染
 
 **Files:**
 - Create: `market-radar/val_format.py`
@@ -683,7 +683,7 @@ git commit -m "feat: val_format 估值判断区块渲染"
 
 ---
 
-### Task V5: 合并编排 — market_dashboard 骨架 + 估值表 + 资金数据并入
+### Task 5: 合并编排 — market_dashboard 骨架 + 估值表 + 资金数据并入
 
 **Files:**
 - Modify: `market-radar/market_dashboard.py`（主骨架）、`market-radar/rally-health.yml`
@@ -810,7 +810,7 @@ git commit -m "feat: 合并编排 — 估值表+资金观察并入仪表盘骨�
 
 ---
 
-### Task V6: workflow 改造 — 单卡单推 16:15
+### Task 6: workflow 改造 — 单卡单推 16:15
 
 **Files:**
 - Modify: `market-radar/.github/workflows/rally-health.yml`（cron 16:15 + 合并入口）
@@ -853,7 +853,7 @@ git commit -m "ci: 合并推送 — 16:15 单卡单推，停用资金观察独�
 
 ---
 
-### Task V7: 收尾 — 全量验证 + PRD 验收对照
+### Task 7: 收尾 — 全量验证 + PRD 验收对照
 
 **Files:**
 - Delete: 临时文件（如有）
