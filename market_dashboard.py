@@ -1303,7 +1303,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      sector_unavailable: bool = False,
                      sector_overview: Optional[Dict] = None,
                      flow_anomalies: Optional[List] = None,
-                     fund_flow_hist_ok: Optional[bool] = None) -> str:
+                     fund_flow_hist_ok: Optional[bool] = None,
+                     board_ok: Optional[bool] = None) -> str:
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -1657,6 +1658,11 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     if sectors:
         lines.append(f"## 📋 板块全貌（{len(sectors)}个 · 理论框架诊断）")
         lines.append("")
+        # D3: 板块概览全败（返回 None 而非抛异常）→ 降级条目仍须标注，禁止静默缺块。
+        # 文案与 F9 异常路径一致（"板块数据暂不可用"），此处补充降级来源说明
+        if board_ok is not None and not board_ok:
+            lines.append("> ⚠️ **板块数据暂不可用** — 行业板块概览（当日涨跌/领涨股）获取失败，以下评级基于会议规则+技术面K线，板块当日概览数据缺失。")
+            lines.append("")
         # F5: 板块资金流 5d/10d 失败时明确标注，避免静默归零误导
         if fund_flow_hist_ok is not None and not fund_flow_hist_ok:
             lines.append("> ⚠️ 资金流历史数据暂不可用（5日/10日资金流缺失，当日资金流仍显示）。")
@@ -1819,6 +1825,7 @@ def main():
     sector_overview = {}                # F3: 板块模块市场概况并入推送正文
     flow_anomalies = []                 # F3: 资金异动接入推送正文
     fund_flow_hist_ok = None            # F5: 板块资金流 5d/10d 可用性
+    board_ok = True                     # D3: 板块概览（当日涨跌/领涨）可用性 — 全败时标注降级
     try:
         from sector_monitor import fetch_sector_monitor_data
         sector_data = fetch_sector_monitor_data()
@@ -1827,11 +1834,13 @@ def main():
         sector_overview = sector_data.get("market_overview", {})
         flow_anomalies = sector_data.get("flow_anomalies", [])
         fund_flow_hist_ok = sector_data.get("fund_flow_hist_ok", True)
+        board_ok = sector_data.get("board_ok", True)
         print(f"  板块: {sm.get('entry_count',0)}入 {sm.get('hold_count',0)}持 "
               f"{sm.get('watch_count',0)}观 {sm.get('avoid_count',0)}避")
     except Exception as e:
         print(f"  [!] 板块: {e}")
         sector_unavailable = True
+        board_ok = False                # 异常路径板块亦视为不可用
 
     cycle = assess_sentiment(signals)
     print(f"\n[4/6] 情绪周期: {cycle['emoji']} {cycle['name']}")
@@ -1871,7 +1880,8 @@ def main():
                            sector_unavailable=sector_unavailable,
                            sector_overview=sector_overview,
                            flow_anomalies=flow_anomalies,
-                           fund_flow_hist_ok=fund_flow_hist_ok)
+                           fund_flow_hist_ok=fund_flow_hist_ok,
+                           board_ok=board_ok)
 
     # 飞书内容可能超长，分段发送
     max_chars = 25000

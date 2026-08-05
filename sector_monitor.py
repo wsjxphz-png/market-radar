@@ -1299,6 +1299,11 @@ def fetch_sector_monitor_data() -> Dict:
                 continue
             ths_name = _lookup_ths_name(name)
             name_map[name] = ths_name if ths_name else name
+    # D3: 板块概览可用性 — fetch_industry_board_overview 全败时返回 None（不抛异常），
+    # 降级路径必须显式标注，禁止静默缺块（market_dashboard 板块全貌块据此输出"板块数据暂不可用"）
+    result["board_ok"] = board_df is not None and len(board_df) > 0
+    if not result["board_ok"]:
+        logger.warning("行业板块概览获取失败（东财+同花顺全败），板块当日概览数据缺失 — 仅用会议规则+技术面评级")
     time.sleep(random.uniform(REQUEST_INTERVAL_MIN, REQUEST_INTERVAL_MAX))
 
     # 2. 获取资金流向

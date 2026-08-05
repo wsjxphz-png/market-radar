@@ -162,6 +162,29 @@ def test_format_dashboard_manual_reference_marker():
     assert "参考材料 · 非今日数据" in msg
 
 
+def test_format_dashboard_board_ok_false_annotation():
+    """D3: 板块概览全败（board_ok=False，非异常路径）→ 板块全貌出现"板块数据暂不可用"标注"""
+    idx = _idx_df()
+    signals = compute_signals(idx, None)
+    fake_sector = {"name": "半导体", "category": "科技", "rating": "🟡 观察中",
+                   "phase": "震荡", "tags": "⚠数据获取失败"}
+    msg = format_dashboard(_cycle(), signals, [fake_sector], None, idx, board_ok=False)
+    assert "## 📋 板块全貌" in msg
+    assert "⚠️ **板块数据暂不可用**" in msg
+    assert "当日概览数据缺失" in msg
+
+
+def test_format_dashboard_board_ok_default_no_annotation():
+    """D3: board_ok 缺省（None，正常路径）→ 不输出标注，无噪声"""
+    idx = _idx_df()
+    signals = compute_signals(idx, None)
+    fake_sector = {"name": "半导体", "category": "科技", "rating": "🟡 观察中",
+                   "phase": "震荡", "tags": "指标正常"}
+    msg = format_dashboard(_cycle(), signals, [fake_sector], None, idx)
+    assert "板块数据暂不可用" not in msg
+    assert "## 📋 板块全貌" in msg
+
+
 # ═══════════════════════════════════════════════════════════
 # analyze_fund_flow — 资金流信号（注入假 df，不触网）
 # ═══════════════════════════════════════════════════════════
@@ -276,7 +299,7 @@ class _FakeStockData:
 
 
 def _fake_sector_data():
-    """sector_monitor 假返回 — 含一个降级板块条目（technical/fund 为空）"""
+    """sector_monitor 假返回 — 含一个降级板块条目（technical/fund 为空），板块概览全败"""
     return {
         "date": "2026-08-05",
         "sectors": [{"name": "半导体", "category": "科技", "meeting_status": "watch",
@@ -285,6 +308,7 @@ def _fake_sector_data():
         "summary": {"entry": [], "hold": [], "watch": ["半导体"], "avoid": [],
                     "entry_count": 0, "hold_count": 0, "watch_count": 1, "avoid_count": 0},
         "market_overview": {}, "flow_anomalies": [], "fund_flow_hist_ok": True,
+        "board_ok": False,   # D3: 板块概览（EM+THS）全败 — 降级路径须出现标注
     }
 
 
@@ -315,6 +339,9 @@ def test_main_push_dedup_two_runs(tmp_path, monkeypatch, capsys):
     out1 = capsys.readouterr().out
     assert "飞书: OK" in out1
     assert calls["send"] == 1                                     # 第一次真实推送
+    # D3 集成：板块概览全败的降级条目，真实推送正文必须含"板块数据暂不可用"标注
+    assert "板块数据暂不可用" in out1
+    assert "当日概览数据缺失" in out1
     state = json.loads((tmp_path / "state.json").read_text(encoding="utf-8"))
     assert state["last_pushed_date"] == data_date                 # 状态已记录
 
