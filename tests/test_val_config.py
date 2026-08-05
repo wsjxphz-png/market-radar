@@ -30,3 +30,59 @@ def test_index_code_for():
 
 def test_thresholds():
     assert PCT_LOW == 25 and PCT_HIGH == 75 and PB_VETO_GAP == 40
+
+# ═══════ Task 1: 口径对齐层 — THS↔东财 12 板块映射 ═══════
+
+def test_ths_em_mapping_covers_12_boards():
+    # 估值表 12 个东财板块，每个都有同花顺对应名（仪表盘 SECTOR_RULES 口径）
+    from val_config import INDEX_MAP, THS_TO_EM
+    for em in INDEX_MAP:
+        assert em in THS_TO_EM.values(), f"{em} 缺同花顺映射"
+
+def test_ths_em_keys_all_from_sector_rules():
+    # 防 typo：THS_TO_EM 的所有同花顺名必须真实存在于 SECTOR_RULES 名单
+    from val_config import THS_TO_EM
+    from sector_monitor import SECTOR_RULES
+    real = {r["name"] for r in SECTOR_RULES}
+    fake = set(THS_TO_EM) - real
+    assert not fake, f"映射含非 SECTOR_RULES 名: {fake}"
+
+def test_ths_em_known_diffs():
+    # 锁定实际映射（含全部差异名）
+    from val_config import em_name_for
+    # 同名直映
+    assert em_name_for("半导体") == "半导体"
+    assert em_name_for("银行") == "银行"
+    assert em_name_for("通信设备") == "通信设备"
+    # 差异名（同花顺 → 东财一级）
+    assert em_name_for("汽车整车") == "汽车"
+    assert em_name_for("汽车零部件") == "汽车"
+    assert em_name_for("煤炭开采加工") == "煤炭"
+    assert em_name_for("证券") == "非银金融"
+    assert em_name_for("保险") == "非银金融"
+    assert em_name_for("军工装备") == "国防军工"
+    assert em_name_for("工业金属") == "有色金属"
+    assert em_name_for("白酒") == "食品饮料"
+    assert em_name_for("食品加工制造") == "食品饮料"
+    assert em_name_for("化学制药") == "医药生物"
+    assert em_name_for("中药") == "医药生物"
+    assert em_name_for("医疗服务") == "医药生物"
+    assert em_name_for("医疗器械") == "医药生物"
+    assert em_name_for("IT服务") == "计算机"
+    assert em_name_for("软件开发") == "计算机"
+    assert em_name_for("电池") == "电力设备"
+    assert em_name_for("光伏设备") == "电力设备"
+    assert em_name_for("电网设备") == "电力设备"
+
+def test_ths_em_roundtrip_for_all_boards():
+    # 每个东财板块反查同花顺名后，必须能映射回自身
+    from val_config import INDEX_MAP, em_name_for, ths_name_for
+    for em in INDEX_MAP:
+        ths = ths_name_for(em)
+        assert ths is not None, f"{em} 无反查同花顺名"
+        assert em_name_for(ths) == em, f"{em} 反查'{ths}'后无法回到自身"
+
+def test_em_name_for_unknown():
+    from val_config import em_name_for, ths_name_for
+    assert em_name_for("不存在的板块") is None
+    assert ths_name_for("不存在的板块") is None
