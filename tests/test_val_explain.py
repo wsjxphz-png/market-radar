@@ -263,6 +263,25 @@ def test_synthesize_price_position_metric():
     assert "位置" in out["explanation"]
 
 
+def test_synthesize_missing_key_logs_warning(caplog):
+    # 契约违反（key 缺失）→ logger.warning 告警 + 降级不崩溃（Task 4 Issue 3 加固：
+    # 渲染层组装错位会在卡片上静默降级而非报错，日志必须显式暴露缺 key）
+    # synthesize 输出契约是三层结构（board/facts/explanation/两判断/conflict_note），
+    # 输入缺 key 的降级体现在 facts 文本与判断层里
+    import logging
+    with caplog.at_level(logging.WARNING, logger="val_explain"):
+        out = synthesize({"board": "银行", "trend_state": "above20_rising"})
+    assert "数据不可用" in out["facts"]                            # fund_state 降级 unknown
+    assert "无法判断：估值证据不足" in out["dca_judge"]             # valuation 降级 观察
+    assert "PE" in out["facts"] or "趋势" in out["facts"]           # metric 降级 PE
+    msgs = [r.message for r in caplog.records]
+    assert any("fund_state" in m for m in msgs)
+    assert any("valuation" in m for m in msgs)
+    assert any("main_pct" in m for m in msgs)
+    # 合法缺省（sl_net=None 属数据不可用，非契约违反）不告警
+    assert not any("sl_net" in m for m in msgs)
+
+
 # ══════════ 名词解释（GLOSSARY 扩展）══════════
 
 def test_glossary_covers_brief_terms():

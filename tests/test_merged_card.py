@@ -549,3 +549,168 @@ def test_market_volume_unavailable_when_source_fails(monkeypatch):
     vol = StockData().get_market_volume(idx_volume=59215512400.0)
     assert vol["available"] is False
     assert vol["total_amount"] == 0
+
+
+# ═══════════════════════════════════════════════════════════
+# Task 5: 板块总览三层结构（事实→说明→判断）+ TREND_STATE 映射（渲染层）
+# synthesize 输出契约（Task 4 实测）：board/facts/explanation/short_term_judge/
+# dca_judge/conflict_note 六 key——渲染层逐 key 核对，错位会静默降级（Issue 3 交接）
+# ═══════════════════════════════════════════════════════════
+
+def _board_facts_fixture():
+    """synthesize 输入契约全 key 事实（上升/下降/全缺三态）"""
+    return [
+        {"board": "银行", "trend_state": "above20_rising", "valuation": "合理",
+         "fund_state": "inflow_confirm", "sl_net": 12.5, "main_pct": 50.0,
+         "metric": "PE", "years": 10.0, "terms": ["PE", "分位", "20日线"]},
+        {"board": "煤炭", "trend_state": "below20_falling", "valuation": "便宜",
+         "fund_state": "outflow_confirm", "sl_net": -3.2, "main_pct": 15.0,
+         "metric": "PB", "years": 8.0,
+         "terms": ["PB", "分位", "20日线", "永不下跌补仓", "微笑曲线"]},
+        {"board": "通信设备", "trend_state": "unknown", "valuation": "观察",
+         "fund_state": "unknown", "sl_net": None, "main_pct": None,
+         "metric": "PE", "years": None, "terms": []},
+    ]
+
+
+def test_board_overview_three_layers():
+    """每板块包含 事实/说明/判断 三个标记；判断含短线+定投两场景；名词首次出现有解释"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "🧭 板块总览" in out
+    assert "3 板块" in out
+    assert out.count("◆ 事实") == 3
+    assert out.count("◆ 说明") == 3
+    assert out.count("◆ 判断") == 3
+    assert "短线（推断）" in out
+    assert "定投（推断）" in out
+    # 名词首次出现有解释（PE/分位 大白话）
+    assert "PE：市盈率" in out
+    assert "分位：百分位" in out
+
+
+def test_board_overview_judgment_can_be_absent():
+    """数据不足 → "无法判断"照常渲染（判断可缺席是设计，不强行给结论）"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "无法判断：趋势状态不明" in out       # 短线缺席
+    assert "无法判断：估值证据不足" in out       # 定投缺席
+    assert "无法判断：趋势与估值证据均不足" in out  # 冲突分流整体缺席
+    assert "◆ 事实" in out and "◆ 说明" in out and "◆ 判断" in out
+
+
+def test_board_overview_trend_framework_loaded():
+    """判断措辞含趋势交易论框架：不破20日线 / 永不下跌补仓 / 微笑曲线"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "不破 20 日线" in out          # 银行：上升顺势持有
+    assert "永不下跌补仓" in out          # 煤炭：下降不抄底
+    assert "微笑曲线" in out              # 煤炭：便宜可加码（定投场景）
+
+
+def test_board_overview_renders_all_synthesize_keys():
+    """渲染层逐 key 核对 synthesize 输出契约（facts/explanation/short_term_judge/
+    dca_judge/conflict_note 全部渲染，错位会静默降级——Task 4 Issue 3 交接）"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    # facts 层：趋势/估值/资金三行原样在场
+    assert "板块：银行" in out
+    assert "趋势：" in out and "估值：" in out and "资金：" in out
+    # explanation 层：翻译文本透出（分位/趋势/资金三翻译）
+    assert "只有 50% 的时间比现在便宜" in out
+    assert "20 日线上方上升期" in out
+    assert "有持续性的买入" in out
+    # judgment 层：短线 + 定投 + 冲突分流（煤炭=下降+便宜 冲突存在）
+    assert "场景分流（推断）" in out
+
+
+def test_trend_state_map():
+    """sector_monitor trend_phase → val_explain TREND_STATE 词表（渲染层映射）：
+    topping（筑顶）在 20 日线上方应归"震荡"而非"上升"（val_explain docstring 标注）"""
+    from market_dashboard import trend_state_map
+    assert trend_state_map("rally") == "above20_rising"
+    assert trend_state_map("downtrend") == "below20_falling"
+    for phase in ("oscillation", "topping", "bottoming", "mixed"):
+        assert trend_state_map(phase) == "around20_oscillation"
+    assert trend_state_map("unknown") == "unknown"
+    assert trend_state_map(None) == "unknown"
+    assert trend_state_map("不存在的阶段") == "unknown"
+
+
+def test_build_board_facts_full_contract():
+    """synthesize 输入契约端到端组装（Task 4 Issue 3 交接：逐 key 核对，缺 key 静默降级）：
+    snapshots+judgements+history+sector 条目 → 每板块事实全 key；
+    多子行业 trend_phase 全一致取该值、不一致归 mixed（→震荡）、无 THS 映射 → unknown"""
+    from market_dashboard import build_board_facts
+    snapshots = [
+        {"board": "银行", "source": "pb", "main_pct": 12.0, "pb_pct": 12.0,
+         "pe_pct": None, "trend": "flat", "years": 1.2, "note": "PB=0.42"},
+        {"board": "医药生物", "source": "pe", "main_pct": 55.0, "pe_pct": 55.0,
+         "pb_pct": None, "trend": "flat", "years": 4.0, "note": ""},
+        {"board": "计算机", "source": "pe", "main_pct": 40.0, "pe_pct": 40.0,
+         "pb_pct": None, "trend": "flat", "years": 2.5, "note": ""},
+        {"board": "半导体", "source": "pe", "main_pct": None, "pe_pct": None,
+         "pb_pct": None, "trend": "flat", "years": None, "note": ""},
+    ]
+    judgements = [
+        {"board": "银行", "verdict": "便宜", "confidence": "高", "action": "full", "note": ""},
+        {"board": "医药生物", "verdict": "合理", "confidence": "中", "action": "half", "note": ""},
+        {"board": "计算机", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
+        {"board": "半导体", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
+    ]
+    history = [
+        {"tags": {"银行": {"sl_net": 2.1}}, "fund_by_board": {"银行": 3.3}},
+        {"tags": {"银行": {"sl_net": 1.5}}, "fund_by_board": {"银行": 2.2}},
+        {"tags": {"银行": {"sl_net": 0.9}}, "fund_by_board": {"银行": 1.1}},
+    ]
+    sectors = [
+        {"name": "银行", "technical": {"trend_phase": "topping"}},          # 筑顶 → 震荡
+        {"name": "化学制药", "technical": {"trend_phase": "rally"}},        # → 医药生物
+        {"name": "中药", "technical": {"trend_phase": "rally"}},            # 全一致 → rally
+        {"name": "IT服务", "technical": {"trend_phase": "rally"}},          # → 计算机
+        {"name": "软件开发", "technical": {"trend_phase": "oscillation"}},  # 不一致 → mixed
+    ]
+    facts = build_board_facts(snapshots, judgements, history, sectors)
+    assert len(facts) == 4
+    by_board = {f["board"]: f for f in facts}
+    # 单子行业 topping → 震荡（非上升）
+    b = by_board["银行"]
+    assert b["trend_state"] == "around20_oscillation"
+    assert b["valuation"] == "便宜"
+    assert b["fund_state"] == "inflow_confirm"      # fund_by_board 优先（Task 2 口径）
+    assert b["sl_net"] == 1.1                        # 最新留痕优先（列表末条为最新）
+    assert b["main_pct"] == 12.0 and b["metric"] == "PB" and b["years"] == 1.2
+    assert "PB" in b["terms"] and "20日线" in b["terms"] and "微笑曲线" in b["terms"]
+    # 多子行业全一致 → 取该阶段
+    assert by_board["医药生物"]["trend_state"] == "above20_rising"
+    assert by_board["医药生物"]["valuation"] == "合理"
+    # 多子行业不一致 → mixed → 震荡（诚实，不取单边）
+    assert by_board["计算机"]["trend_state"] == "around20_oscillation"
+    # 无 THS 映射 → unknown；数据缺 → main_pct None 透传
+    assert by_board["半导体"]["trend_state"] == "unknown"
+    assert by_board["半导体"]["main_pct"] is None
+    assert "20日线" not in by_board["半导体"]["terms"]
+
+
+def test_merged_card_board_overview_between_valuation_and_dashboard():
+    """板块总览位置：估值判断之后、format_dashboard（市场温度）之前"""
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()
+    card = build_merged_card(data)
+    i_val = card.find("估值判断")
+    i_ov = card.find("🧭 板块总览")
+    i_temp = card.find("## 🔥 市场温度")
+    i_fund = card.find("资金观察")
+    i_honest = card.find("诚实声明")
+    assert -1 not in (i_val, i_ov, i_temp, i_fund, i_honest)
+    assert 0 <= i_val < i_ov < i_temp < i_fund < i_honest
+    assert "◆ 事实" in card
+
+
+def test_merged_card_board_overview_empty_no_header():
+    """board_facts 空 → 不输出板块总览空标题（F2：不静默缺块，也不得输出空标题）"""
+    data = _full_card_data()
+    data["board_facts"] = []
+    card = build_merged_card(data)
+    assert "板块总览" not in card
+    assert "## 🔥 市场温度" in card          # 原区块不受影响

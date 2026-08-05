@@ -16,8 +16,24 @@
 - around20_oscillation    20 日线附近震荡期（oscillation/topping/bottoming/mixed 对齐）
 - unknown                 趋势状态数据不足
 """
+import logging
 from typing import Dict, List, Optional
 from val_config import PCT_LOW, PCT_HIGH
+
+logger = logging.getLogger(__name__)
+
+# synthesize 事实契约 key：缺失时降级并告警（Task 4 Issue 3 加固——渲染层组装错位
+# 会在卡片上静默降级而非报错，日志必须显式暴露缺 key；sl_net 缺席属"数据不可用"合法，不告警）
+_CONTRACT_KEYS = ("board", "trend_state", "valuation", "fund_state",
+                  "main_pct", "metric", "years", "terms")
+
+
+def _facts_get(facts: dict, key: str, default):
+    """事实取数：key 缺失（契约违反）→ logger.warning + 降级；值为 None 属数据不可用，不告警"""
+    if key not in facts:
+        logger.warning("synthesize 契约缺 key: %s（降级为 %r；board=%s）",
+                       key, default, facts.get("board", "?"))
+    return facts.get(key, default)
 
 # ============================================================
 # GLOSSARY：名词大白话解释（首次出现才渲染，判定归渲染层）
@@ -165,15 +181,15 @@ def synthesize(facts: dict) -> dict:
       years       分位数据窗口年数（可 None）
       terms       首次出现的名词（渲染层判定，本函数直接解释）
     """
-    board = facts.get("board", "")
-    trend_state = facts.get("trend_state") or "unknown"
-    valuation = facts.get("valuation") or "观察"
-    fund_state = facts.get("fund_state") or "unknown"
-    sl_net = facts.get("sl_net")
-    main_pct = facts.get("main_pct")
-    metric = facts.get("metric") or "PE"
-    years = facts.get("years")
-    terms = facts.get("terms") or []
+    board = _facts_get(facts, "board", "")
+    trend_state = _facts_get(facts, "trend_state", "unknown") or "unknown"
+    valuation = _facts_get(facts, "valuation", "观察") or "观察"
+    fund_state = _facts_get(facts, "fund_state", "unknown") or "unknown"
+    sl_net = facts.get("sl_net")            # None = 数据不可用（合法），非契约违反
+    main_pct = _facts_get(facts, "main_pct", None)
+    metric = _facts_get(facts, "metric", "PE") or "PE"
+    years = _facts_get(facts, "years", None)
+    terms = _facts_get(facts, "terms", []) or []
 
     # ── 事实层：机器可核验数据，原样呈现 ──
     fact_parts = [f"板块：{board}"]

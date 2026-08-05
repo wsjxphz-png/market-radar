@@ -1,4 +1,4 @@
-"""估值判断区块渲染（卡片顶部）"""
+"""估值判断区块渲染（卡片顶部）+ 板块总览区块渲染（三层结构：事实→说明→判断）"""
 from typing import List
 
 ACTION_TEXT = {"full": "按计划定投", "half": "半额定投/等资金确认", "skip": "只观察，不买", "none": "不追加"}
@@ -36,4 +36,37 @@ def format_valuation_block(judgements: List[dict], snapshots: List[dict]) -> str
         lines.append(f"- {j['board']}：{j['verdict']}（{pos}）")
         conf = {"高": "高置信度", "中": "中置信度", "低": "低置信度"}.get(j["confidence"], "观察")
         lines.append(f"  {conf}｜{ACTION_TEXT.get(j['action'], '观察')}｜{j['note']}")
+    return "\n".join(lines)
+
+
+def build_board_overview(board_facts: list) -> str:
+    """板块总览区块（三层结构：事实→说明→判断），每板块调用 val_explain.synthesize。
+
+    synthesize 输出契约（Task 4 实测，逐 key 核对防静默降级）：
+      board / facts（趋势·估值·资金三行）→ 事实层
+      explanation（翻译+阈值口径+名词解释）→ 说明层
+      short_term_judge / dca_judge / conflict_note（非空时）→ 判断层
+    判断"无法判断"照常渲染（判断可缺席是设计）；board_facts 空 → 返回 ""（F2 不输出空标题）。
+    board_facts 契约（merge_main build_board_facts 组装）：
+      board/trend_state(TREND_STATE 词表)/valuation(verdict)/fund_state/
+      sl_net/main_pct/metric/years/terms（首次出现名词，渲染层判定）。"""
+    if not board_facts:
+        return ""
+    from val_explain import synthesize
+    lines = [f"━━━ 🧭 板块总览（{len(board_facts)} 板块 · 事实→说明→判断） ━━━"]
+    for i, facts in enumerate(board_facts, 1):
+        if not isinstance(facts, dict):
+            continue
+        syn = synthesize(facts)
+        lines.append("")
+        lines.append(f"▌{i}. {syn.get('board', '未知板块')}")
+        lines.append("◆ 事实")
+        lines.append(syn["facts"])
+        lines.append("◆ 说明")
+        lines.append(syn["explanation"] if syn["explanation"] else "（数据不足，暂无说明）")
+        lines.append("◆ 判断")
+        lines.append(f"・ {syn['short_term_judge']}")
+        lines.append(f"・ {syn['dca_judge']}")
+        if syn.get("conflict_note"):
+            lines.append(f"・ {syn['conflict_note']}")
     return "\n".join(lines)

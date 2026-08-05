@@ -1818,17 +1818,20 @@ def build_merged_card(data: dict) -> str:
 
     ⚠️ 内容丢失修复（feat/board-overview）：旧六区块简化版丢弃了交易手册/每日一得/
     指数监测/资金异动/信号翻转/冲突裁决/板块全貌/板块观察池等全部原区块，本函数改为
-    base = format_dashboard(...) 全量渲染，估值判断区块插入顶部，资金观察增强区块追加
-    尾部（南向/回购/承接 — 原「板块资金流向」区块保留在 base 内不动），诚实声明收尾。
+    base = format_dashboard(...) 全量渲染，估值判断区块插入顶部，板块总览（三层结构，
+    核心）紧随其后，资金观察增强区块追加尾部（南向/回购/承接 — 原「板块资金流向」
+    区块保留在 base 内不动），诚实声明收尾。
 
     data 键（与 merge_main 的组装一一对应）：
     cycle/signals/sectors/ai_text/idx/indices/temp_data/flow_data/
     sector_unavailable/sector_overview/flow_anomalies/fund_flow_hist_ok/board_ok
     → 透传 format_dashboard（原卡片全部内容）；
     valuation_judgements/valuation_snapshots → 估值判断区块（顶部，format_valuation_block）；
+    board_facts → 板块总览区块（估值判断之后，build_board_overview：12 板块×synthesize
+    三层结构——事实/说明/判断，判断可缺席"无法判断"照常渲染）；
     fund_observation → 资金观察增强区块（南向/回购/承接，尾部）；
     honest → 诚实声明（覆盖估值/资金推断与操作信号理论性）。"""
-    from val_format import format_valuation_block
+    from val_format import build_board_overview, format_valuation_block
     base = format_dashboard(
         cycle=data["cycle"], signals=data["signals"], sectors=data.get("sectors", []),
         ai_text=data.get("ai_text"), idx=data["idx"],
@@ -1846,6 +1849,10 @@ def build_merged_card(data: dict) -> str:
                                  data.get("valuation_snapshots", []))
     if val:
         parts.append(val)
+    # 板块总览区块：紧随估值判断之后、format_dashboard 之前（板块详情作为核心）
+    board_ov = build_board_overview(data.get("board_facts", []))
+    if board_ov:
+        parts.append(board_ov)
     # 原仪表盘全量区块（估值/资金新增之外的顺序与文案完全保留）
     parts.append(base)
     # 资金观察增强区块：追加尾部（南向/回购/承接 — 原「板块资金流向」区块保留在 base 内不动）
@@ -1909,6 +1916,132 @@ def _judge_boards(snapshots: list, history: list) -> list:
                                "confidence": "低", "action": "skip",
                                "note": f"估值判定异常：{str(e)[:50]}（推断）"})
     return judgements
+
+
+# ═══════════════════════════════════════════════════════════
+# 板块总览事实组装（Task 5）：synthesize 输入契约逐 key 核对（Task 4 Issue 3 交接——
+# 组装错位会在卡片上静默降级而非报错，务必按 val_explain docstring 的 key 契约组装）
+# ═══════════════════════════════════════════════════════════
+
+# sector_monitor trend_phase → val_explain TREND_STATE 词表（映射在渲染层，Task 4 docstring 标注）
+TREND_STATE_MAP = {
+    "rally": "above20_rising",                       # 单边上涨 → 20 日线上方上升期
+    "downtrend": "below20_falling",                  # 下降趋势 → 20 日线下方下降期
+    # 筑顶（topping）在 20 日线上方也归"震荡/方向不明"而非"上升"——放量滞涨是派发不是顺势
+    "topping": "around20_oscillation",
+    "oscillation": "around20_oscillation",           # 中枢震荡
+    "bottoming": "around20_oscillation",             # 筑底（20 日线附近，方向未明）
+    "mixed": "around20_oscillation",                 # 混合 → 方向不明
+}
+
+
+def trend_state_map(trend_phase) -> str:
+    """sector_monitor trend_phase → val_explain TREND_STATE 词表；未知/None → unknown"""
+    return TREND_STATE_MAP.get(trend_phase, "unknown")
+
+
+def _board_trend_phase(sector_entries: list, board: str) -> str:
+    """该东财板块的趋势阶段（sector_monitor 词表）：经 THS→EM 映射收集子行业 trend_phase。
+
+    多子行业（如 医药生物=化学制药+中药+医疗服务+医疗器械）全一致取该值；
+    不一致归 mixed（→震荡，诚实不取单边）；无映射/无数值 → "unknown"。
+    sector_entries 为 sector_monitor.fetch_sector_monitor_data()["sectors"]（name=THS名）。"""
+    from val_config import em_name_for
+    phases = []
+    for s in sector_entries:
+        if not isinstance(s, dict):
+            continue
+        if em_name_for(str(s.get("name", ""))) != board:
+            continue
+        tech = s.get("technical")
+        if isinstance(tech, dict) and tech.get("trend_phase"):
+            phases.append(str(tech["trend_phase"]))
+    if not phases:
+        return "unknown"
+    if len(set(phases)) == 1:
+        return phases[0]
+    return "mixed"
+
+
+def _latest_sl_net(history: list, board: str):
+    """当日（最新留痕）主力净额（亿元）：fund_by_board 优先，回退 tags；全无 → None。
+    与 compute_fund_state 同口径（Task 2 fund_by_board 12 板块全覆盖）。"""
+    for h in reversed(history):
+        if not isinstance(h, dict):
+            continue
+        sl_net = None
+        fb = h.get("fund_by_board")
+        if isinstance(fb, dict):
+            sl_net = fb.get(board)
+        if sl_net is None:
+            tags = h.get("tags")
+            if isinstance(tags, dict):
+                entry = tags.get(board)
+                if isinstance(entry, dict):
+                    sl_net = entry.get("sl_net")
+        if sl_net is not None:
+            try:
+                return float(sl_net)
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+def _fact_terms(source: str, trend_phase: str, verdict: str) -> list:
+    """名词解释清单（渲染层判定"首次出现"）：主指标名词 + 趋势/定投框架名词。
+    GLOSSARY 未收录的词跳过（glossary_for 不虚构）。"""
+    terms = []
+    if source == "pe":
+        terms += ["PE", "分位"]
+    elif source == "pb":
+        terms += ["PB", "分位"]
+    if trend_phase and trend_phase != "unknown":
+        terms.append("20日线")
+    if verdict in ("便宜", "贵"):
+        terms.append("微笑曲线")
+    if trend_phase == "downtrend":
+        terms.append("永不下跌补仓")
+    return terms
+
+
+def build_board_facts(snapshots: list, judgements: list, history: list,
+                      sector_entries: list = None) -> list:
+    """12 板块事实列表（val_explain.synthesize 输入契约，逐 key 组装防静默降级）：
+
+      board       东财板块名
+      trend_state TREND_STATE 词表（sector_monitor trend_phase 渲染层映射；topping→震荡）
+      valuation   val_judge verdict（便宜/合理/贵/观察）
+      fund_state  compute_fund_state 词表
+      sl_net      最新留痕主力净额（None=数据不可用）
+      main_pct    主指标分位；metric PE/PB/价格位置；years 窗口年数
+      terms       首次出现名词清单
+
+    单板块异常 → 跳过该板块（不击穿 merge_main，与 _judge_boards 同防护）。"""
+    sector_entries = sector_entries or []
+    jmap = {j["board"]: j for j in judgements if isinstance(j, dict) and j.get("board")}
+    facts = []
+    for s in snapshots:
+        if not isinstance(s, dict) or not s.get("board"):
+            continue
+        board = s["board"]
+        try:
+            trend_phase = _board_trend_phase(sector_entries, board)
+            verdict = (jmap.get(board) or {}).get("verdict", "观察")
+            source = s.get("source", "price")
+            facts.append({
+                "board": board,
+                "trend_state": trend_state_map(trend_phase),
+                "valuation": verdict,
+                "fund_state": compute_fund_state(history, board),
+                "sl_net": _latest_sl_net(history, board),
+                "main_pct": s.get("main_pct"),
+                "metric": {"pe": "PE", "pb": "PB"}.get(source, "价格位置"),
+                "years": s.get("years"),
+                "terms": _fact_terms(source, trend_phase, verdict),
+            })
+        except Exception as e:
+            print(f"  [!] 板块总览 {board} 事实组装异常已跳过: {str(e)[:80]}")
+    return facts
 
 
 def _send_merged_card(msg: str) -> bool:
@@ -2153,6 +2286,11 @@ def merge_main():
     judgements = _with_metric_disclosure(judgements, snapshots)
     print(f"  估值判定: {len(judgements)} 个板块")
 
+    # ── 板块总览事实（12 板块 × synthesize 三层结构；TREND_STATE 映射在渲染层） ──
+    board_facts = build_board_facts(snapshots, judgements, history,
+                                    (sector_data or {}).get("sectors", []))
+    print(f"  板块总览事实: {len(board_facts)} 个板块")
+
     # ── 资金观察（归因/南向/回购 + AI 解读，复用 ltc_main 组装逻辑） ──
     print("\n[7/7] 资金观察（归因/南向/回购 + AI 解读）...")
     import ltc_analysis, ltc_data, ltc_narrative
@@ -2221,9 +2359,10 @@ def merge_main():
         "flow_anomalies": flow_anomalies,
         "fund_flow_hist_ok": fund_flow_hist_ok,
         "board_ok": board_ok,
-        # ── 新增区块：估值判断（顶部）+ 资金观察增强（尾部，南向/回购/承接） ──
+        # ── 新增区块：估值判断（顶部）+ 板块总览（估值后）+ 资金观察增强（尾部） ──
         "valuation_judgements": judgements,
         "valuation_snapshots": snapshots,
+        "board_facts": board_facts,
         "fund_observation": fund_section,
         "honest": MERGED_HONEST,
     })
