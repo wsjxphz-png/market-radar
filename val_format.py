@@ -4,6 +4,11 @@ from typing import List
 ACTION_TEXT = {"full": "按计划定投", "half": "半额定投/等资金确认", "skip": "只观察，不买", "none": "不追加"}
 
 
+def _fmt_years(years: float) -> str:
+    """年数显示：整数不带小数（2.0→"2"），否则保留一位（7.1→"7.1"）"""
+    return f"{years:.0f}" if float(years) == int(years) else f"{years:.1f}"
+
+
 def format_valuation_block(judgements: List[dict], snapshots: List[dict]) -> str:
     if not judgements:
         return ""
@@ -13,6 +18,10 @@ def format_valuation_block(judgements: List[dict], snapshots: List[dict]) -> str
         src = snap.get("source", "")
         if src == "pe":
             pos = f"PE分位 {snap.get('pe_pct', 0):.0f}%"
+            years = snap.get("years")
+            if years is not None:
+                # 数据窗口诚实性：标注指数历史实际年数（931865 等新指数窗口远短于 10 年）
+                pos += f"（指数历史 {_fmt_years(years)} 年）"
             if snap.get("pb_pct") is not None:
                 pos += f" | PB {snap['pb_pct']:.0f}%"  # pb_pct 是分位（0-100），加 % 防误读为 PB 比值
         elif src == "pb":
