@@ -249,13 +249,17 @@ def test_synthesize_no_conflict_when_directions_agree():
     assert out["conflict_note"] == ""
 
 def test_synthesize_price_position_metric():
-    # 兜底口径（价格位置）：说明层不误用"时间占比"句式
+    # 兜底口径（价格位置）：说明层不误用"时间占比"句式；
+    # 窗口诚实性：价格位置来自 K 线全程（fetch_board_kline days=1300 约 5 年）min/max，
+    # 无"近一年"截断——输出不得虚构窗口（"近一年"），只能如实说"历史区间"
     out = synthesize({"board": "煤炭", "trend_state": "around20_oscillation",
                       "valuation": "合理", "fund_state": "unknown",
                       "sl_net": None, "main_pct": 30.0, "metric": "价格位置",
                       "years": None, "terms": []})
     assert "价格位置 30%" in out["facts"]
     assert "只有 30% 的时间" not in out["explanation"]  # 位置≠时间占比，不得虚构
+    assert "近一年" not in out["explanation"]           # 不得虚构窗口（回归锁）
+    assert "历史区间" in out["explanation"]
     assert "位置" in out["explanation"]
 
 

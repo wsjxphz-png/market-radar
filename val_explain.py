@@ -188,7 +188,9 @@ def synthesize(facts: dict) -> dict:
     expl_parts = []
     if main_pct is not None:
         if metric == "价格位置":
-            expl_parts.append(f"价格位置 {main_pct:.0f}% = 当前价格在近一年高低区间的位置，越低越便宜")
+            # 窗口诚实性：价格位置取自 K 线全程 min/max（fetch_board_kline days=1300，
+            # 约 5 年），无"近一年"截断——不得虚构窗口，只说"历史区间"
+            expl_parts.append(f"价格位置 {main_pct:.0f}% = 当前价格在历史区间高低点之间的位置，越低越便宜")
         else:
             expl_parts.append(explain_percentile(main_pct, metric, years))
         expl_parts.append(f"阈值口径（val_config）：分位 <{PCT_LOW}% 视为便宜，>{PCT_HIGH}% 视为贵，中间为合理")
@@ -252,5 +254,5 @@ def _conflict_note(trend_state: str, valuation: str,
         return ("场景分流（推断）：短线看趋势（顺势持有）与定投看估值（贵则减量）"
                 "方向相反——短线吃趋势尾段，定投控制成本，各管各的场景，不互相覆盖")
     if "无法判断" in short_term_judge and "无法判断" in dca_judge:
-        return "无法判断：趋势与估值证据均不足，等待证据"
+        return "无法判断：趋势与估值证据均不足，等待证据（推断）"
     return ""
