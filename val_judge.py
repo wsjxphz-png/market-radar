@@ -20,17 +20,17 @@ def judge_valuation(board: str, main_pct: Optional[float], trend: str,
     else:
         verdict = "合理"
 
+    # ── PB 交叉：只降级不升级（先于修正1；被否决的"便宜"不再触发错杀/陷阱推断）──
+    if verdict == "便宜" and pb_pct is not None and pb_pct > PB_VETO_GAP:
+        note_parts.append(f"PB 分位 {pb_pct:.0f}% > {PB_VETO_GAP}%（否决：PB 说真话）")
+        verdict = "观察"
+
     # ── 修正1：仅主指标=PE（非周期）时启用；趋势降→倾向错杀 / 升→倾向陷阱 ──
     if not cyclical and verdict == "便宜":
         if trend == "down":
             note_parts.append("主指标趋势下行，倾向错杀（盈利回升中，推断）")
         elif trend == "up":
             note_parts.append("主指标趋势上行，倾向陷阱（盈利仍在下滑，推断）")
-
-    # ── PB 交叉：只降级不升级 ──
-    if verdict == "便宜" and pb_pct is not None and pb_pct > PB_VETO_GAP:
-        note_parts.append(f"PB 分位 {pb_pct:.0f}% > {PB_VETO_GAP}%（否决：PB 说真话）")
-        verdict = "观察"
 
     # ── 资金维（估算，低可信度；方向性粗筛）──
     fund_dim = None

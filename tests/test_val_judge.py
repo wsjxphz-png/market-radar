@@ -56,3 +56,39 @@ def test_main_pct_none_watch():
     # 数据全缺 → 观察
     out = judge_valuation("半导体", None, "flat", None, "unknown", None)
     assert out["verdict"] == "观察"
+
+def test_growth_cheap_trend_up_trap_note():
+    # 修正1 趋势升 → 倾向陷阱（推断标记）
+    out = judge_valuation("半导体", 15.0, "up", 20.0, "cold_start", None)
+    assert out["verdict"] == "便宜"
+    assert "陷阱" in out["note"]
+    assert "推断" in out["note"]
+
+def test_single_day_medium_half():
+    # 资金单日（0.5 维）：便宜 + 单日 → 中置信度 → 半额
+    out = judge_valuation("半导体", 15.0, "flat", 20.0, "single_day", None)
+    assert out["verdict"] == "便宜"
+    assert out["confidence"] == "中"
+    assert out["action"] == "half"
+
+def test_fund_unknown_cheap_medium_half():
+    # fund_state=unknown → 资金维 0：便宜 + 未知 → 中置信度 → 半额
+    out = judge_valuation("半导体", 15.0, "flat", 20.0, "unknown", None)
+    assert out["confidence"] == "中"
+    assert out["action"] == "half"
+    assert "资金维数据不可用" in out["note"]
+
+def test_pb_veto_note_overrides_modifier():
+    # PB 否决生效后，修正1 的"错杀"推断不再输出（note 与 verdict 不矛盾）
+    out = judge_valuation("半导体", 15.0, "down", 60.0, "inflow_confirm", None)
+    assert out["verdict"] == "观察"
+    assert out["action"] == "skip"
+    assert "否决" in out["note"]
+    assert "错杀" not in out["note"]
+
+def test_reasonable_medium_skip():
+    # 合理 + 资金确认 → 中置信度 → skip（仅高置信度才 half）
+    out = judge_valuation("半导体", 50.0, "flat", 10.0, "inflow_confirm", None)
+    assert out["verdict"] == "合理"
+    assert out["confidence"] == "中"
+    assert out["action"] == "skip"
