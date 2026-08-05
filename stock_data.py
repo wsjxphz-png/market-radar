@@ -199,23 +199,44 @@ class StockData:
         return result
 
     def get_market_volume(self, idx_volume: float = 0) -> Dict:
-        """获取全市场成交额 — 优先用传入的指数成交额，回退 akshare"""
-        result = {"total_amount": idx_volume, "avg_amount_20d": 0, "ratio": 1.0, "available": idx_volume > 0}
-        if idx_volume > 0:
-            return result
+        """获取上证市场成交额（单位：元）— sina 全量行情沪市聚合 + sina 日线成交量 20 日均比值。
+
+        ⚠️ 历史换算 bug（Task 2 修复）：调用方传入的 idx_volume 是上证指数『成交量』
+        （ak.stock_zh_index_daily 的 volume 列，单位股），不是成交额——旧代码把它当金额
+        直接除 1e8 渲染，得到「成交额 592亿」（2026-08-05 成交量 592 亿股被当 592 亿元）。
+        实测同股数数据：上交所官方当日上证成交金额 12,097亿、sina 全量行情聚合 12,082亿
+        （差 0.1%）——正确量级差约 20 倍。sina/腾讯指数日线均无真实成交额列
+        （腾讯 stock_zh_index_daily_tx 的 amount 列实测为成交量·手，与成交量·股恒成
+        1:100，系错标）；东财 push2 被封。故：
+        ① 成交额 = stock_zh_a_spot（sina 全量行情，收盘后即含全日数据，无上交所
+        官方每日概况的发布时滞）中沪市（sh*）成交额求和；
+        ② 20日均比值 = 上证指数日线成交量 20 日均（单位无关——放量/缩量本就是
+        量价分析中的成交量概念；渲染层只显示当日成交额数字）。
+        任一源失败 → 诚实返回 unavailable（错误数字比缺失更糟）。"""
+        result = {"total_amount": 0, "avg_amount_20d": 0, "ratio": 1.0, "available": False}
         try:
             import akshare as ak
-            df = ak.stock_zh_index_daily(symbol="sh000001")
-            if df is not None and len(df) >= 20:
-                amt_col = [c for c in df.columns if "amount" in str(c).lower() or "成交额" in str(c)]
-                if not amt_col:
-                    amt_col = [c for c in df.columns if "volume" not in str(c).lower() and "收盘" not in str(c)][-1:]
-                if amt_col:
-                    recent = df[amt_col[0]].tail(20)
-                    result["total_amount"] = float(recent.iloc[-1])
-                    result["avg_amount_20d"] = float(recent.mean())
-                    result["ratio"] = result["total_amount"] / result["avg_amount_20d"] if result["avg_amount_20d"] > 0 else 1.0
-                    result["available"] = True
+            # ── 20 日均比值：上证指数日线成交量（股），单位无关 ──
+            kdf = ak.stock_zh_index_daily(symbol="sh000001")
+            if kdf is None or len(kdf) < 20 or "volume" not in kdf.columns:
+                return result
+            vols = pd.to_numeric(kdf["volume"], errors="coerce").dropna().tail(20)
+            if len(vols) < 20 or float(vols.mean()) <= 0:
+                return result
+            ratio = float(vols.iloc[-1]) / float(vols.mean())
+            # ── 当日成交额：sina 全量行情沪市成交额求和（元）──
+            spot = ak.stock_zh_a_spot()
+            if spot is None or len(spot) == 0:
+                return result
+            codes = spot["代码"].astype(str)
+            amt = pd.to_numeric(spot["成交额"], errors="coerce")
+            sh_amt = float(amt[codes.str.startswith("sh")].sum())
+            if sh_amt <= 0:
+                return result
+            result["total_amount"] = sh_amt
+            result["avg_amount_20d"] = sh_amt / ratio
+            result["ratio"] = ratio
+            result["available"] = True
         except Exception:
             pass
         return result

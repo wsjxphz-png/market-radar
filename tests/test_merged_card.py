@@ -396,3 +396,156 @@ def test_record_merge_success_write_failure_does_not_raise(monkeypatch, tmp_path
                         lambda path, entry: (_ for _ in ()).throw(OSError("磁盘只读")))
     ok = _record_merge_success("2026-08-05", None, [], [], str(tmp_path / "x.jsonl"))
     assert ok is False
+
+
+# ── Task 2: 资金维补记 12 板块 — focus 之外的板块也必须留痕，否则 compute_fund_state 永停 cold_start ──
+
+def _flow_fixture():
+    """完整 sector_flow 假数据（同花顺口径行业名，super_large_net_yi = 净额）：
+    含 12 个估值板块的全部 THS 成分行业 + 无关行业；国防军工成分故意缺失（测 None 路径）"""
+    rows = [
+        # ── 与东财同名直映 ──
+        ("半导体", 12.5), ("银行", -33.02), ("通信设备", 8.1),
+        # ── 多对一聚合：THS 细分 → 一个东财板块 ──
+        ("化学制药", 3.1), ("中药", -1.2), ("医疗服务", 0.5), ("医疗器械", 2.0),   # → 医药生物
+        ("白酒", 5.5), ("食品加工制造", -2.0),                                     # → 食品饮料
+        ("工业金属", 4.0),                                                          # → 有色金属
+        ("IT服务", 1.1), ("软件开发", 0.9),                                         # → 计算机
+        ("电池", 6.0), ("光伏设备", -3.0), ("电网设备", 1.0),                      # → 电力设备
+        ("煤炭开采加工", 7.7),                                                      # → 煤炭
+        ("证券", 9.0), ("保险", -4.0),                                              # → 非银金融
+        ("汽车整车", 1.2), ("汽车零部件", 3.4),                                     # → 汽车
+        # ── 无关行业（86/90 行业里的大多数）──
+        ("贵金属", 69.88), ("教育", 0.1), ("游戏", -5.0),
+    ]
+    return pd.DataFrame(rows, columns=["industry", "super_large_net_yi"])
+
+
+def test_record_merge_success_includes_all_12_boards(tmp_path):
+    """留痕 fund_by_board 覆盖全部 12 个 INDEX_MAP 板块（含不在 focus 的）：
+    focus 仅 2 板块 → tags 只有 2 键，fund_by_board 必须 12 键全齐；
+    多 THS 细分聚合（医药生物=4行求和、汽车=整车+零部件）；无匹配板块记 None"""
+    from market_dashboard import _record_merge_success
+    from val_config import INDEX_MAP
+    hist = tmp_path / "history.jsonl"
+    focus = [{"industry": "半导体", "tag": "逆势吸筹嫌疑", "sl_net": 12.5,
+              "accum": {"period": None, "reasons": []}}]   # focus 只有 1 个
+    snapshots = [{"board": "半导体", "pb": 0.5}]
+    assert _record_merge_success("2026-08-05", 25.7, focus, snapshots,
+                                 str(hist), flow=_flow_fixture())
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    fb = e["fund_by_board"]
+    assert set(fb.keys()) == set(INDEX_MAP.keys())          # 12 板块全齐
+    assert len(e["tags"]) == 1                              # tags 仍是 focus 子集（不破坏旧结构）
+    # 不在 focus 的板块必须有值（这正是 cold_start 修复点）
+    assert fb["银行"] == -33.02
+    assert fb["煤炭"] == 7.7
+    assert fb["非银金融"] == 5.0                             # 证券 9.0 + 保险 -4.0 = 5.0
+    # 多对一聚合求和
+    assert fb["医药生物"] == 4.4                             # 3.1 + (-1.2) + 0.5 + 2.0
+    assert fb["汽车"] == 4.6                                 # 1.2 + 3.4
+    assert fb["电力设备"] == 4.0                             # 6.0 + (-3.0) + 1.0
+    # 直映板块
+    assert fb["半导体"] == 12.5 and fb["通信设备"] == 8.1
+    # 无匹配行业 → None（不当作 0）
+    assert fb["国防军工"] is None
+
+
+def test_record_merge_success_fund_by_board_flow_none(tmp_path):
+    """sector_flow 抓取失败（None）→ fund_by_board 12 键仍写入但全为 None（诚实留痕）"""
+    from market_dashboard import _record_merge_success
+    hist = tmp_path / "history.jsonl"
+    assert _record_merge_success("2026-08-05", None, [], [], str(hist), flow=None)
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    assert len(set(e["fund_by_board"].keys())) == 12
+    assert all(v is None for v in e["fund_by_board"].values())
+
+
+def test_compute_fund_state_uses_fund_by_board():
+    """compute_fund_state 优先读 fund_by_board：银行不在 focus（tags 无此板块）
+    但 fund_by_board 有连续 3 日净流入 → inflow_confirm（冷启动解除）"""
+    history = [
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 2.1}},
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 1.5}},
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 0.8}},
+    ]
+    assert compute_fund_state(history, "银行") == "inflow_confirm"
+
+
+def test_compute_fund_state_fund_by_board_precedence():
+    """fund_by_board 与 tags 同时存在时以 fund_by_board 为准（同一源，口径统一）"""
+    history = [
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -3.0}},
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -1.0}},
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -0.5}},
+    ]
+    assert compute_fund_state(history, "银行") == "outflow_confirm"
+
+
+def test_compute_fund_state_fund_by_board_none_skipped():
+    """fund_by_board 中 None/缺失（行业无匹配）不计数、不当作 0"""
+    history = [
+        {"fund_by_board": {"银行": None}},
+        {"fund_by_board": {"银行": 1.2}},
+    ]
+    assert compute_fund_state(history, "银行") == "single_day"
+
+
+def test_compute_fund_state_fallback_to_tags():
+    """历史条目无 fund_by_board（旧格式留痕）→ 回退 tags，不丢历史"""
+    history = [
+        {"tags": {"银行": {"sl_net": 2.1}}},
+        {"fund_by_board": {"银行": 1.5}},
+        {"tags": {"银行": {"sl_net": 0.8}}},
+    ]
+    assert compute_fund_state(history, "银行") == "inflow_confirm"
+
+
+# ── Task 2: 成交额单位 — 成交量被当作成交额的换算错误（"592亿" → 应为数千亿量级） ──
+
+def _volume_kline_fixture():
+    """上证指数日线假数据：20 个交易日，volume 单位股（最后一日 592 亿股 = 旧 bug 输入值）"""
+    vols = [5.5e10] * 19 + [5.9216e10]
+    return pd.DataFrame({"date": pd.date_range("2026-07-01", periods=20, freq="B"),
+                         "volume": vols})
+
+
+def _spot_fixture():
+    """sina 全量行情假数据：沪市（sh*）成交额合计 1.2082e12 元 = 12082亿（08-05 实测量级，
+    上交所官方 12097亿）；深市/北交所股票必须被排除（上证口径）"""
+    return pd.DataFrame({
+        "代码": ["sh600000", "sh688000", "sz000001", "sz300750", "bj920000"],
+        "成交额": [6.041e11, 6.041e11, 1.0e12, 5.0e11, 1.0e8],
+    })
+
+
+def test_market_volume_unit(monkeypatch):
+    """get_market_volume 成交额量级：旧代码把上证成交量 592 亿股当成交额显示"592亿"，
+    真实上证成交额是数千亿（2026-08-05 上交所官方 12097亿）——修复后必须显示真实量级"""
+    import akshare as ak
+    from stock_data import StockData
+    monkeypatch.setattr(ak, "stock_zh_index_daily", lambda symbol: _volume_kline_fixture())
+    monkeypatch.setattr(ak, "stock_zh_a_spot", lambda: _spot_fixture())
+    vol = StockData().get_market_volume(idx_volume=59215512400.0)  # 旧口径传入的成交量
+    assert vol["available"] is True
+    # 成交额 = 沪市成交额求和（深市/北交所排除），单位元
+    assert vol["total_amount"] == 1.2082e12
+    # 渲染路径量级（format_dashboard 的 vol_str 公式）：12082亿（数千亿），绝非 592亿
+    assert f"{vol['total_amount']/1e8:.0f}亿" == "12082亿"
+    assert "592亿" != f"{vol['total_amount']/1e8:.0f}亿"
+    # 20 日均比值来自成交量序列（单位无关）
+    vols = _volume_kline_fixture()["volume"]
+    assert abs(vol["ratio"] - vols.iloc[-1] / vols.mean()) < 1e-9
+    assert vol["avg_amount_20d"] > 0
+
+
+def test_market_volume_unavailable_when_source_fails(monkeypatch):
+    """数据源失败时不得退回成交量冒充成交额（旧 bug 路径）：诚实返回 unavailable"""
+    import akshare as ak
+    from stock_data import StockData
+    monkeypatch.setattr(ak, "stock_zh_index_daily", lambda symbol: _volume_kline_fixture())
+    monkeypatch.setattr(ak, "stock_zh_a_spot",
+                        lambda: (_ for _ in ()).throw(OSError("sina 全量行情被墙")))
+    vol = StockData().get_market_volume(idx_volume=59215512400.0)
+    assert vol["available"] is False
+    assert vol["total_amount"] == 0

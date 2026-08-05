@@ -1777,19 +1777,25 @@ MERGED_HONEST = ("资金净额按板块流入-流出推断资金方向（推断�
 def compute_fund_state(history: list, sector: str, days: int = 3) -> str:
     """资金维状态：连续 ≥3 日主力净流入/流出确认；单日=观察；无留痕=冷启动
     返回 inflow_confirm / outflow_confirm / single_day / cold_start / unknown
+    Task 2 修复：优先读留痕 fund_by_board（12 估值板块全覆盖，focus 之外的板块
+    也有留痕——修复前 tags 只覆盖 focus 前 6，其余板块永远 cold_start），
+    无 fund_by_board 的旧格式条目回退 tags。
     嵌套异常防护（Task 6 Important 2）：行非 dict / tags 非 dict / 板块条目非 dict /
     sl_net 非数值 → 跳过该条不计数，不得击穿 merge_main"""
     flows = []
     for h in reversed(history):
         if not isinstance(h, dict):
             continue
-        tags = h.get("tags", {})
-        if not isinstance(tags, dict):
-            continue
-        entry = tags.get(sector)
-        if not isinstance(entry, dict):
-            continue
-        sl_net = entry.get("sl_net")
+        sl_net = None
+        fb = h.get("fund_by_board")
+        if isinstance(fb, dict):
+            sl_net = fb.get(sector)          # 12 板块全覆盖路径（优先）
+        if sl_net is None:
+            tags = h.get("tags", {})
+            if isinstance(tags, dict):
+                entry = tags.get(sector)
+                if isinstance(entry, dict):
+                    sl_net = entry.get("sl_net")
         if sl_net is None:
             continue
         try:
@@ -1929,21 +1935,66 @@ def _send_merged_card(msg: str) -> bool:
     return pushed
 
 
-def _build_merged_history_entry(data_date: str, sb_value, focus: list, snapshots: list) -> dict:
+def _build_fund_by_board(flow, boards: list) -> dict:
+    """从当天完整 sector_flow 构建 12 估值板块资金净额映射 {东财板块名: sl_net}（Task 2）。
+
+    背景：tags 只覆盖资金流排名前 6 的 focus 板块，估值表 12 板块中不在 focus 的
+    永远无留痕 → compute_fund_state 对这些板块永远 cold_start。
+    实测（2026-08-05）stock_fund_flow_industry 返回 90 个同花顺口径行业（industry 列），
+    东财名直映的只有 半导体/银行/通信设备 等少数 → 用 val_config.THS_TO_EM
+    把同花顺细分行业名映射回东财板块名（半导体/银行/通信设备在映射表内直映）；
+    多个同花顺细分映射到同一东财板块时求和（如 医药生物=化学制药+中药+医疗服务+医疗器械，
+    汽车=整车+零部件——该板块资金净额的自然口径）；无映射/无数值 → None（不当作 0）。
+    sl_net 口径与 tags 一致：super_large_net_yi（简化变体下即净额列）。"""
+    from math import isfinite
+    from val_config import em_name_for
+    out = {b: None for b in boards}
+    if flow is None or not hasattr(flow, "iterrows"):
+        return out
+    acc = {b: 0.0 for b in boards}
+    seen = {b: False for b in boards}
+    for _, row in flow.iterrows():
+        try:
+            name = str(row.get("industry", "")).strip()
+        except Exception:
+            continue
+        board = name if name in out else em_name_for(name)
+        if board not in out:
+            continue
+        try:
+            v = float(row.get("super_large_net_yi"))
+        except (TypeError, ValueError):
+            continue
+        if not isfinite(v):
+            continue
+        acc[board] += v
+        seen[board] = True
+    for b in boards:
+        if seen[b]:
+            out[b] = round(acc[b], 2)
+    return out
+
+
+def _build_merged_history_entry(data_date: str, sb_value, focus: list, snapshots: list,
+                                flow=None) -> dict:
     """合并推送留痕条目（C1 修复）：与 ltc_main 留痕同构
     （date/data_date/southbound_net_yi/tags{industry:{tag,accum,sl_net}}），
     并补写 sector_pb{board: 当日原始 PB}——供 _pb_reference/_pb_percentile 消费，
     PB 分位从"积累中"走向正式分位的关键。
     ⚠️ sector_pb 必须写原始 PB 比值（fetch_sector_pb 的中位数，如 0.42），
     不能写 pb_pct 分位——_pb_percentile 拿留痕值与当日原始 PB 直接比大小
-    （v < cur_pb），写分位进去恒为 False，PB 分位会永久停在 0%（比冷启动更糟）。"""
+    （v < cur_pb），写分位进去恒为 False，PB 分位会永久停在 0%（比冷启动更糟）。
+    Task 2：补记 fund_by_board{东财板块名: sl_net}——12 估值板块全覆盖（含 focus 之外），
+    compute_fund_state 优先读它；flow 为当日完整 sector_flow（可为 None，全 None 留痕）。"""
     from ltc_config import bj_now
+    from val_config import INDEX_MAP
     entry = {
         "date": bj_now().strftime("%Y-%m-%d %H:%M:%S"),
         "data_date": data_date,
         "southbound_net_yi": sb_value,
         "tags": {f["industry"]: {"tag": f["tag"], "accum": f.get("accum", {}).get("period"),
                                  "sl_net": f["sl_net"]} for f in focus},
+        "fund_by_board": _build_fund_by_board(flow, list(INDEX_MAP.keys())),
     }
     sector_pb = {s["board"]: s["pb"] for s in snapshots if s.get("pb") is not None}
     if sector_pb:
@@ -1952,16 +2003,17 @@ def _build_merged_history_entry(data_date: str, sb_value, focus: list, snapshots
 
 
 def _record_merge_success(data_date: str, sb_value, focus: list, snapshots: list,
-                          hist_path: str = LTC_HISTORY_FILE) -> bool:
+                          hist_path: str = LTC_HISTORY_FILE, flow=None) -> bool:
     """推送成功后的留痕写入（C1 修复）：append 当日 history.jsonl。
 
     合并推送是生产唯一每日写者（ltc_main 的 long-term-capital.yml schedule 已停用），
     缺此环则 Task 7 清空后的 history.jsonl 永无写入 → compute_fund_state 永停
     cold_start、PB 分位与南向参照永久"积累中"。
+    Task 2：flow（当日完整 sector_flow）用于补记 fund_by_board——12 估值板块全覆盖。
     写失败仅记日志返回 False，不阻塞推送（卡已发出）。"""
     import ltc_store
     try:
-        entry = _build_merged_history_entry(data_date, sb_value, focus, snapshots)
+        entry = _build_merged_history_entry(data_date, sb_value, focus, snapshots, flow)
         ltc_store.append_history(hist_path, entry)
         print(f"  [i] 留痕已追加: {entry['data_date']} "
               f"({len(entry['tags'])} 板块, {len(entry.get('sector_pb', {}))} 板块PB)")
@@ -2189,7 +2241,7 @@ def merge_main():
         # C1 修复：留痕写入环 — 推送成功即 append 当日留痕（合并推送是生产唯一每日写者，
         # ltc_main workflow 已停用），否则 history.jsonl 永远停在 Task 7 清空后的状态，
         # 资金维确认/PB 分位/南向参照永久冷启动。写失败不阻塞（_record_merge_success 内部兜底）
-        _record_merge_success(data_date, sb_value, focus, snapshots)
+        _record_merge_success(data_date, sb_value, focus, snapshots, flow=flow)
     return 0 if ok else 1
 
 
