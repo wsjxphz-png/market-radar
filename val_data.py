@@ -46,7 +46,8 @@ def pe_percentile(pe_series: Optional[pd.DataFrame], lookback_days: int = PE_LOO
         trend = "up" if chg > 0.05 else ("down" if chg < -0.05 else "flat")
     else:
         trend = "flat"
-    return {"pe": round(cur, 2), "pct": round(pct, 1), "trend": trend, "days": len(recent)}
+    return {"pe": round(cur, 2), "pct": round(pct, 1), "trend": trend, "days": len(recent),
+            "years": round(len(recent) / 244, 1)}  # 数据窗口诚实性：实际指数历史年数（交易日/年）
 
 def fetch_constituents(index_code: str) -> Optional[List[str]]:
     """中证 cons xls 成分股 → BaoStock 代码格式（sh./sz.）"""
@@ -157,6 +158,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
                 "pb_pct": pb_pct,
                 "pb": pb["pb"] if pb else None,  # 原始 PB（留痕写入用，C1：sector_pb 须存原始比值）
                 "trend": pe_info["trend"], "note": note,
+                "years": pe_info["years"],  # 指数历史实际年数（渲染诚实标注窗口用）
             }
             out.append(entry)
             continue

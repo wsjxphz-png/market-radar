@@ -1,46 +1,161 @@
 # -*- coding: utf-8 -*-
-"""合并卡片纯函数测试 — build_merged_card 六区块顺序/无北向 + compute_fund_state 资金维确认。
-原则：注入假数据，不触网。"""
+"""合并卡片纯函数测试 — build_merged_card 全量保留原仪表盘区块 + 估值/资金新增区块 + 无北向
++ compute_fund_state 资金维确认。
+原则：注入假数据，不触网。内容丢失修复（feat/board-overview）：原六区块简化版已废弃，
+合并卡 = format_dashboard 全量（原 14+ 区块一个不丢）+ 估值判断（顶部）+ 资金观察（尾部）。
+"""
 import json, sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from market_dashboard import build_merged_card, compute_fund_state, _with_metric_disclosure
+import pandas as pd
+from market_dashboard import (build_merged_card, compute_fund_state,
+                              _with_metric_disclosure, compute_signals,
+                              SENTIMENT_CYCLE)
 
 
-def test_merged_card_sections_order():
-    data = {
+# ═══════════════════════════════════════════════════════════
+# 假数据构造（与 test_dashboard 同构，不触网）
+# ═══════════════════════════════════════════════════════════
+
+def _idx_df(n=300, uptrend=0.001):
+    """构造指数日线假数据（无网络）：强上升趋势 → 三周期/年线 healthy"""
+    dates = pd.date_range("2024-01-01", periods=n, freq="B")
+    close = [100 * (1 + uptrend) ** i for i in range(n)]
+    return pd.DataFrame({"date": dates, "open": [c * 0.99 for c in close],
+                         "close": close, "high": [c * 1.02 for c in close],
+                         "low": [c * 0.98 for c in close], "volume": [1e9] * n})
+
+
+def _full_card_data():
+    """构造 build_merged_card 全量入参（覆盖原仪表盘全部区块 + 新增区块）"""
+    from ltc_format import build_fund_section
+    idx = _idx_df()
+    signals = compute_signals(idx, None)
+    sectors = [
+        {"name": "半导体", "category": "科技", "rating": "🟡 观察中", "phase": "震荡",
+         "tags": "指标正常", "_entry_check": "❌ 年线下方——手册第2节：选股需五条件全满足"},
+    ]
+    focus, southbound, refs, repurchase = _fund_fixture()
+    return {
+        # ── format_dashboard 全量参数（原仪表盘全部区块） ──
+        "cycle": dict(SENTIMENT_CYCLE["startup"]),
+        "signals": signals,
+        "sectors": sectors,
+        "ai_text": "AI 解读文本（事实清单模式）",
+        "idx": idx,
+        "indices": {"上证": idx, "深证": idx, "创业板": idx, "科创50": idx},
+        "temp_data": {"up_count": 3200, "down_count": 1900, "limit_up": 45, "limit_down": 3,
+                      "total": 5100, "volume": {"total_amount": 1.2e12, "ratio": 1.1},
+                      "breadth_ok": True, "volume_ok": True},
+        "flow_data": {"sectors": ["半导体: 流入43.5亿", "银行: 流出12.3亿"]},
+        "sector_unavailable": False,
+        "sector_overview": {"上证指数": {"close": 3450.0, "above_ma5": True, "bias_pct": 1.2}},
+        "flow_anomalies": [{"sector": "半导体",
+                            "anomaly": "资金面反转：此前持续流出，近期转为流入"}],
+        "fund_flow_hist_ok": True,
+        "board_ok": True,
+        # ── 新增区块 ──
         "valuation_judgements": [
             {"board": "银行", "verdict": "便宜", "dominant": "估值+资金", "confidence": "高",
              "action": "full", "note": "推断"}],
         "valuation_snapshots": [
-            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 0.42,
+            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 42.0,
              "pe_pct": None, "trend": "flat", "note": "PB=0.42（成分中位数）"}],
-        "market_overview": "上证 +0.33%",
-        "sector_ops": "半导体 hold",
-        "fund_section": "今日资金：银行 逆势吸筹嫌疑",
-        "interpretation": "今日解读文本",
+        "fund_observation": build_fund_section(focus, southbound, repurchase, refs),
         "honest": "诚实声明",
     }
+
+
+# ═══════════════════════════════════════════════════════════
+# 内容丢失修复：原仪表盘全部区块必须在合并卡中出现，一个不能丢
+# ═══════════════════════════════════════════════════════════
+
+def test_merged_card_keeps_all_original_dashboard_blocks(monkeypatch):
+    """合并卡必须包含原 format_dashboard 全部区块（交易手册/每日一得/指数监测/资金异动/
+    信号翻转/今日信号/入场出场/冲突裁决/板块诊断/板块全貌/综合策略/观察池/资金流向TOP5/
+    市场温度"怎么看"说明等）"""
+    monkeypatch.setattr("market_dashboard.detect_signal_flips",
+                        lambda signals, log_path=None: ["量价结构: healthy→danger ↓"])
+    card = build_merged_card(_full_card_data())
+    for marker in [
+        "## 🔥 市场温度",                       # 市场温度
+        "**怎么看**",                          # 市场温度"怎么看"说明
+        "## 💰 板块资金流向",                  # 板块资金流向 TOP5
+        "半导体: 流入43.5亿",                  # 板块资金流向 TOP5 内容
+        "## 📊 指数监测（板块模块）",           # 指数监测
+        "## ⚠️ 资金异动",                      # 资金异动
+        "## 📖 交易手册",                      # 交易手册
+        "## ⚠️ 信号翻转 — 与昨日对比",         # 信号翻转
+        "## 📊 今日信号",                      # 今日信号
+        "## 🎯 入场/出场信号与仓位",           # 入场/出场信号
+        "## ⚔️ 信号冲突裁决",                  # 冲突裁决
+        "## 🔍 板块操作信号",                  # 板块诊断（正常路径）
+        "## 📋 板块全貌",                      # 板块全貌
+        "## 🎯 综合策略",                      # 综合策略
+        "## 👀 板块观察池",                    # 板块观察池
+        "## 📖 每日一得",                      # 每日一得
+    ]:
+        assert marker in card, f"原仪表盘区块丢失: {marker}"
+
+
+def test_merged_card_order_valuation_top_fund_observation_tail():
+    """区块顺序：估值判断(顶部) → 原仪表盘全量 → 资金观察(尾部) → 诚实声明"""
+    card = build_merged_card(_full_card_data())
+    assert card.startswith("━━━ 💰 估值判断")     # 估值判断区块在卡片顶部
+    i_val = card.find("估值判断")
+    i_temp = card.find("## 🔥 市场温度")
+    i_fund_obs = card.find("资金观察（南向/回购/承接）")
+    i_honest = card.find("诚实声明")
+    assert 0 <= i_val < i_temp < i_fund_obs < i_honest
+
+
+def test_merged_card_fund_observation_enhanced_block():
+    """资金观察增强区块（南向/回购/承接）存在 — 新增区块；原「板块资金流向」保留不动"""
+    card = build_merged_card(_full_card_data())
+    assert "━━━ 📈 资金观察（南向/回购/承接） ━━━" in card
+    assert "南向" in card
+    assert "回购" in card
+    assert "承接" in card
+    # 原「板块资金流向」区块保留（与新增区块并存，非替换）
+    assert "## 💰 板块资金流向" in card
+    assert "板块资金净流入 TOP5:" in card
+
+
+def test_merged_card_sector_unavailable_block():
+    """板块模块整体异常 → 合并卡出现「板块诊断」+「板块数据暂不可用」（F2 不静默缺块）"""
+    data = _full_card_data()
+    data["sector_unavailable"] = True
+    data["sectors"] = []
     card = build_merged_card(data)
-    # 注：brief 原测试用 "market_overview"/"fund_section"/"interpretation" 作 find 目标，
-    # 但实现按 brief 逐字渲染中文标题（大盘概况/今日资金）与数据值（今日解读文本），
-    # 字面 key 永不出现 → 按 Task 3/4 先例改为真实渲染标记，断言意图不变（区块顺序）
-    order = [card.find(s) for s in ["估值判断", "大盘概况", "今日资金", "今日解读文本", "诚实声明"]]
-    assert all(o >= 0 for o in order)
-    assert order == sorted(order)  # 区块顺序：估值→概况→资金→解读→声明
+    assert "## 📋 板块诊断" in card
+    assert "板块数据暂不可用" in card
+    assert "## 🔍 板块操作信号" not in card  # 空板块不输出空标题
 
 
 def test_merged_card_has_no_northbound():
-    data = {"valuation_judgements": [], "valuation_snapshots": [],
-            "market_overview": "x", "sector_ops": "y", "fund_section": "z",
-            "interpretation": "w", "honest": "h"}
-    card = build_merged_card(data)
+    """北向硬性不出现：卡片任何位置不得出现"北向" """
+    card = build_merged_card(_full_card_data())
     assert "北向" not in card
 
 
-def test_merged_card_skips_empty_blocks():
-    """缺块不得输出占位标题（F2：数据不可用不得静默缺块，也不得编造）"""
-    card = build_merged_card({})
-    assert card == ""
+def test_merged_card_no_empty_new_blocks():
+    """新增区块数据缺失时不得输出空标题（F2：不静默缺块，也不得编造）"""
+    data = _full_card_data()
+    data["valuation_judgements"] = []
+    data["valuation_snapshots"] = []
+    data["fund_observation"] = ""
+    data["honest"] = ""
+    card = build_merged_card(data)
+    assert "估值判断" not in card
+    assert "资金观察" not in card
+    assert "诚实声明" not in card
+    assert "## 🔥 市场温度" in card          # 原区块仍然在
+
+
+def test_fund_observation_header_emoji_no_collision():
+    """新增资金观察区块头部 emoji 与估值(💰)/板块资金流向(💰) 去重 → 资金观察用 📈"""
+    card = build_merged_card(_full_card_data())
+    assert "━━━ 📈 资金观察" in card
+    assert "━━━ 💰 估值判断" in card
 
 
 def test_compute_fund_state_inflow_confirm():
@@ -131,11 +246,9 @@ def test_merged_and_ltc_card_fund_section_same_caliber():
     from market_dashboard import build_merged_card
     focus, southbound, refs, repurchase = _fund_fixture()
     ltc = ltc_format_card("2026-08-04", "解读", focus, southbound, [], repurchase, refs)
-    merged = build_merged_card({
-        "valuation_judgements": [], "valuation_snapshots": [],
-        "market_overview": "x", "sector_ops": "y",
-        "fund_section": build_fund_section(focus, southbound, repurchase, refs),
-        "interpretation": "w", "honest": "h"})
+    data = _full_card_data()
+    data["fund_observation"] = build_fund_section(focus, southbound, repurchase, refs)
+    merged = build_merged_card(data)
     for key in ["净额（板块资金流入-流出",
                 "承接：偏长期布局特征（推断）｜ 价格处于 1 年低位区",
                 "南向（内地资金买入港股市场",
@@ -143,21 +256,6 @@ def test_merged_and_ltc_card_fund_section_same_caliber():
         assert key in ltc and key in merged
     # 旧的双轨口径（合并卡裸写"（超大单 X亿，股价"）不得再现（净额口径断言见 test_ltc_narrative）
     assert "（超大单 173.9亿，股价" not in merged
-
-
-def test_fund_section_emoji_dedup():
-    """Minor：资金区块头与估值区块头 emoji 去重（💰 估值判断 / 📊 今日资金，飞书保守集合）"""
-    card = build_merged_card({
-        "valuation_judgements": [
-            {"board": "银行", "verdict": "便宜", "dominant": "估值", "confidence": "高",
-             "action": "full", "note": "推断"}],
-        "valuation_snapshots": [
-            {"board": "银行", "source": "pb", "main_pct": None, "pb_pct": 0.42,
-             "pe_pct": None, "trend": "flat", "note": "PB=0.42"}],
-        "fund_section": "x"})
-    assert "💰 估值判断" in card
-    assert "📊 今日资金" in card
-    assert card.count("💰") == 1
 
 
 def test_empty_fund_annotation_distinguishes_empty_vs_failure():
@@ -298,3 +396,410 @@ def test_record_merge_success_write_failure_does_not_raise(monkeypatch, tmp_path
                         lambda path, entry: (_ for _ in ()).throw(OSError("磁盘只读")))
     ok = _record_merge_success("2026-08-05", None, [], [], str(tmp_path / "x.jsonl"))
     assert ok is False
+
+
+# ── Task 2: 资金维补记 12 板块 — focus 之外的板块也必须留痕，否则 compute_fund_state 永停 cold_start ──
+
+def _flow_fixture():
+    """完整 sector_flow 假数据（同花顺口径行业名，super_large_net_yi = 净额）：
+    含 12 个估值板块的全部 THS 成分行业 + 无关行业；国防军工成分故意缺失（测 None 路径）"""
+    rows = [
+        # ── 与东财同名直映 ──
+        ("半导体", 12.5), ("银行", -33.02), ("通信设备", 8.1),
+        # ── 多对一聚合：THS 细分 → 一个东财板块 ──
+        ("化学制药", 3.1), ("中药", -1.2), ("医疗服务", 0.5), ("医疗器械", 2.0),   # → 医药生物
+        ("白酒", 5.5), ("食品加工制造", -2.0),                                     # → 食品饮料
+        ("工业金属", 4.0),                                                          # → 有色金属
+        ("IT服务", 1.1), ("软件开发", 0.9),                                         # → 计算机
+        ("电池", 6.0), ("光伏设备", -3.0), ("电网设备", 1.0),                      # → 电力设备
+        ("煤炭开采加工", 7.7),                                                      # → 煤炭
+        ("证券", 9.0), ("保险", -4.0),                                              # → 非银金融
+        ("汽车整车", 1.2), ("汽车零部件", 3.4),                                     # → 汽车
+        # ── 无关行业（59/90 行业里的大多数；Task 6 补全的子行业在 _flow_fixture_extended）──
+        ("教育", 0.1), ("游戏", -5.0),
+    ]
+    return pd.DataFrame(rows, columns=["industry", "super_large_net_yi"])
+
+
+def _flow_fixture_extended():
+    """Task 6 审查 Important：THS_TO_EM 补全的 10 个同花顺子行业（2026-08-06 实测名单）
+    ——原本静默丢弃的行业必须进 12 板块聚合（有色金属/电力设备/食品饮料/半导体/汽车）"""
+    rows = [
+        # ── 与东财同名直映 ──
+        ("半导体", 12.5), ("银行", -33.02), ("通信设备", 8.1),
+        # ── 多对一聚合：THS 细分 → 一个东财板块 ──
+        ("化学制药", 3.1), ("中药", -1.2), ("医疗服务", 0.5), ("医疗器械", 2.0),   # → 医药生物
+        ("白酒", 5.5), ("食品加工制造", -2.0),                                     # → 食品饮料
+        ("工业金属", 4.0),                                                          # → 有色金属
+        ("IT服务", 1.1), ("软件开发", 0.9),                                         # → 计算机
+        ("电池", 6.0), ("光伏设备", -3.0), ("电网设备", 1.0),                      # → 电力设备
+        ("煤炭开采加工", 7.7),                                                      # → 煤炭
+        ("证券", 9.0), ("保险", -4.0),                                              # → 非银金融
+        ("汽车整车", 1.2), ("汽车零部件", 3.4),                                     # → 汽车
+        # ── Task 6 补全子行业 ──
+        ("贵金属", 69.88), ("小金属", 2.2), ("能源金属", -1.1), ("金属新材料", 3.3),  # → 有色金属
+        ("风电设备", 0.7), ("电机", 1.3), ("其他电源设备", -0.4),                    # → 电力设备
+        ("饮料制造", 2.4),                                                          # → 食品饮料
+        ("电子化学品", 0.9),                                                         # → 半导体（材料）
+        ("汽车服务及其他", 0.6),                                                     # → 汽车
+        # ── 同级错配防护：面板/PCB 类（"电子"二级，非半导体子集）不并入半导体 ──
+        ("光学光电子", 4.4), ("元件", -1.6),
+        # ── 无关行业 ──
+        ("教育", 0.1), ("游戏", -5.0),
+    ]
+    return pd.DataFrame(rows, columns=["industry", "super_large_net_yi"])
+
+
+def test_record_merge_success_includes_all_12_boards(tmp_path):
+    """留痕 fund_by_board 覆盖全部 12 个 INDEX_MAP 板块（含不在 focus 的）：
+    focus 仅 2 板块 → tags 只有 2 键，fund_by_board 必须 12 键全齐；
+    多 THS 细分聚合（医药生物=4行求和、汽车=整车+零部件）；无匹配板块记 None"""
+    from market_dashboard import _record_merge_success
+    from val_config import INDEX_MAP
+    hist = tmp_path / "history.jsonl"
+    focus = [{"industry": "半导体", "tag": "逆势吸筹嫌疑", "sl_net": 12.5,
+              "accum": {"period": None, "reasons": []}}]   # focus 只有 1 个
+    snapshots = [{"board": "半导体", "pb": 0.5}]
+    assert _record_merge_success("2026-08-05", 25.7, focus, snapshots,
+                                 str(hist), flow=_flow_fixture())
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    fb = e["fund_by_board"]
+    assert set(fb.keys()) == set(INDEX_MAP.keys())          # 12 板块全齐
+    assert len(e["tags"]) == 1                              # tags 仍是 focus 子集（不破坏旧结构）
+    # 不在 focus 的板块必须有值（这正是 cold_start 修复点）
+    assert fb["银行"] == -33.02
+    assert fb["煤炭"] == 7.7
+    assert fb["非银金融"] == 5.0                             # 证券 9.0 + 保险 -4.0 = 5.0
+    # 多对一聚合求和
+    assert fb["医药生物"] == 4.4                             # 3.1 + (-1.2) + 0.5 + 2.0
+    assert fb["汽车"] == 4.6                                 # 1.2 + 3.4
+    assert fb["电力设备"] == 4.0                             # 6.0 + (-3.0) + 1.0
+    # 直映板块
+    assert fb["半导体"] == 12.5 and fb["通信设备"] == 8.1
+    # 无匹配行业 → None（不当作 0）
+    assert fb["国防军工"] is None
+
+
+def test_record_merge_success_fund_by_board_flow_none(tmp_path):
+    """sector_flow 抓取失败（None）→ fund_by_board 12 键仍写入但全为 None（诚实留痕）"""
+    from market_dashboard import _record_merge_success
+    hist = tmp_path / "history.jsonl"
+    assert _record_merge_success("2026-08-05", None, [], [], str(hist), flow=None)
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    assert len(set(e["fund_by_board"].keys())) == 12
+    assert all(v is None for v in e["fund_by_board"].values())
+
+
+def test_ths_em_extension_subindustries_aggregate(tmp_path):
+    """Task 6 审查 Important 锁定：THS_TO_EM 补全的 10 个子行业进 12 板块聚合
+    （贵金属/小金属/能源金属/金属新材料→有色金属、风电/电机/其他电源设备→电力设备、
+    饮料制造→食品饮料、电子化学品→半导体、汽车服务及其他→汽车）；
+    光学光电子/元件（面板/PCB，同级错配）不并入半导体"""
+    from market_dashboard import _record_merge_success
+    hist = tmp_path / "history.jsonl"
+    assert _record_merge_success("2026-08-05", None, [], [], str(hist),
+                                 flow=_flow_fixture_extended())
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    fb = e["fund_by_board"]
+    # 补全板块：原映射值 + 新增子行业求和
+    assert fb["有色金属"] == 78.28      # 4.0 + 69.88 + 2.2 - 1.1 + 3.3
+    assert fb["电力设备"] == 5.6        # 6.0 - 3.0 + 1.0 + 0.7 + 1.3 - 0.4
+    assert fb["食品饮料"] == 5.9        # 5.5 - 2.0 + 2.4
+    assert fb["半导体"] == 13.4         # 12.5 + 0.9（仅电子化学品；光学光电子/元件不并入）
+    assert fb["汽车"] == 5.2            # 1.2 + 3.4 + 0.6
+    # 未受影响板块原样（不回归）
+    assert fb["医药生物"] == 4.4
+    assert fb["非银金融"] == 5.0
+    assert fb["煤炭"] == 7.7
+    assert fb["计算机"] == 2.0
+    assert fb["国防军工"] is None
+
+
+def test_compute_fund_state_uses_fund_by_board():
+    """compute_fund_state 优先读 fund_by_board：银行不在 focus（tags 无此板块）
+    但 fund_by_board 有连续 3 日净流入 → inflow_confirm（冷启动解除）"""
+    history = [
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 2.1}},
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 1.5}},
+        {"tags": {"半导体": {"sl_net": 1.0}}, "fund_by_board": {"银行": 0.8}},
+    ]
+    assert compute_fund_state(history, "银行") == "inflow_confirm"
+
+
+def test_compute_fund_state_fund_by_board_precedence():
+    """fund_by_board 与 tags 同时存在时以 fund_by_board 为准（同一源，口径统一）"""
+    history = [
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -3.0}},
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -1.0}},
+        {"tags": {"银行": {"sl_net": 2.0}}, "fund_by_board": {"银行": -0.5}},
+    ]
+    assert compute_fund_state(history, "银行") == "outflow_confirm"
+
+
+def test_compute_fund_state_fund_by_board_none_skipped():
+    """fund_by_board 中 None/缺失（行业无匹配）不计数、不当作 0"""
+    history = [
+        {"fund_by_board": {"银行": None}},
+        {"fund_by_board": {"银行": 1.2}},
+    ]
+    assert compute_fund_state(history, "银行") == "single_day"
+
+
+def test_compute_fund_state_fallback_to_tags():
+    """历史条目无 fund_by_board（旧格式留痕）→ 回退 tags，不丢历史"""
+    history = [
+        {"tags": {"银行": {"sl_net": 2.1}}},
+        {"fund_by_board": {"银行": 1.5}},
+        {"tags": {"银行": {"sl_net": 0.8}}},
+    ]
+    assert compute_fund_state(history, "银行") == "inflow_confirm"
+
+
+# ── Task 2: 成交额单位 — 成交量被当作成交额的换算错误（"592亿" → 应为数千亿量级） ──
+
+def _volume_kline_fixture():
+    """上证指数日线假数据：20 个交易日，volume 单位股（最后一日 592 亿股 = 旧 bug 输入值）"""
+    vols = [5.5e10] * 19 + [5.9216e10]
+    return pd.DataFrame({"date": pd.date_range("2026-07-01", periods=20, freq="B"),
+                         "volume": vols})
+
+
+def _spot_fixture():
+    """sina 全量行情假数据：沪市（sh*）成交额合计 1.2082e12 元 = 12082亿（08-05 实测量级，
+    上交所官方 12097亿）；深市/北交所股票必须被排除（上证口径）"""
+    return pd.DataFrame({
+        "代码": ["sh600000", "sh688000", "sz000001", "sz300750", "bj920000"],
+        "成交额": [6.041e11, 6.041e11, 1.0e12, 5.0e11, 1.0e8],
+    })
+
+
+def test_market_volume_unit(monkeypatch):
+    """get_market_volume 成交额量级：旧代码把上证成交量 592 亿股当成交额显示"592亿"，
+    真实上证成交额是数千亿（2026-08-05 上交所官方 12097亿）——修复后必须显示真实量级"""
+    import akshare as ak
+    from stock_data import StockData
+    monkeypatch.setattr(ak, "stock_zh_index_daily", lambda symbol: _volume_kline_fixture())
+    monkeypatch.setattr(ak, "stock_zh_a_spot", lambda: _spot_fixture())
+    vol = StockData().get_market_volume(idx_volume=59215512400.0)  # 旧口径传入的成交量
+    assert vol["available"] is True
+    # 成交额 = 沪市成交额求和（深市/北交所排除），单位元
+    assert vol["total_amount"] == 1.2082e12
+    # 渲染路径量级（format_dashboard 的 vol_str 公式）：12082亿（数千亿），绝非 592亿
+    assert f"{vol['total_amount']/1e8:.0f}亿" == "12082亿"
+    assert "592亿" != f"{vol['total_amount']/1e8:.0f}亿"
+    # 20 日均比值来自成交量序列（单位无关）
+    vols = _volume_kline_fixture()["volume"]
+    assert abs(vol["ratio"] - vols.iloc[-1] / vols.mean()) < 1e-9
+    assert vol["avg_amount_20d"] > 0
+
+
+def test_market_volume_unavailable_when_source_fails(monkeypatch):
+    """数据源失败时不得退回成交量冒充成交额（旧 bug 路径）：诚实返回 unavailable"""
+    import akshare as ak
+    from stock_data import StockData
+    monkeypatch.setattr(ak, "stock_zh_index_daily", lambda symbol: _volume_kline_fixture())
+    monkeypatch.setattr(ak, "stock_zh_a_spot",
+                        lambda: (_ for _ in ()).throw(OSError("sina 全量行情被墙")))
+    vol = StockData().get_market_volume(idx_volume=59215512400.0)
+    assert vol["available"] is False
+    assert vol["total_amount"] == 0
+
+
+# ═══════════════════════════════════════════════════════════
+# Task 5: 板块总览三层结构（事实→说明→判断）+ TREND_STATE 映射（渲染层）
+# synthesize 输出契约（Task 4 实测）：board/facts/explanation/short_term_judge/
+# dca_judge/conflict_note 六 key——渲染层逐 key 核对，错位会静默降级（Issue 3 交接）
+# ═══════════════════════════════════════════════════════════
+
+def _board_facts_fixture():
+    """synthesize 输入契约全 key 事实（上升/下降/全缺三态）"""
+    return [
+        {"board": "银行", "trend_state": "above20_rising", "valuation": "合理",
+         "fund_state": "inflow_confirm", "sl_net": 12.5, "main_pct": 50.0,
+         "metric": "PE", "years": 10.0, "terms": ["PE", "分位", "20日线"]},
+        {"board": "煤炭", "trend_state": "below20_falling", "valuation": "便宜",
+         "fund_state": "outflow_confirm", "sl_net": -3.2, "main_pct": 15.0,
+         "metric": "PB", "years": 8.0,
+         "terms": ["PB", "分位", "20日线", "永不下跌补仓", "微笑曲线"]},
+        {"board": "通信设备", "trend_state": "unknown", "valuation": "观察",
+         "fund_state": "unknown", "sl_net": None, "main_pct": None,
+         "metric": "PE", "years": None, "terms": []},
+    ]
+
+
+def test_board_overview_three_layers():
+    """每板块包含 事实/说明/判断 三个标记；判断含短线+定投两场景；名词首次出现有解释"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "🧭 板块总览" in out
+    assert "3 板块" in out
+    assert out.count("◆ 事实") == 3
+    assert out.count("◆ 说明") == 3
+    assert out.count("◆ 判断") == 3
+    assert "短线（推断）" in out
+    assert "定投（推断）" in out
+    # 名词首次出现有解释（PE/分位 大白话）
+    assert "PE：市盈率" in out
+    assert "分位：百分位" in out
+
+
+def test_board_overview_judgment_can_be_absent():
+    """数据不足 → "无法判断"照常渲染（判断可缺席是设计，不强行给结论）"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "无法判断：趋势状态不明" in out       # 短线缺席
+    assert "无法判断：估值证据不足" in out       # 定投缺席
+    assert "无法判断：趋势与估值证据均不足" in out  # 冲突分流整体缺席
+    assert "◆ 事实" in out and "◆ 说明" in out and "◆ 判断" in out
+
+
+def test_board_overview_trend_framework_loaded():
+    """判断措辞含趋势交易论框架：不破20日线 / 永不下跌补仓 / 微笑曲线"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    assert "不破 20 日线" in out          # 银行：上升顺势持有
+    assert "永不下跌补仓" in out          # 煤炭：下降不抄底
+    assert "微笑曲线" in out              # 煤炭：便宜可加码（定投场景）
+
+
+def test_board_overview_renders_all_synthesize_keys():
+    """渲染层逐 key 核对 synthesize 输出契约（facts/explanation/short_term_judge/
+    dca_judge/conflict_note 全部渲染，错位会静默降级——Task 4 Issue 3 交接）"""
+    from val_format import build_board_overview
+    out = build_board_overview(_board_facts_fixture())
+    # facts 层：趋势/估值/资金三行原样在场
+    assert "板块：银行" in out
+    assert "趋势：" in out and "估值：" in out and "资金：" in out
+    # explanation 层：翻译文本透出（分位/趋势/资金三翻译）
+    assert "只有 50% 的时间比现在便宜" in out
+    assert "20 日线上方上升期" in out
+    assert "有持续性的买入" in out
+    # judgment 层：短线 + 定投 + 冲突分流（煤炭=下降+便宜 冲突存在）
+    assert "场景分流（推断）" in out
+
+
+def test_board_overview_per_board_exception_degraded(monkeypatch):
+    """Task 6 审查 Important：单板块 synthesize 抛错 → 该板块降级"无法判断：数据异常（推断）"，
+    其余板块三层照常渲染，不击穿整卡（val_format.py 裸下标 KeyError 击穿修复）"""
+    from val_format import build_board_overview
+    import val_explain
+    real = val_explain.synthesize
+    def flaky(facts):
+        if facts.get("board") == "煤炭":
+            raise ValueError("模拟 synthesize 异常")
+        return real(facts)
+    monkeypatch.setattr(val_explain, "synthesize", flaky)
+    out = build_board_overview(_board_facts_fixture())
+    assert out.count("◆ 事实") == 3                 # 3 板块都渲染（煤炭降级，不击穿整卡）
+    assert "无法判断：数据异常（推断）" in out        # 煤炭降级文案
+    assert "数据异常，事实层缺失" in out             # 事实层降级标注
+    assert "只有 50% 的时间比现在便宜" in out         # 银行（正常板块）说明层照常
+    assert "不破 20 日线" in out                     # 银行判断层照常（永不下跌补仓在降级板块上）
+
+
+def test_board_overview_syn_missing_key_fallback(monkeypatch):
+    """Task 6 审查 Important：synthesize 输出缺 key（契约违反）→ .get 兜底降级而非 KeyError"""
+    from val_format import build_board_overview
+    import val_explain
+    real = val_explain.synthesize
+    def partial(facts):
+        syn = real(facts)
+        if facts.get("board") == "煤炭":
+            del syn["dca_judge"]                    # 模拟契约违反：判断 key 缺失
+        return syn
+    monkeypatch.setattr(val_explain, "synthesize", partial)
+    out = build_board_overview(_board_facts_fixture())
+    assert "无法判断：数据异常（推断）" in out        # 缺 key 板块降级
+    assert out.count("◆ 判断") == 3                  # 三板块判断层仍在
+
+
+def test_trend_state_map():
+    """sector_monitor trend_phase → val_explain TREND_STATE 词表（渲染层映射）：
+    topping（筑顶）在 20 日线上方应归"震荡"而非"上升"（val_explain docstring 标注）"""
+    from market_dashboard import trend_state_map
+    assert trend_state_map("rally") == "above20_rising"
+    assert trend_state_map("downtrend") == "below20_falling"
+    for phase in ("oscillation", "topping", "bottoming", "mixed"):
+        assert trend_state_map(phase) == "around20_oscillation"
+    assert trend_state_map("unknown") == "unknown"
+    assert trend_state_map(None) == "unknown"
+    assert trend_state_map("不存在的阶段") == "unknown"
+
+
+def test_build_board_facts_full_contract():
+    """synthesize 输入契约端到端组装（Task 4 Issue 3 交接：逐 key 核对，缺 key 静默降级）：
+    snapshots+judgements+history+sector 条目 → 每板块事实全 key；
+    多子行业 trend_phase 全一致取该值、不一致归 mixed（→震荡）、无 THS 映射 → unknown"""
+    from market_dashboard import build_board_facts
+    snapshots = [
+        {"board": "银行", "source": "pb", "main_pct": 12.0, "pb_pct": 12.0,
+         "pe_pct": None, "trend": "flat", "years": 1.2, "note": "PB=0.42"},
+        {"board": "医药生物", "source": "pe", "main_pct": 55.0, "pe_pct": 55.0,
+         "pb_pct": None, "trend": "flat", "years": 4.0, "note": ""},
+        {"board": "计算机", "source": "pe", "main_pct": 40.0, "pe_pct": 40.0,
+         "pb_pct": None, "trend": "flat", "years": 2.5, "note": ""},
+        {"board": "半导体", "source": "pe", "main_pct": None, "pe_pct": None,
+         "pb_pct": None, "trend": "flat", "years": None, "note": ""},
+    ]
+    judgements = [
+        {"board": "银行", "verdict": "便宜", "confidence": "高", "action": "full", "note": ""},
+        {"board": "医药生物", "verdict": "合理", "confidence": "中", "action": "half", "note": ""},
+        {"board": "计算机", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
+        {"board": "半导体", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
+    ]
+    history = [
+        {"tags": {"银行": {"sl_net": 2.1}}, "fund_by_board": {"银行": 3.3}},
+        {"tags": {"银行": {"sl_net": 1.5}}, "fund_by_board": {"银行": 2.2}},
+        {"tags": {"银行": {"sl_net": 0.9}}, "fund_by_board": {"银行": 1.1}},
+    ]
+    sectors = [
+        {"name": "银行", "technical": {"trend_phase": "topping"}},          # 筑顶 → 震荡
+        {"name": "化学制药", "technical": {"trend_phase": "rally"}},        # → 医药生物
+        {"name": "中药", "technical": {"trend_phase": "rally"}},            # 全一致 → rally
+        {"name": "IT服务", "technical": {"trend_phase": "rally"}},          # → 计算机
+        {"name": "软件开发", "technical": {"trend_phase": "oscillation"}},  # 不一致 → mixed
+    ]
+    facts = build_board_facts(snapshots, judgements, history, sectors)
+    assert len(facts) == 4
+    by_board = {f["board"]: f for f in facts}
+    # 单子行业 topping → 震荡（非上升）
+    b = by_board["银行"]
+    assert b["trend_state"] == "around20_oscillation"
+    assert b["valuation"] == "便宜"
+    assert b["fund_state"] == "inflow_confirm"      # fund_by_board 优先（Task 2 口径）
+    assert b["sl_net"] == 1.1                        # 最新留痕优先（列表末条为最新）
+    assert b["main_pct"] == 12.0 and b["metric"] == "PB" and b["years"] == 1.2
+    assert "PB" in b["terms"] and "20日线" in b["terms"] and "微笑曲线" in b["terms"]
+    # 多子行业全一致 → 取该阶段
+    assert by_board["医药生物"]["trend_state"] == "above20_rising"
+    assert by_board["医药生物"]["valuation"] == "合理"
+    # 多子行业不一致 → mixed → 震荡（诚实，不取单边）
+    assert by_board["计算机"]["trend_state"] == "around20_oscillation"
+    # 无 THS 映射 → unknown；数据缺 → main_pct None 透传
+    assert by_board["半导体"]["trend_state"] == "unknown"
+    assert by_board["半导体"]["main_pct"] is None
+    assert "20日线" not in by_board["半导体"]["terms"]
+
+
+def test_merged_card_board_overview_between_valuation_and_dashboard():
+    """板块总览位置：估值判断之后、format_dashboard（市场温度）之前"""
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()
+    card = build_merged_card(data)
+    i_val = card.find("估值判断")
+    i_ov = card.find("🧭 板块总览")
+    i_temp = card.find("## 🔥 市场温度")
+    i_fund = card.find("资金观察")
+    i_honest = card.find("诚实声明")
+    assert -1 not in (i_val, i_ov, i_temp, i_fund, i_honest)
+    assert 0 <= i_val < i_ov < i_temp < i_fund < i_honest
+    assert "◆ 事实" in card
+
+
+def test_merged_card_board_overview_empty_no_header():
+    """board_facts 空 → 不输出板块总览空标题（F2：不静默缺块，也不得输出空标题）"""
+    data = _full_card_data()
+    data["board_facts"] = []
+    card = build_merged_card(data)
+    assert "板块总览" not in card
+    assert "## 🔥 市场温度" in card          # 原区块不受影响
