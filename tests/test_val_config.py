@@ -39,13 +39,43 @@ def test_ths_em_mapping_covers_12_boards():
     for em in INDEX_MAP:
         assert em in THS_TO_EM.values(), f"{em} 缺同花顺映射"
 
-def test_ths_em_keys_all_from_sector_rules():
-    # 防 typo：THS_TO_EM 的所有同花顺名必须真实存在于 SECTOR_RULES 名单
+# 同花顺资金流 90 行业实测名单快照（ak.stock_fund_flow_industry，2026-08-06 实测核对）：
+# THS_TO_EM 扩展键必须真实存在于此名单或 SECTOR_RULES——防 typo 的完整口径。
+# （任务源 90 个；若同花顺改名单，运行一次 stock_fund_flow_industry 更新此快照）
+THS_INDUSTRY_UNIVERSE_90 = {
+    "IT服务", "专用设备", "中药", "互联网电商", "保险", "元件", "光伏设备", "光学光电子",
+    "公路铁路运输", "其他电子", "其他电源设备", "其他社会服务", "养殖业", "军工电子",
+    "军工装备", "农产品加工", "农化制品", "包装印刷", "化学制品", "化学制药", "化学原料",
+    "化学纤维", "医疗器械", "医疗服务", "医药商业", "半导体", "厨卫电器", "塑料制品",
+    "多元金融", "家居用品", "小家电", "小金属", "工业金属", "工程机械", "建筑材料",
+    "建筑装饰", "影视院线", "房地产", "教育", "文化传媒", "旅游及酒店", "服装家纺",
+    "机场航运", "橡胶制品", "汽车整车", "汽车服务及其他", "汽车零部件", "油气开采及服务",
+    "消费电子", "港口航运", "游戏", "煤炭开采加工", "燃气", "物流", "环保设备",
+    "环境治理", "生物制品", "电力", "电子化学品", "电机", "电池", "电网设备", "白色家电",
+    "白酒", "石油加工贸易", "种植业与林业", "纺织制造", "综合", "美容护理", "能源金属",
+    "自动化设备", "计算机设备", "证券", "贵金属", "贸易", "轨交设备", "软件开发",
+    "通信服务", "通信设备", "通用设备", "造纸", "金属新材料", "钢铁", "银行", "零售",
+    "非金属材料", "风电设备", "食品加工制造", "饮料制造", "黑色家电",
+}
+
+
+def test_ths_em_keys_all_from_real_industries():
+    # 防 typo（Task 6 审查 Important 补全后扩展为双口径）：
+    # THS_TO_EM 的每个同花顺名必须真实存在于 SECTOR_RULES（会议口径）
+    # 或 stock_fund_flow_industry 90 行业实测名单（2026-08-06 快照）
     from val_config import THS_TO_EM
     from sector_monitor import SECTOR_RULES
-    real = {r["name"] for r in SECTOR_RULES}
+    real = {r["name"] for r in SECTOR_RULES} | THS_INDUSTRY_UNIVERSE_90
     fake = set(THS_TO_EM) - real
-    assert not fake, f"映射含非 SECTOR_RULES 名: {fake}"
+    assert not fake, f"映射含非真实同花顺行业名: {fake}"
+    # 反向：12 个东财核心板块每个都必须有同花顺映射（防漏映射）
+    from val_config import THS_TO_EM, INDEX_MAP
+    for em in INDEX_MAP:
+        members = {t for t, e in THS_TO_EM.items() if e == em}
+        assert members, f"{em} 无同花顺映射"
+    # 已知覆盖边界（90 名单里非 12 核心板块成分的细分允许不映射）：
+    # 消费电子/其他电子/军工电子/计算机设备/白色家电/黑色家电/多元金融/医药商业/
+    # 生物制品 等留给各自板块监控，不强制
 
 def test_ths_em_known_diffs():
     # 锁定实际映射（含全部差异名）
@@ -57,13 +87,19 @@ def test_ths_em_known_diffs():
     # 差异名（同花顺 → 东财一级）
     assert em_name_for("汽车整车") == "汽车"
     assert em_name_for("汽车零部件") == "汽车"
+    assert em_name_for("汽车服务及其他") == "汽车"        # Task 6 补全
     assert em_name_for("煤炭开采加工") == "煤炭"
     assert em_name_for("证券") == "非银金融"
     assert em_name_for("保险") == "非银金融"
     assert em_name_for("军工装备") == "国防军工"
     assert em_name_for("工业金属") == "有色金属"
+    assert em_name_for("贵金属") == "有色金属"             # Task 6 补全
+    assert em_name_for("小金属") == "有色金属"
+    assert em_name_for("能源金属") == "有色金属"
+    assert em_name_for("金属新材料") == "有色金属"
     assert em_name_for("白酒") == "食品饮料"
     assert em_name_for("食品加工制造") == "食品饮料"
+    assert em_name_for("饮料制造") == "食品饮料"           # Task 6 补全
     assert em_name_for("化学制药") == "医药生物"
     assert em_name_for("中药") == "医药生物"
     assert em_name_for("医疗服务") == "医药生物"
@@ -73,6 +109,12 @@ def test_ths_em_known_diffs():
     assert em_name_for("电池") == "电力设备"
     assert em_name_for("光伏设备") == "电力设备"
     assert em_name_for("电网设备") == "电力设备"
+    assert em_name_for("风电设备") == "电力设备"           # Task 6 补全
+    assert em_name_for("电机") == "电力设备"
+    assert em_name_for("其他电源设备") == "电力设备"
+    assert em_name_for("光学光电子") == "半导体"           # Task 6 补全
+    assert em_name_for("元件") == "半导体"
+    assert em_name_for("电子化学品") == "半导体"
 
 def test_ths_em_roundtrip_for_all_boards():
     # 每个东财板块反查同花顺名后，必须能映射回自身

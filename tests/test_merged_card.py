@@ -415,8 +415,35 @@ def _flow_fixture():
         ("煤炭开采加工", 7.7),                                                      # → 煤炭
         ("证券", 9.0), ("保险", -4.0),                                              # → 非银金融
         ("汽车整车", 1.2), ("汽车零部件", 3.4),                                     # → 汽车
-        # ── 无关行业（86/90 行业里的大多数）──
-        ("贵金属", 69.88), ("教育", 0.1), ("游戏", -5.0),
+        # ── 无关行业（55/90 行业里的大多数；Task 6 补全的子行业在 _flow_fixture_extended）──
+        ("教育", 0.1), ("游戏", -5.0),
+    ]
+    return pd.DataFrame(rows, columns=["industry", "super_large_net_yi"])
+
+
+def _flow_fixture_extended():
+    """Task 6 审查 Important：THS_TO_EM 补全的 14 个同花顺子行业（2026-08-06 实测名单）
+    ——原本静默丢弃的行业必须进 12 板块聚合（有色金属/电力设备/食品饮料/半导体/汽车）"""
+    rows = [
+        # ── 与东财同名直映 ──
+        ("半导体", 12.5), ("银行", -33.02), ("通信设备", 8.1),
+        # ── 多对一聚合：THS 细分 → 一个东财板块 ──
+        ("化学制药", 3.1), ("中药", -1.2), ("医疗服务", 0.5), ("医疗器械", 2.0),   # → 医药生物
+        ("白酒", 5.5), ("食品加工制造", -2.0),                                     # → 食品饮料
+        ("工业金属", 4.0),                                                          # → 有色金属
+        ("IT服务", 1.1), ("软件开发", 0.9),                                         # → 计算机
+        ("电池", 6.0), ("光伏设备", -3.0), ("电网设备", 1.0),                      # → 电力设备
+        ("煤炭开采加工", 7.7),                                                      # → 煤炭
+        ("证券", 9.0), ("保险", -4.0),                                              # → 非银金融
+        ("汽车整车", 1.2), ("汽车零部件", 3.4),                                     # → 汽车
+        # ── Task 6 补全子行业 ──
+        ("贵金属", 69.88), ("小金属", 2.2), ("能源金属", -1.1), ("金属新材料", 3.3),  # → 有色金属
+        ("风电设备", 0.7), ("电机", 1.3), ("其他电源设备", -0.4),                    # → 电力设备
+        ("饮料制造", 2.4),                                                          # → 食品饮料
+        ("光学光电子", 4.4), ("元件", -1.6), ("电子化学品", 0.9),                    # → 半导体
+        ("汽车服务及其他", 0.6),                                                     # → 汽车
+        # ── 无关行业 ──
+        ("教育", 0.1), ("游戏", -5.0),
     ]
     return pd.DataFrame(rows, columns=["industry", "super_large_net_yi"])
 
@@ -459,6 +486,30 @@ def test_record_merge_success_fund_by_board_flow_none(tmp_path):
     e = json.loads(open(hist, encoding="utf-8").readline())
     assert len(set(e["fund_by_board"].keys())) == 12
     assert all(v is None for v in e["fund_by_board"].values())
+
+
+def test_ths_em_extension_subindustries_aggregate(tmp_path):
+    """Task 6 审查 Important 锁定：THS_TO_EM 补全的 14 个子行业进 12 板块聚合
+    （贵金属/小金属/能源金属/金属新材料→有色金属、风电/电机/其他电源设备→电力设备、
+    饮料制造→食品饮料、光学光电子/元件/电子化学品→半导体、汽车服务及其他→汽车）"""
+    from market_dashboard import _record_merge_success
+    hist = tmp_path / "history.jsonl"
+    assert _record_merge_success("2026-08-05", None, [], [], str(hist),
+                                 flow=_flow_fixture_extended())
+    e = json.loads(open(hist, encoding="utf-8").readline())
+    fb = e["fund_by_board"]
+    # 补全板块：原映射值 + 新增子行业求和
+    assert fb["有色金属"] == 78.28      # 4.0 + 69.88 + 2.2 - 1.1 + 3.3
+    assert fb["电力设备"] == 5.6        # 6.0 - 3.0 + 1.0 + 0.7 + 1.3 - 0.4
+    assert fb["食品饮料"] == 5.9        # 5.5 - 2.0 + 2.4
+    assert fb["半导体"] == 16.2         # 12.5 + 4.4 - 1.6 + 0.9
+    assert fb["汽车"] == 5.2            # 1.2 + 3.4 + 0.6
+    # 未受影响板块原样（不回归）
+    assert fb["医药生物"] == 4.4
+    assert fb["非银金融"] == 5.0
+    assert fb["煤炭"] == 7.7
+    assert fb["计算机"] == 2.0
+    assert fb["国防军工"] is None
 
 
 def test_compute_fund_state_uses_fund_by_board():
