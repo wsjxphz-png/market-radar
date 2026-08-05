@@ -15,6 +15,9 @@ jobs:
   daily-report:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # O1：需要写回 active_theses.json / archive/（追踪/校准闭环持久化）
+    permissions:
+      contents: write
 
     steps:
       - name: 检出代码
@@ -39,7 +42,30 @@ jobs:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: python main.py ${{ inputs.force && '--force' || '' }}
 
+      # O1：追踪/校准闭环持久化 —— runner 每次全新检出，必须把本次更新的
+      # active_theses.json / archive/（到期验证、校准统计的数据源）提交回仓库，
+      # 否则 logic_tracker/到期验证/校准统计每次都是空跑。
+      # main.py 的 THESES_FILE/ARCHIVE_DIR 基于脚本所在目录（仓库根），路径一致。
+      - name: 持久化追踪数据（活跃判断/归档/校准留痕）
+        if: steps.检出代码.outcome == 'success'
+        run: |
+          mkdir -p archive/expired archive/falsified
+          git config user.name "market-radar-bot"
+          git config user.email "market-radar-bot@users.noreply.github.com"
+          # 降级日不生成 active_theses.json：单独 add 并容错，避免 pathspec
+          # "did not match any files" fatal 拖累 archive/ data/ 的持久化提交
+          # （git add --ignore-errors 不覆盖 pathspec 错误，实测仍 fatal 全中止）。
+          git add active_theses.json || true
+          git add archive/ data/
+          if git diff --cached --quiet; then
+            echo "无追踪数据变更，跳过提交"
+          else
+            git commit -m "data: 活跃判断追踪留痕 [skip ci]"
+            git push
+          fi
+
       - name: 失败通知
         if: failure()
         run: |
+          echo "::error::市场机会日报生成或数据持久化失败，请检查 GitHub Actions 日志。"
           echo "日报生成失败，请检查 GitHub Actions 日志。"
