@@ -21,6 +21,7 @@ jobs:
 
     steps:
       - name: 检出代码
+        id: checkout
         uses: actions/checkout@v4
 
       - name: 设置 Python
@@ -47,7 +48,7 @@ jobs:
       # 否则 logic_tracker/到期验证/校准统计每次都是空跑。
       # main.py 的 THESES_FILE/ARCHIVE_DIR 基于脚本所在目录（仓库根），路径一致。
       - name: 持久化追踪数据（活跃判断/归档/校准留痕）
-        if: steps.检出代码.outcome == 'success'
+        if: steps.checkout.outcome == 'success'
         run: |
           mkdir -p archive/expired archive/falsified
           git config user.name "market-radar-bot"
