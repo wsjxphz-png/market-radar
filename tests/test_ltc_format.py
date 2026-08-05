@@ -29,7 +29,7 @@ def test_card_sections_separated():
 
 def test_card_glossary_and_phase():
     card = format_card("2026-08-04", "解读文本", *_args())
-    assert "超大单" in card and "单笔 100 万以上" in card       # 术语解释
+    assert "净额" in card and "流入-流出" in card              # 术语解释（净额口径，非超大单拆分）
     assert "董事会预案" in card                                  # 回购阶段
 
 def test_card_valuation_partial_failure_note():

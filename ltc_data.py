@@ -66,19 +66,35 @@ def fetch_southbound() -> Optional[dict]:
             "southbound_net_yi": round(float(total), 2)}
 
 def parse_sector_flow(df_raw: pd.DataFrame) -> Optional[pd.DataFrame]:
-    """东财行业资金流：位置列映射（0:序号 1:行业 2:指数 3:涨跌幅 4:主力 5:超大单 6:大单）"""
-    cols = df_raw.columns.tolist()
-    pos = {1: "industry", 3: "chg_pct", 4: "main_net_yi", 5: "super_large_net_yi", 6: "large_net_yi"}
+    """行业资金流解析 — 按列名识别口径，不按位置（实测 akshare 1.18.64
+    stock_fund_flow_industry = 同花顺 data.10jqka.com.cn/funds/hyzjl 简化表：
+    序号/行业/行业指数/行业-涨跌幅/流入资金/流出资金/净额/公司家数/领涨股/领涨股-涨跌幅/当前价）。
+    旧位置映射按东财口径（4=主力 5=超大单 6=大单）会把 流出资金 误当超大单净流入
+    （2026-08-05 实测：半导体流出 1617.54 显示为 超大单+1617.5亿，银行净流出-33 判为"逆势吸筹"）。
+    简化表无大单拆分 → super_large_net_yi=净额（资金方向代理）；全量变体（含
+    主力/超大单/大单净流入-净额列）按列名直接取。"""
     rename = {}
-    for p, name in pos.items():
-        if p < len(cols):
-            rename[cols[p]] = name
-    df = df_raw.rename(columns=rename)
-    if "industry" not in df.columns:
+    if "行业" in df_raw.columns:
+        rename["行业"] = "industry"
+    for chg_col in ["行业-涨跌幅", "涨跌幅"]:
+        if chg_col in df_raw.columns:
+            rename[chg_col] = "chg_pct"
+            break
+    if "超大单净流入-净额" in df_raw.columns:  # 全量变体：按列名取大单拆分
+        rename["主力净流入-净额"] = "main_net_yi"
+        rename["超大单净流入-净额"] = "super_large_net_yi"
+        rename["大单净流入-净额"] = "large_net_yi"
+    elif "净额" in df_raw.columns:  # 简化变体：净额=流入-流出，无超大单拆分
+        rename["流入资金"] = "main_net_yi"
+        rename["流出资金"] = "large_net_yi"
+        rename["净额"] = "super_large_net_yi"
+    if "industry" not in rename.values():
         return None
+    df = df_raw.rename(columns=rename)
     for c in ["chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]:
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+        if c not in df.columns:
+            df[c] = float("nan")
+        df[c] = pd.to_numeric(df[c], errors="coerce")
     return df[["industry", "chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]]
 
 def fetch_sector_flow() -> Optional[pd.DataFrame]:

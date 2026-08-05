@@ -116,16 +116,37 @@ def test_non_network_exception_retries_no_trip(monkeypatch):
     assert calls["em"] == 2  # retries=1 → 首次失败后重试 1 次
     assert ltc_data._EM_AVAILABLE is True  # 数据类异常不触发熔断
 
-def test_parse_sector_flow_position_mapping():
+def test_parse_sector_flow_ths_simplified_schema():
+    """THS 简化变体（akshare stock_fund_flow_industry 现行，data.10jqka.com.cn/funds/hyzjl）：
+    按列名识别 流入资金/流出资金/净额 —— 无超大单拆分，super_large_net_yi=净额（资金方向代理）。
+    旧按位置映射会把 流出资金 当作超大单（半导体流出 1617.54 显示为 超大单+1617.5亿，方向被反转）。"""
     df = pd.DataFrame([
-        [1, "半导体", 5000, 6.01, 1437.42, 1218.06, 219.35, 200, "中芯国际", 8.0, 1],
-        [2, "银行", 4000, -2.69, 103.79, 173.92, -70.13, 40, "招商银行", 1.2, 2],
-    ])
+        [1, "半导体", 15699.8, 5.63, 1716.35, 1617.54, 98.81, 183, "有研硅", 17.62, 32.97],
+        [2, "银行", 4000.0, -1.15, 112.2, 145.22, -33.02, 42, "招商银行", 1.2, 10.0],
+    ], columns=["序号", "行业", "行业指数", "行业-涨跌幅", "流入资金", "流出资金", "净额",
+                "公司家数", "领涨股", "领涨股-涨跌幅", "当前价"])
     out = parse_sector_flow(df)
     assert list(out.columns) == ["industry", "chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]
     assert out.iloc[0]["industry"] == "半导体"
+    assert abs(out.iloc[0]["chg_pct"] - 5.63) < 1e-6
+    # 核心：超大单列取净额（98.81），而不是流出资金（1617.54）
+    assert abs(out.iloc[0]["super_large_net_yi"] - 98.81) < 1e-6
+    assert abs(out.iloc[0]["large_net_yi"] - 1617.54) < 1e-6  # 流出资金入 large，不再冒充超大单
+    assert abs(out.iloc[1]["super_large_net_yi"] - (-33.02)) < 1e-6  # 银行净流出为负，方向正确
+
+def test_parse_sector_flow_full_variant_by_name():
+    """THS 全量变体（含大单拆分）：按列名直接取 主力/超大单/大单 净额列"""
+    df = pd.DataFrame([
+        ["半导体", 5.63, 1437.42, 1218.06, 219.35],
+    ], columns=["行业", "涨跌幅", "主力净流入-净额", "超大单净流入-净额", "大单净流入-净额"])
+    out = parse_sector_flow(df)
     assert abs(out.iloc[0]["super_large_net_yi"] - 1218.06) < 1e-6
-    assert abs(out.iloc[1]["chg_pct"] - (-2.69)) < 1e-6
+    assert abs(out.iloc[0]["large_net_yi"] - 219.35) < 1e-6
+    assert abs(out.iloc[0]["main_net_yi"] - 1437.42) < 1e-6
+
+def test_parse_sector_flow_missing_industry_none():
+    df = pd.DataFrame([["A", 1.0, 2.0, 3.0, 4.0]], columns=["x", "y", "z", "w", "v"])
+    assert parse_sector_flow(df) is None
 
 def test_parse_repurchase_phase_and_filter():
     # 18 列对齐东财 stock_repurchase_em: 0序号 1代码 2简称 3最新价 4价上 5价下 6数上 7数下

@@ -114,7 +114,7 @@ def test_build_fund_section_shared_render():
     from ltc_format import build_fund_section
     focus, southbound, refs, repurchase = _fund_fixture()
     section = build_fund_section(focus, southbound, repurchase, refs)
-    assert "超大单（单笔 100 万以上" in section                      # 术语表展开
+    assert "净额（板块资金流入-流出" in section                      # 术语表展开（净额口径）
     assert "承接：偏长期布局特征（推断）｜ 价格处于 1 年低位区" in section  # 承接 reasons（合并卡原先缺失）
     assert "南向（内地资金买入港股市场" in section                    # 南向术语表展开（合并卡原先缺失）
     assert "• 近4周回购：宁德时代 400.0亿" in section
@@ -122,7 +122,7 @@ def test_build_fund_section_shared_render():
     # 无回购参数（ltc 卡：回购在长期数据区块）→ 不渲染回购行
     no_rep = build_fund_section(focus, southbound, None, refs)
     assert "近4周回购" not in no_rep
-    assert "超大单（单笔 100 万以上" in no_rep
+    assert "净额（板块资金流入-流出" in no_rep
 
 
 def test_merged_and_ltc_card_fund_section_same_caliber():
@@ -136,12 +136,12 @@ def test_merged_and_ltc_card_fund_section_same_caliber():
         "market_overview": "x", "sector_ops": "y",
         "fund_section": build_fund_section(focus, southbound, repurchase, refs),
         "interpretation": "w", "honest": "h"})
-    for key in ["超大单（单笔 100 万以上",
+    for key in ["净额（板块资金流入-流出",
                 "承接：偏长期布局特征（推断）｜ 价格处于 1 年低位区",
                 "南向（内地资金买入港股市场",
                 "对你意味着什么"]:
         assert key in ltc and key in merged
-    # 旧的双轨口径（合并卡裸写"（超大单 X亿，股价"）不得再现
+    # 旧的双轨口径（合并卡裸写"（超大单 X亿，股价"）不得再现（净额口径断言见 test_ltc_narrative）
     assert "（超大单 173.9亿，股价" not in merged
 
 

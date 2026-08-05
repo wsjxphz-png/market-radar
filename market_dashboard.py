@@ -1768,7 +1768,7 @@ LTC_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dat
 LTC_SIGNALS_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ltc", "signals_config.json")
 
 # 合并卡片诚实声明：覆盖资金推断 / 估值推断 / 操作信号理论性
-MERGED_HONEST = ("资金流按交易金额大小推断资金类型（超大单≈机构），不是实名数据；"
+MERGED_HONEST = ("资金净额按板块流入-流出推断资金方向（推断，非实名数据）；"
                  "估值分位基于中证指数 PE/PB 历史与成分股聚合，属推断；"
                  "板块操作信号基于《趋势交易论》规则，理论判断非保证；"
                  "本内容不构成任何买卖建议。")

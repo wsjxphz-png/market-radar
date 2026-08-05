@@ -34,6 +34,8 @@ def test_template_interpretation_contains_facts():
              "southbound": {"value": 25.7, "ref_label": "参照积累中"}}
     text = template_interpretation(facts)
     assert "银行" in text
+    assert "净额+173.9亿" in text           # 净额口径（原"超大单+173.9亿"误标拆分口径，已修正）
+    assert "超大单" not in text
     assert len(text) <= 200
 
 def test_validate_output_blocks_banned():

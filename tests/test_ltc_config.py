@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ltc_config import GLOSSARY, BANNED_PHRASES, PHASE_LABEL, is_expired, QUARTERLY_CONTEXT_FALLBACK, bj_now
 
 def test_glossary_covers_key_terms():
-    for term in ["超大单", "大单", "主力", "回购", "南向", "估值分位"]:
+    for term in ["超大单", "大单", "主力", "净额", "回购", "南向", "估值分位"]:
         assert term in GLOSSARY
 
 def test_banned_phrases_no_operation_words():

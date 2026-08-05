@@ -30,7 +30,7 @@ def build_fund_section(focus: List[dict], southbound: dict = None,
     for f in focus[:6]:
         acc = f.get("accum", {})
         lines.append(f"• {f['industry']}：{f['tag'] or '资金动作'}")
-        lines.append(f"  {_term('超大单')} {f['sl_net']:+.1f}亿 ｜ 股价 {f['chg_pct']:+.1f}% ｜ 分位 {f['sl_percentile']:.0f}%")
+        lines.append(f"  {_term('净额')} {f['sl_net']:+.1f}亿 ｜ 股价 {f['chg_pct']:+.1f}% ｜ 分位 {f['sl_percentile']:.0f}%")
         if acc.get("reasons"):
             lines.append(f"  承接：{acc.get('period', '')}（推断）｜ " + "；".join(acc["reasons"][:2]))
     sb = (southbound or {}).get("southbound_net_yi")
@@ -77,5 +77,5 @@ def format_card(data_date: str, interpretation_text: str, focus: List[dict],
     lines.append(qb)
     lines.append("")
     lines.append(f"━━━ {E['honest']} 诚实声明 ━━━")
-    lines.append("资金流按交易金额大小推断资金类型（超大单≈机构），不是实名数据；唯一实名披露是季报，每季度更新。承接周期判断为推断。本内容不构成任何买卖建议。")
+    lines.append("资金净额按板块流入-流出推断资金方向（推断，非实名）；唯一实名披露是季报，每季度更新。承接周期判断为推断。本内容不构成任何买卖建议。")
     return "\n".join(lines)
