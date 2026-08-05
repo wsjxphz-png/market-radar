@@ -64,7 +64,7 @@ def build_board_overview(board_facts: list) -> str:
         try:
             syn = synthesize(facts)
             header = syn.get("board", "未知板块") or "未知板块"
-            facts_block = syn["facts"]
+            facts_block = syn.get("facts") or "（数据异常，事实层缺失）"
             explanation = syn.get("explanation") or "（数据不足，暂无说明）"
             short_judge = syn.get("short_term_judge") or "无法判断：数据异常（推断）"
             dca_judge = syn.get("dca_judge") or "无法判断：数据异常（推断）"
