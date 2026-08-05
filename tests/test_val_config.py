@@ -112,9 +112,15 @@ def test_ths_em_known_diffs():
     assert em_name_for("风电设备") == "电力设备"           # Task 6 补全
     assert em_name_for("电机") == "电力设备"
     assert em_name_for("其他电源设备") == "电力设备"
-    assert em_name_for("光学光电子") == "半导体"           # Task 6 补全
-    assert em_name_for("元件") == "半导体"
-    assert em_name_for("电子化学品") == "半导体"
+    assert em_name_for("电子化学品") == "半导体"           # Task 6 补全：半导体材料（光刻胶/电子特气）
+
+def test_ths_em_no_wrong_level_mapping():
+    # 复审 Important（口径纯度，2026-08-06）：面板（京东方/TCL）、PCB/被动元件是
+    # "电子"下的二级行业，不是半导体子集——并入会让半导体的资金确认信号被非半导体
+    # 资金驱动（每日推送的判断输入）。光学光电子/元件 等必须不映射（None）
+    from val_config import em_name_for
+    for ths in ("光学光电子", "元件", "消费电子", "其他电子", "军工电子", "计算机设备"):
+        assert em_name_for(ths) is None, f"{ths} 不应映射到 12 核心板块（同级错配）"
 
 def test_ths_em_roundtrip_for_all_boards():
     # 每个东财板块反查同花顺名后，必须能映射回自身
