@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 import baostock as bs
 import ltc_data
-from val_config import INDEX_MAP
+from val_config import INDEX_MAP, is_cyclical
 
 logger = logging.getLogger(__name__)
 H = {"User-Agent": "Mozilla/5.0"}
@@ -118,6 +118,19 @@ def _pb_reference(history: List[dict], sector: str) -> Optional[float]:
     vals = vals[:20]
     return sum(vals) / len(vals)
 
+def _pb_percentile(history: List[dict], sector: str, cur_pb: float) -> Optional[float]:
+    """板块 PB 留痕分位：当前中位 PB 在近一年留痕中的分位（<20 样本 → None 冷启动）。
+    与 val_judge 的契约：pb_pct/main_pct 均为分位（0-100），raw PB 比值仅作参考值。"""
+    vals = []
+    for h in reversed(history):
+        v = (h.get("sector_pb") or {}).get(sector)
+        if v is not None:
+            vals.append(v)
+    if len(vals) < 20:
+        return None
+    vals = vals[:244]  # 近一年留痕窗口
+    return round(sum(1 for v in vals if v < cur_pb) / len(vals) * 100, 1)
+
 def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dict]:
     """全板块三级降级链：PE 分位 → PB 分位 → 价格位置（标注口径）"""
     out = []
@@ -126,22 +139,42 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
         pe_info = pe_percentile(pe_series) if pe_series is not None else None
         if pe_info is not None:
             pb = _safe(fetch_sector_pb, board)
+            pb_pct = _safe(_pb_percentile, history, board, pb["pb"]) if pb else None
+            if is_cyclical(board) and pb_pct is not None:
+                # 规则1：周期板块主指标=PB 分位（PE 分位仅留痕）
+                main_pct = pb_pct
+                note = f"主指标=PB 分位（PE 分位 {pe_info['pct']:.0f}% 仅留痕）"
+            elif is_cyclical(board):
+                # PB 分位冷启动 → 临时以 PE 分位为主指标并标注
+                main_pct = pe_info["pct"]
+                note = "主指标=PE 分位（PB 分位积累中，冷启动降级）"
+            else:
+                main_pct = pe_info["pct"]
+                note = ""
             entry = {
                 "board": board, "source": "pe",
-                "main_pct": pe_info["pct"], "pe_pct": pe_info["pct"],
-                "pb_pct": pb["pb"] if pb else None,
-                "trend": pe_info["trend"], "note": "",
+                "main_pct": main_pct, "pe_pct": pe_info["pct"],
+                "pb_pct": pb_pct,
+                "trend": pe_info["trend"], "note": note,
             }
             out.append(entry)
             continue
         pb = _safe(fetch_sector_pb, board)
         if pb is not None:
             ref = _safe(_pb_reference, history, board)
+            pb_pct = _safe(_pb_percentile, history, board, pb["pb"])
+            note = f"PB={pb['pb']}（成分中位数）"
+            if ref is not None:
+                note += f"，近20日均值 {ref:.2f}"
+            else:
+                note += "，PB 分位积累中"
+            if pb_pct is not None:
+                note += f"，分位 {pb_pct}%"
             entry = {
                 "board": board, "source": "pb",
-                "main_pct": None, "pe_pct": None, "pb_pct": pb["pb"],
+                "main_pct": pb_pct, "pe_pct": None, "pb_pct": pb_pct,
                 "trend": "flat",
-                "note": f"PB={pb['pb']}（成分中位数）" + (f"，近20日均值 {ref:.2f}" if ref else "，PB 分位积累中"),
+                "note": note,
             }
             out.append(entry)
             continue

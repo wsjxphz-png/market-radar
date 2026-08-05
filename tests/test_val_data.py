@@ -67,19 +67,51 @@ def test_fetch_valuation_snapshot_pb_branch(monkeypatch):
     monkeypatch.setattr("val_data.fetch_pe_series", lambda code: None)
     monkeypatch.setattr("val_data.fetch_sector_pb", lambda s: {"pb": 1.0, "method": "成分中位数", "n": 5})
     monkeypatch.setattr("val_data.fetch_price_position", fake_price)
-    # 无留痕：note 含"积累中"
+    # 无留痕：pb_pct/main_pct 冷启动为 None，note 含"积累中"
     out = fetch_valuation_snapshot(["银行"], [])
     assert out[0]["source"] == "pb"
-    assert out[0]["pb_pct"] == 1.0
+    assert out[0]["pb_pct"] is None
     assert out[0]["main_pct"] is None and out[0]["pe_pct"] is None
     assert out[0]["trend"] == "flat"
     assert "成分中位数" in out[0]["note"]
     assert "积累中" in out[0]["note"]
-    # 有留痕：note 含"近20日均值"
+    # 有留痕：main_pct/pb_pct = PB 分位（全部历史 0.9 < 当前 1.0 → 100.0），note 含"近20日均值"
     hist = [{"date": "2026-07-01", "sector_pb": {"银行": 0.9}}] * 25
     out2 = fetch_valuation_snapshot(["银行"], hist)
+    assert out2[0]["pb_pct"] == 100.0
+    assert out2[0]["main_pct"] == 100.0
     assert "近20日均值 0.90" in out2[0]["note"]
+    assert "分位 100.0%" in out2[0]["note"]
     assert calls["price"] == 0
+
+def test_pb_percentile_math():
+    # 30 个留痕样本 1.01..1.30，当前 1.10 → 30% 分位
+    from val_data import _pb_percentile
+    hist = [{"date": "2026-07-01", "sector_pb": {"银行": 1.0 + i * 0.01}} for i in range(1, 31)]
+    assert _pb_percentile(hist, "银行", 1.10) == 30.0
+    assert _pb_percentile(hist, "银行", 0.5) == 0.0
+    assert _pb_percentile(hist, "银行", 1.40) == 100.0
+    assert _pb_percentile([], "银行", 1.0) is None  # 冷启动
+    hist2 = [{"date": "2026-07-01", "sector_pb": {"银行": 0.5}}] * 10
+    assert _pb_percentile(hist2, "银行", 1.0) is None  # <20 样本
+
+def test_cyclical_main_indicator_pb_percentile(monkeypatch):
+    # 规则1：周期板块即使 PE 数据可用，主指标仍取 PB 分位（PE 分位仅留痕）
+    def fake_pe(code):
+        dates = pd.date_range("2020-01-01", periods=500, freq="B")
+        return pd.DataFrame({"date": dates, "pe": [10.0 + ((i + 50) % 100) * 0.1 for i in range(500)]})
+    monkeypatch.setattr("val_data.fetch_pe_series", fake_pe)
+    monkeypatch.setattr("val_data.fetch_sector_pb", lambda s: {"pb": 1.0, "method": "成分中位数", "n": 5})
+    hist = [{"date": "2026-06-01", "sector_pb": {"银行": 0.9}}] * 30
+    out = fetch_valuation_snapshot(["银行"], hist)[0]
+    assert out["source"] == "pe"
+    assert out["main_pct"] == 100.0      # PB 分位
+    assert out["pb_pct"] == 100.0
+    assert 40 < out["pe_pct"] < 60       # PE 分位仅留痕
+    # PB 分位冷启动 → 降级用 PE 分位并标注
+    out2 = fetch_valuation_snapshot(["银行"], [])[0]
+    assert out2["main_pct"] == out2["pe_pct"]
+    assert "冷启动降级" in out2["note"]
 
 def test_pb_reference_sector_pb_none():
     # 回归：sector_pb 显式为 None 时不应崩溃（h.get("sector_pb", {}) 返回 None 后 .get 抛 AttributeError）
