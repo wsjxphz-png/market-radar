@@ -1154,6 +1154,41 @@ def append_signal_snapshot(date_str: str, signals: List[Signal],
 
 
 # ═══════════════════════════════════════════════════════════
+# 推送去重 — F10: 同一交易日数据不得重复推送（复用 ltc_store 模式）
+# ═══════════════════════════════════════════════════════════
+
+# 状态文件：记录最近一次成功推送的数据日期（data/dashboard/state.json）
+PUSH_STATE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data", "dashboard", "state.json")
+
+
+def _load_push_state(path: str = PUSH_STATE_PATH) -> dict:
+    """读取推送状态 — 语义同 ltc_store.load_state：缺文件/坏文件均返回 {}"""
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_push_state(path: str, data_date: str) -> None:
+    """推送成功后记录本次数据日期 — 语义同 ltc_store.save_state：自动建目录"""
+    dirname = os.path.dirname(path)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"last_pushed_date": data_date}, f, ensure_ascii=False, indent=2)
+
+
+def is_already_pushed(data_date: str, state: dict) -> bool:
+    """F10 推送去重：数据日期不晚于已推送日期 → 已推送（手动重跑应跳过）"""
+    last = state.get("last_pushed_date", "")
+    return bool(last) and data_date <= last
+
+
+# ═══════════════════════════════════════════════════════════
 # 每日一得 — 从《趋势交易论》按市场状态选摘
 # ═══════════════════════════════════════════════════════════
 
@@ -1764,6 +1799,16 @@ def main():
     if not args.force and idx["date"].iloc[-1].strftime("%Y-%m-%d") != today_str:
         print(f"[i] 非交易日 (最新: {idx['date'].iloc[-1].strftime('%Y-%m-%d')})"); return
 
+    # F10: 推送去重 — 同一交易日数据已成功推送过则跳过（交易日手动重跑防重复推送）。
+    # 以数据日期（而非今天）为准：--force 补跑历史数据时也能正确去重。
+    # 非交易日检查保留在其之前；dry-run 只预览不推送，不做去重。
+    data_date = idx["date"].iloc[-1].strftime("%Y-%m-%d")
+    # 显式传 PUSH_STATE_PATH（模块全局按调用时求值，便于测试注入）
+    push_state = _load_push_state(PUSH_STATE_PATH)
+    if not args.dry_run and is_already_pushed(data_date, push_state):
+        print(f"[i] {data_date} 数据已推送过 (last_pushed_date="
+              f"{push_state.get('last_pushed_date', '')})，跳过本次推送"); return
+
     print("[2/4] 计算信号...")
     signals = compute_signals(idx, m1)
     for s in signals: print(f"  {s.name}: {s.value} [{s.status}]")
@@ -1857,6 +1902,8 @@ def main():
     # F4: 推送成功后写入当日信号快照，供次日 detect_signal_flips 对比
     if pushed:
         append_signal_snapshot(today_str, signals)
+        # F10: 记录本次成功推送的数据日期，供下次运行去重
+        _save_push_state(PUSH_STATE_PATH, data_date)
 
 
 if __name__ == "__main__":

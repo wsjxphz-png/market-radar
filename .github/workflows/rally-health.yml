@@ -51,10 +51,14 @@ jobs:
 
       - name: 信号留痕提交
         # F4: trade_log.jsonl 随 workflow 持久化，供次日 detect_signal_flips 对比信号翻转
+        # D2: data/dashboard/state.json 随 workflow 持久化 — 否则每次运行都是全新检出，
+        #     手动重跑（workflow_dispatch）时去重状态丢失，仍会重复推送
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 分开 add：任一文件缺失时另一文件照常暂存（合并 add 遇缺失 pathspec 会整体失败）
           git add trade_log.jsonl || true
+          git add data/dashboard/state.json || true
           git diff --cached --quiet || git commit -m "data: 仪表盘信号留痕 [skip ci]"
           git push
 

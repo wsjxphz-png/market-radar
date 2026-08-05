@@ -239,3 +239,87 @@ def test_detect_signal_flips_no_yesterday_entry(tmp_path):
     log.write_text(json.dumps({"type": "index", "date": "2020-01-01",
                                "signals": {"三周期趋势": "danger"}}) + "\n", encoding="utf-8")
     assert detect_signal_flips([Signal("三周期趋势", "v", "healthy")], str(log)) == []
+
+
+# ═══════════════════════════════════════════════════════════
+# F10 推送去重 — last_pushed_date 状态（复用 ltc_store 模式）
+# ═══════════════════════════════════════════════════════════
+
+def test_is_already_pushed_logic():
+    """F10: 去重判断 — 空状态/新数据放行，同日重复/数据落后跳过"""
+    assert md.is_already_pushed("2026-08-05", {}) is False                          # 首次运行
+    assert md.is_already_pushed("2026-08-05", {"last_pushed_date": "2026-08-04"}) is False  # 新数据
+    assert md.is_already_pushed("2026-08-05", {"last_pushed_date": "2026-08-05"}) is True   # 同日重复
+    assert md.is_already_pushed("2026-08-05", {"last_pushed_date": "2026-08-06"}) is True   # 数据落后
+
+
+def test_push_state_roundtrip(tmp_path):
+    """F10: state 读写往返 — 自动建目录 / 缺文件 / 坏文件均不炸"""
+    path = str(tmp_path / "sub" / "state.json")
+    md._save_push_state(path, "2026-08-05")
+    assert md._load_push_state(path) == {"last_pushed_date": "2026-08-05"}
+    assert md._load_push_state(str(tmp_path / "missing.json")) == {}
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json", encoding="utf-8")
+    assert md._load_push_state(str(bad)) == {}
+
+
+class _FakeStockData:
+    """main() 市场温度段落的假实现（零网络）"""
+    def get_market_breadth(self):
+        return {"up_count": 1000, "down_count": 800, "limit_up": 30, "limit_down": 5,
+                "total": 1800, "available": True}
+    def get_market_volume(self, idx_volume):
+        return {"total_amount": 9e11, "ratio": 1.1, "available": True}
+    def get_sector_fund_flow(self):
+        return pd.DataFrame()
+
+
+def _fake_sector_data():
+    """sector_monitor 假返回 — 含一个降级板块条目（technical/fund 为空）"""
+    return {
+        "date": "2026-08-05",
+        "sectors": [{"name": "半导体", "category": "科技", "meeting_status": "watch",
+                     "meeting_rule": "x", "meeting_note": "y",
+                     "today": {}, "technical": {}, "fund_flow": {}, "signal": {}}],
+        "summary": {"entry": [], "hold": [], "watch": ["半导体"], "avoid": [],
+                    "entry_count": 0, "hold_count": 0, "watch_count": 1, "avoid_count": 0},
+        "market_overview": {}, "flow_anomalies": [], "fund_flow_hist_ok": True,
+    }
+
+
+def _mock_main_deps(monkeypatch, idx, tmp_path, calls):
+    """把 main() 的抓取/推送/板块依赖全部替换为假实现，send 次数记入 calls"""
+    import sys
+    import sector_monitor
+    monkeypatch.setattr(md, "fetch_index", lambda name, code, days=300: idx)
+    monkeypatch.setattr(md, "fetch_m1", lambda: None)
+    monkeypatch.setattr(md, "ai_audit", lambda *a, **k: None)
+    monkeypatch.setattr(md, "append_signal_snapshot", lambda *a, **k: None)
+    monkeypatch.setattr(md, "StockData", _FakeStockData)
+    monkeypatch.setattr(md, "PUSH_STATE_PATH", str(tmp_path / "state.json"))
+    monkeypatch.setattr(md, "send_feishu",
+                        lambda content: (calls.__setitem__("send", calls["send"] + 1), True)[1])
+    monkeypatch.setattr(sector_monitor, "fetch_sector_monitor_data", lambda: _fake_sector_data())
+    monkeypatch.setattr(sys, "argv", ["market_dashboard.py", "--force"])
+
+
+def test_main_push_dedup_two_runs(tmp_path, monkeypatch, capsys):
+    """F10: 两次运行 — 第一次推送成功并写 state，第二次同数据日期 → 跳过推送（send 不再被调用）"""
+    idx = _idx_df()
+    data_date = idx["date"].iloc[-1].strftime("%Y-%m-%d")
+    calls = {"send": 0}
+    _mock_main_deps(monkeypatch, idx, tmp_path, calls)
+
+    md.main()
+    out1 = capsys.readouterr().out
+    assert "飞书: OK" in out1
+    assert calls["send"] == 1                                     # 第一次真实推送
+    state = json.loads((tmp_path / "state.json").read_text(encoding="utf-8"))
+    assert state["last_pushed_date"] == data_date                 # 状态已记录
+
+    md.main()
+    out2 = capsys.readouterr().out
+    assert "已推送过" in out2                                     # 第二次打印跳过原因
+    assert "跳过本次推送" in out2
+    assert calls["send"] == 1                                     # 未重复推送
