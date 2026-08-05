@@ -35,10 +35,11 @@ def template_interpretation(facts: dict) -> str:
     """模板回退：只填核验过的数字"""
     parts = []
     for f in facts.get("focus", [])[:3]:
-        action = {"逆势吸筹嫌疑": "价格在跌但大资金在买",
-                  "派发嫌疑": "价格在涨但大资金在卖",
-                  "资金关注": "大资金集中流入",
-                  "资金撤离": "大资金在撤离"}.get(f["tag"], "资金动作明显")
+        # 复审 I2：数据只有板块资金净额，不得归因"大资金"——措辞只能用资金净流入/净流出
+        action = {"逆势吸筹嫌疑": "价格在跌但资金净流入",
+                  "派发嫌疑": "价格在涨但资金净流出",
+                  "资金关注": "资金净流入集中",
+                  "资金撤离": "资金净流出"}.get(f["tag"], "资金动作明显")
         parts.append(f"{f['industry']}（{action}，净额{f['sl_net']:+.1f}亿，{f['accum_period']}）")
     sb = facts.get("southbound", {})
     sb_txt = f"南向资金{sb['value']:+.1f}亿（{sb.get('ref_label','参照积累中')}）" if sb.get("value") is not None else "南向数据暂不可用"

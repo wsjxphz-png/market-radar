@@ -38,6 +38,21 @@ def test_template_interpretation_contains_facts():
     assert "超大单" not in text
     assert len(text) <= 200
 
+def test_template_no_dazijin_attribution():
+    """复审 I2：叙事不得归因"大资金"——数据只有板块资金净额，措辞只能是资金净流入/流出"""
+    cases = [("逆势吸筹嫌疑", "价格在跌但资金净流入"),
+             ("派发嫌疑", "价格在涨但资金净流出"),
+             ("资金关注", "资金净流入集中"),
+             ("资金撤离", "资金净流出")]
+    for tag, expected in cases:
+        facts = {"data_date": "2026-08-05",
+                 "focus": [{"industry": "银行", "tag": tag, "sl_net": 1.0,
+                            "chg_pct": 0.0, "accum_period": "短期行为特征"}],
+                 "southbound": {"value": 25.7, "ref_label": "参照积累中"}}
+        text = template_interpretation(facts)
+        assert expected in text
+        assert "大资金" not in text
+
 def test_validate_output_blocks_banned():
     assert validate_output("今天资金流入半导体") is True
     assert validate_output("你可以考虑买入半导体") is False
