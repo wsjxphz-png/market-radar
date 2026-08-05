@@ -113,6 +113,27 @@ def test_cyclical_main_indicator_pb_percentile(monkeypatch):
     assert out2["main_pct"] == out2["pe_pct"]
     assert "冷启动降级" in out2["note"]
 
+def test_fetch_valuation_snapshot_carries_raw_pb(monkeypatch):
+    """C1 修复：snapshot 携带原始 PB（留痕写入用）——sector_pb 必须存原始比值
+    （_pb_percentile 拿留痕值与当日原始 PB 比大小），不能存 pb_pct 分位"""
+    monkeypatch.setattr("val_data.fetch_pe_series", lambda code: None)
+    monkeypatch.setattr("val_data.fetch_sector_pb", lambda s: {"pb": 0.42, "method": "成分中位数", "n": 5})
+    monkeypatch.setattr("val_data.fetch_price_position", lambda s: {"position_pct": 43.0})
+    out = fetch_valuation_snapshot(["银行"], [])
+    assert out[0]["source"] == "pb"
+    assert out[0]["pb"] == 0.42
+    # PE 可用路径同样携带原始 PB；PB 抓取失败 → None（不写入 sector_pb）
+    def fake_pe(code):
+        import pandas as pd
+        dates = pd.date_range("2020-01-01", periods=500, freq="B")
+        return pd.DataFrame({"date": dates, "pe": [15.0]*500})
+    monkeypatch.setattr("val_data.fetch_pe_series", fake_pe)
+    out2 = fetch_valuation_snapshot(["银行"], [])
+    assert out2[0]["source"] == "pe" and out2[0]["pb"] == 0.42
+    monkeypatch.setattr("val_data.fetch_sector_pb", lambda s: None)
+    out3 = fetch_valuation_snapshot(["银行"], [])
+    assert out3[0]["pb"] is None
+
 def test_pb_reference_sector_pb_none():
     # 回归：sector_pb 显式为 None 时不应崩溃（h.get("sector_pb", {}) 返回 None 后 .get 抛 AttributeError）
     hist = [{"date": "2026-07-01", "sector_pb": None},

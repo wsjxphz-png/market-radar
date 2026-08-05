@@ -155,6 +155,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
                 "board": board, "source": "pe",
                 "main_pct": main_pct, "pe_pct": pe_info["pct"],
                 "pb_pct": pb_pct,
+                "pb": pb["pb"] if pb else None,  # 原始 PB（留痕写入用，C1：sector_pb 须存原始比值）
                 "trend": pe_info["trend"], "note": note,
             }
             out.append(entry)
@@ -173,6 +174,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
             entry = {
                 "board": board, "source": "pb",
                 "main_pct": pb_pct, "pe_pct": None, "pb_pct": pb_pct,
+                "pb": pb["pb"],  # 原始 PB（留痕写入用，C1：sector_pb 须存原始比值）
                 "trend": "flat",
                 "note": note,
             }
@@ -182,7 +184,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
         entry = {
             "board": board, "source": "price",
             "main_pct": price["position_pct"] if price else None,
-            "pe_pct": None, "pb_pct": None, "trend": "flat",
+            "pe_pct": None, "pb_pct": None, "pb": None, "trend": "flat",
             "note": "基于价格位置，非 PE/PB" if price else "估值数据源全部不可用",
         }
         out.append(entry)

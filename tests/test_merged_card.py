@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """合并卡片纯函数测试 — build_merged_card 六区块顺序/无北向 + compute_fund_state 资金维确认。
 原则：注入假数据，不触网。"""
-import sys, os
+import json, sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from market_dashboard import build_merged_card, compute_fund_state, _with_metric_disclosure
 
@@ -265,3 +265,36 @@ def test_metric_disclosure_pe_degradation():
     snaps2 = [{"board": "煤炭", "source": "pe", "note": ""}]
     out2 = _with_metric_disclosure(judgements, snaps2)
     assert out2[0]["note"] == judgements[0]["note"]
+
+
+# ── C1 修复：留痕写入环 — 推送成功必须 append 当日留痕（生产唯一每日写者） ──
+
+def test_record_merge_success_appends_history(tmp_path):
+    """推送成功路径 append 留痕：结构与 ltc_main 同构 + sector_pb（原始 PB 值）"""
+    from market_dashboard import _record_merge_success
+    hist = tmp_path / "history.jsonl"
+    focus = [{"industry": "银行", "tag": "逆势吸筹嫌疑", "sl_net": -33.02,
+              "accum": {"period": "偏长期布局特征", "reasons": []}}]
+    snapshots = [{"board": "银行", "pb": 0.42}, {"board": "煤炭", "pb": None}]
+    assert _record_merge_success("2026-08-05", 25.7, focus, snapshots, str(hist))
+    rows = [json.loads(line) for line in open(hist, encoding="utf-8")]
+    assert len(rows) == 1
+    e = rows[0]
+    assert e["data_date"] == "2026-08-05"
+    assert e["southbound_net_yi"] == 25.7
+    assert e["tags"]["银行"] == {"tag": "逆势吸筹嫌疑", "accum": "偏长期布局特征", "sl_net": -33.02}
+    assert e["sector_pb"] == {"银行": 0.42}  # 原始 PB 比值，非分位（_pb_percentile 的 v < cur_pb 契约）
+    assert len(e["date"]) == 19  # "%Y-%m-%d %H:%M:%S"
+    # 二次推送：append 不覆盖（与 ltc_main 同构，JSONL 追加）
+    _record_merge_success("2026-08-06", -5.0, [], snapshots, str(hist))
+    assert len([json.loads(l) for l in open(hist, encoding="utf-8")]) == 2
+
+
+def test_record_merge_success_write_failure_does_not_raise(monkeypatch, tmp_path):
+    """留痕写失败不得阻塞推送：吞异常返回 False，不击穿 merge_main"""
+    import ltc_store
+    from market_dashboard import _record_merge_success
+    monkeypatch.setattr(ltc_store, "append_history",
+                        lambda path, entry: (_ for _ in ()).throw(OSError("磁盘只读")))
+    ok = _record_merge_success("2026-08-05", None, [], [], str(tmp_path / "x.jsonl"))
+    assert ok is False

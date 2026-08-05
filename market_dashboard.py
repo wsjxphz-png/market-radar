@@ -1926,6 +1926,48 @@ def _send_merged_card(msg: str) -> bool:
     return pushed
 
 
+def _build_merged_history_entry(data_date: str, sb_value, focus: list, snapshots: list) -> dict:
+    """合并推送留痕条目（C1 修复）：与 ltc_main 留痕同构
+    （date/data_date/southbound_net_yi/tags{industry:{tag,accum,sl_net}}），
+    并补写 sector_pb{board: 当日原始 PB}——供 _pb_reference/_pb_percentile 消费，
+    PB 分位从"积累中"走向正式分位的关键。
+    ⚠️ sector_pb 必须写原始 PB 比值（fetch_sector_pb 的中位数，如 0.42），
+    不能写 pb_pct 分位——_pb_percentile 拿留痕值与当日原始 PB 直接比大小
+    （v < cur_pb），写分位进去恒为 False，PB 分位会永久停在 0%（比冷启动更糟）。"""
+    from ltc_config import bj_now
+    entry = {
+        "date": bj_now().strftime("%Y-%m-%d %H:%M:%S"),
+        "data_date": data_date,
+        "southbound_net_yi": sb_value,
+        "tags": {f["industry"]: {"tag": f["tag"], "accum": f.get("accum", {}).get("period"),
+                                 "sl_net": f["sl_net"]} for f in focus},
+    }
+    sector_pb = {s["board"]: s["pb"] for s in snapshots if s.get("pb") is not None}
+    if sector_pb:
+        entry["sector_pb"] = sector_pb
+    return entry
+
+
+def _record_merge_success(data_date: str, sb_value, focus: list, snapshots: list,
+                          hist_path: str = LTC_HISTORY_FILE) -> bool:
+    """推送成功后的留痕写入（C1 修复）：append 当日 history.jsonl。
+
+    合并推送是生产唯一每日写者（ltc_main 的 long-term-capital.yml schedule 已停用），
+    缺此环则 Task 7 清空后的 history.jsonl 永无写入 → compute_fund_state 永停
+    cold_start、PB 分位与南向参照永久"积累中"。
+    写失败仅记日志返回 False，不阻塞推送（卡已发出）。"""
+    import ltc_store
+    try:
+        entry = _build_merged_history_entry(data_date, sb_value, focus, snapshots)
+        ltc_store.append_history(hist_path, entry)
+        print(f"  [i] 留痕已追加: {entry['data_date']} "
+              f"({len(entry['tags'])} 板块, {len(entry.get('sector_pb', {}))} 板块PB)")
+        return True
+    except Exception as e:
+        print(f"  [!] 留痕写入失败（不阻塞推送）: {str(e)[:80]}")
+        return False
+
+
 def merge_main():
     """合并入口：仪表盘骨架 + 估值判断表 + 资金观察区块 + AI 解读（事实清单模式）
 
@@ -2122,6 +2164,10 @@ def merge_main():
         # F4/F10: 推送成功后写入信号快照 + 记录数据日期（与 main 一致）
         append_signal_snapshot(today_str, signals)
         _save_push_state(PUSH_STATE_PATH, data_date)
+        # C1 修复：留痕写入环 — 推送成功即 append 当日留痕（合并推送是生产唯一每日写者，
+        # ltc_main workflow 已停用），否则 history.jsonl 永远停在 Task 7 清空后的状态，
+        # 资金维确认/PB 分位/南向参照永久冷启动。写失败不阻塞（_record_merge_success 内部兜底）
+        _record_merge_success(data_date, sb_value, focus, snapshots)
     return 0 if ok else 1
 
 
