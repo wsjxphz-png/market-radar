@@ -72,6 +72,7 @@ jobs:
           git add trade_log.jsonl || true
           git add data/dashboard/state.json || true
           git add data/ltc || true
+          git add data/fund_decisions.jsonl || true
           git diff --cached --quiet || git commit -m "data: 仪表盘信号留痕 [skip ci]"
           git push
 
