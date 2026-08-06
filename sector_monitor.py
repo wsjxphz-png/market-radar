@@ -181,11 +181,13 @@ SECTOR_RULES = [
     # ═══ 港股 (1) — yfinance 数据源 ═══
     {"name": "恒生科技", "category": "港股", "status": "watch",
      "rule": "support_rebound",
-     "note": "恒生科技指数(^HSTECH)，港股AI+互联网核心(腾讯/阿里/美团等)"},
+     "note": "恒生科技(3033.HK ETF)，港股AI+互联网核心(腾讯/阿里/美团等)"},
 ]
 
 # HK 指数 — 使用 yfinance 的板块（不在同花顺/东财板块列表中）
-HK_SECTORS = {"恒生科技": "^HSTECH"}
+# 2026-08-06: Yahoo 已移除 ^HSTECH（实测 404 "Quote not found"），改恒生科技ETF 3033.HK
+#（追踪同一指数，K 线形态/涨跌幅与指数一致，用于趋势判断等价）
+HK_SECTORS = {"恒生科技": "3033.HK"}
 
 # 会议中提到的非板块指数/标的
 MARKET_INDICES = [
