@@ -107,15 +107,15 @@ def test_merged_card_order_market_first_sector_grouped_trade_last():
     i_temp = card.find("## 🔥 市场温度")           # 大盘组
     i_manual = card.find("## 📖 交易手册")         # 手册
     i_glossary = card.find("名词释义")             # 释义必须紧跟手册(风险点1)
-    i_agg = card.find("━━━ 🔷 板块判断")          # 板块聚合卡
+    i_trade = card.find("## 📊 今日信号")          # 交易组(2026-08-08:判断紧跟知识)
+    i_agg = card.find("━━━ 🔷 板块判断")          # 板块聚合卡(交易组之后)
     i_fund_obs = card.find("资金观察（南向/回购/承接）")
-    i_trade = card.find("## 📊 今日信号")          # 交易组
     i_insight = card.find("## 📖 每日一得")
     i_honest = card.find("诚实声明")
     # 大盘组在前：温度→手册→释义，释义不得后置到板块区
-    assert 0 <= i_temp < i_manual < i_glossary < i_agg
-    # 聚合卡 → 资金观察 → 交易组 → 诚实声明
-    assert i_agg < i_fund_obs < i_trade < i_insight < i_honest
+    assert 0 <= i_temp < i_manual < i_glossary
+    # 知识(手册/释义)→ 判断(今日信号) → 板块聚合卡 → 资金观察 → 诚实声明
+    assert i_glossary < i_trade < i_agg < i_fund_obs < i_honest
     # 旧板块区块全部被聚合卡替代
     for gone in ["## 💰 板块资金流向", "## 🔍 板块操作信号", "## 📋 板块全貌",
                  "━━━ 💰 估值判断", "━━━ 🧭 板块总览"]:
@@ -821,3 +821,13 @@ def test_merged_card_board_overview_empty_no_header():
     card = build_merged_card(data)
     assert "板块总览" not in card
     assert "## 🔥 市场温度" in card          # 原区块不受影响
+
+
+def test_board_aggregate_trend_resonance_line():
+    """聚合卡顶部输出趋势共振统计(2026-08-08):直接回答综合策略的"确认趋势"观察点"""
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()  # 1 站上20日线(银行)/1 下方(煤炭)/1 不明(通信)
+    card = build_merged_card(data)
+    assert "📊 趋势共振" in card
+    assert "站上20日线 1/3" in card
+    assert "板块分化，趋势未确认" in card

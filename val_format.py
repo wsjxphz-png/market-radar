@@ -133,6 +133,18 @@ def render_board_aggregate(facts_list: list, sectors: list,
     glossary = glossary_for(sorted(all_terms))
 
     lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 事实+短线/定投） ━━━"]
+    # 趋势共振统计(2026-08-08 用户需求:综合策略的"关键观察点=确认趋势"，
+    # 板块部分直接回答:多少板块站上20日线,趋势是否被板块共振确认)
+    n_up = sum(1 for f, _ in per_board if isinstance(f, dict)
+               and f.get("trend_state") == "above20_rising")
+    n_down = sum(1 for f, _ in per_board if isinstance(f, dict)
+                 and f.get("trend_state") == "below20_falling")
+    n_flat = len(per_board) - n_up - n_down
+    reso = ("趋势共振向上" if n_up >= len(per_board) * 0.7 else
+            "趋势共振向下" if n_down >= len(per_board) * 0.7 else
+            "板块分化，趋势未确认")
+    lines.append(f"📊 趋势共振：站上20日线 {n_up}/{len(per_board)} · 20日线下 {n_down} · "
+                 f"方向不明 {n_flat} → **{reso}**")
     # M2: 数据降级必须显式标注（板块当日概览/资金流历史缺失时，读者须知道来源缺口）
     if board_ok is not None and not board_ok:
         lines.append("> ⚠️ 板块当日概览（涨跌/领涨股）数据缺失，以下评级基于技术面K线+估值。")

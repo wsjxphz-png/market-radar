@@ -1422,7 +1422,9 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     # ── 📊 指数监测（板块模块） — F3: format_sector_for_prompt 的市场概况并入推送正文 ──
     if sector_overview:
-        (m_lines if section_groups else lines).extend([
+        # 2026-08-08 调整:指数监测从大盘组移入交易组开头——大盘组保持
+        # 日期/温度/手册/释义 紧凑,知识(手册)后紧跟判断(今日信号等)
+        lines.extend([
             "---",
             "",
             "## 📊 指数监测（板块模块）",
@@ -1430,8 +1432,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         ])
         for idx_name, idx_data in sector_overview.items():
             pos_str = "站上" if idx_data.get("above_ma5") else "跌破"
-            (m_lines if section_groups else lines).append(f"- **{idx_name}**: 收盘{idx_data.get('close')} ({pos_str}MA5, 乖离{idx_data.get('bias_pct')}%)")
-        (m_lines if section_groups else lines).append("")
+            lines.append(f"- **{idx_name}**: 收盘{idx_data.get('close')} ({pos_str}MA5, 乖离{idx_data.get('bias_pct')}%)")
+        lines.append("")
 
     # ── ⚠️ 资金异动 — F3: flow_anomalies 接入推送正文 ──
     if flow_anomalies:
@@ -1742,10 +1744,11 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         _s.append("")
 
     if ai_text:
-        (m_lines if section_groups else lines).append("---")
-        (m_lines if section_groups else lines).append("")
-        (m_lines if section_groups else lines).append(f"{ai_text}")
-        (m_lines if section_groups else lines).append("")
+        # 2026-08-08 调整:AI 解读从大盘组移入交易组(跟随判断区块)
+        lines.append("---")
+        lines.append("")
+        lines.append(f"{ai_text}")
+        lines.append("")
 
     # ── 📖 每日一得 ──
     lines.append("---")
@@ -1889,8 +1892,10 @@ def build_merged_card(data: dict) -> str:
         glossary_text=agg_glossary,
     )
     parts = []
-    # ── 大盘组：日期/指数/温度/手册/释义/指数监测/AI 解读 ──
+    # ── 大盘组：日期/指数/温度/手册/释义（知识）──
     parts.append(market_t)
+    # ── 交易组：今日信号/入场出场/冲突裁决/综合策略（判断紧跟知识,2026-08-08 用户需求）──
+    parts.append(trade_t)
     # ── 板块聚合卡：替代 估值判断+板块总览+操作信号+板块全貌 四区块 ──
     if agg_card:
         parts.append(agg_card)
@@ -1908,8 +1913,6 @@ def build_merged_card(data: dict) -> str:
     fund_obs = data.get("fund_observation")
     if fund_obs:
         parts.append(f"━━━ 📈 资金观察（南向/回购/承接） ━━━\n{fund_obs}")
-    # ── 交易组：信号/仓位/纪律 ──
-    parts.append(trade_t)
     # 诚实声明收尾
     if data.get("honest"):
         parts.append(f"━━━ 🔎 诚实声明 ━━━\n{data['honest']}")
