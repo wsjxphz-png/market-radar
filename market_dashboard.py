@@ -1305,7 +1305,8 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      flow_anomalies: Optional[List] = None,
                      fund_flow_hist_ok: Optional[bool] = None,
                      board_ok: Optional[bool] = None,
-                     section_groups: bool = False):
+                     section_groups: bool = False,
+                     glossary_text: str = ""):
     """section_groups=True 时返回 (大盘, 板块, 交易) 三段文本元组——
     合并卡据此重排为「大盘在前、板块聚合、交易在后」(2026-08-06 用户需求);
     False(默认)保持原交织顺序不变。"""
@@ -1394,6 +1395,14 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
             temp_lines.append(f"")
         (m_lines if section_groups else lines).extend(temp_lines)
 
+    # ── 📖 交易手册速查（2026-08-06 需求:紧跟市场温度之后——先学知识,再根据知识做判断）──
+    _m = m_lines if section_groups else lines
+    _m.extend(["---", "", TRADING_MANUAL])
+    # 名词释义紧跟手册（2026-08-07 用户风险点1：一行式板块信息密度高，
+    # 读者须先看释义才能读懂字段；释义不可后置到板块区）
+    if glossary_text:
+        _m.extend(["", f"📖 名词释义（读板块判断前先看）：{glossary_text}"])
+
     # ── 💰 板块资金流向 ──
     if flow_data:
         flows = flow_data.get("sectors", [])
@@ -1440,9 +1449,6 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
         f"",
     ])
-
-    # ── 📖 交易手册速查 ──
-    lines.append(TRADING_MANUAL)
 
     # ── ⚠️ 信号翻转 ──
     flips = detect_signal_flips(signals)
@@ -1853,10 +1859,12 @@ def build_merged_card(data: dict) -> str:
     三层结构——事实/说明/判断，判断可缺席"无法判断"照常渲染）；
     fund_observation → 资金观察增强区块（南向/回购/承接，尾部）；
     honest → 诚实声明（覆盖估值/资金推断与操作信号理论性）。"""
-    from val_format import build_board_overview, format_valuation_block
-    # 分组渲染：大盘(日期/指数/温度/指数监测/AI) → 板块 → 交易三段，
-    # 由本函数重排为「大盘在前、板块聚合、交易在后」（2026-08-06 用户需求：
-    # 原先板块在前、大盘中间、板块又散在尾部，同类信息不聚合）
+    from val_format import render_board_aggregate
+    # 分组渲染：大盘/交易两段由 format_dashboard 输出；板块视图由聚合卡承担
+    #（2026-08-07 用户审计：估值判断/板块总览/操作信号/板块全貌四区块重复输出
+    # 同一板块的多套结论 → 合并为 render_board_aggregate 一张聚合卡）
+    agg_glossary, agg_card = render_board_aggregate(
+        data.get("board_facts", []), data.get("sectors", []))
     market_t, sector_t, trade_t = format_dashboard(
         cycle=data["cycle"], signals=data["signals"], sectors=data.get("sectors", []),
         ai_text=data.get("ai_text"), idx=data["idx"],
@@ -1868,20 +1876,18 @@ def build_merged_card(data: dict) -> str:
         fund_flow_hist_ok=data.get("fund_flow_hist_ok"),
         board_ok=data.get("board_ok"),
         section_groups=True,
+        glossary_text=agg_glossary,
     )
     parts = []
-    # ── 大盘组：日期/指数/温度/指数监测/AI 解读 ──
+    # ── 大盘组：日期/指数/温度/手册/释义/指数监测/AI 解读 ──
     parts.append(market_t)
-    # ── 板块组：估值判断 + 板块总览 + base 板块区块 + 资金观察增强 ──
-    val = format_valuation_block(data.get("valuation_judgements", []),
-                                 data.get("valuation_snapshots", []))
-    if val:
-        parts.append(val)
-    board_ov = build_board_overview(data.get("board_facts", []))
-    if board_ov:
-        parts.append(board_ov)
-    if sector_t:  # 审查 P3-4: 板块数据全缺时避免空段
-        parts.append(sector_t)
+    # ── 板块聚合卡：替代 估值判断+板块总览+操作信号+板块全貌 四区块 ──
+    if agg_card:
+        parts.append(agg_card)
+    elif data.get("sector_unavailable"):
+        # F2(2026-08-07 迁移):板块模块整体异常 → 聚合卡为空时必须显式标注,禁止静默缺块
+        parts.append("━━━ 🔷 板块判断 ━━━\n⚠️ **板块数据暂不可用** — 板块操作信号与板块全貌本日缺失。指数信号不受影响，仍可参考。")
+    # ── 资金观察增强（南向/回购/承接，非板块级维度，独立保留）──
     fund_obs = data.get("fund_observation")
     if fund_obs:
         parts.append(f"━━━ 📈 资金观察（南向/回购/承接） ━━━\n{fund_obs}")

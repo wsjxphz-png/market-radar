@@ -70,81 +70,77 @@ def _full_card_data():
 # ═══════════════════════════════════════════════════════════
 
 def test_merged_card_keeps_all_original_dashboard_blocks(monkeypatch):
-    """合并卡必须包含原 format_dashboard 全部区块（交易手册/每日一得/指数监测/资金异动/
-    信号翻转/今日信号/入场出场/冲突裁决/板块诊断/板块全貌/综合策略/观察池/资金流向TOP5/
-    市场温度"怎么看"说明等）"""
+    """合并卡保留原 format_dashboard 大盘/交易区块（温度/手册/指数监测/信号翻转/
+    今日信号/入场出场/冲突裁决/综合策略/每日一得等）；板块视图由聚合卡承担
+    （2026-08-07 重构：估值判断/板块总览/操作信号/板块全貌/资金流向 合并入聚合卡）"""
     monkeypatch.setattr("market_dashboard.detect_signal_flips",
                         lambda signals, log_path=None: ["量价结构: healthy→danger ↓"])
-    card = build_merged_card(_full_card_data())
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()
+    card = build_merged_card(data)
     for marker in [
         "## 🔥 市场温度",                       # 市场温度
         "**怎么看**",                          # 市场温度"怎么看"说明
-        "## 💰 板块资金流向",                  # 板块资金流向 TOP5
-        "半导体: 流入43.5亿",                  # 板块资金流向 TOP5 内容
-        "## 📊 指数监测（板块模块）",           # 指数监测
-        "## ⚠️ 资金异动",                      # 资金异动
         "## 📖 交易手册",                      # 交易手册
         "## ⚠️ 信号翻转 — 与昨日对比",         # 信号翻转
         "## 📊 今日信号",                      # 今日信号
         "## 🎯 入场/出场信号与仓位",           # 入场/出场信号
         "## ⚔️ 信号冲突裁决",                  # 冲突裁决
-        "## 🔍 板块操作信号",                  # 板块诊断（正常路径）
-        "## 📋 板块全貌",                      # 板块全貌
         "## 🎯 综合策略",                      # 综合策略
-        "## 👀 板块观察池",                    # 板块观察池
         "## 📖 每日一得",                      # 每日一得
+        "━━━ 🔷 板块判断",                    # 板块聚合卡（替代原板块多区块）
     ]:
         assert marker in card, f"原仪表盘区块丢失: {marker}"
+    # 板块视图唯一化：被聚合卡替代的区块不得再单独出现（去重契约）
+    for gone in ["## 💰 板块资金流向", "## 🔍 板块操作信号", "## 📋 板块全貌",
+                 "## 👀 板块观察池", "━━━ 💰 估值判断", "━━━ 🧭 板块总览"]:
+        assert gone not in card, f"板块区块应并入聚合卡: {gone}"
 
 
 def test_merged_card_order_market_first_sector_grouped_trade_last():
-    """区块顺序(2026-08-06 用户需求重排)：大盘(日期/温度)最前 → 板块组
-    (估值判断/板块总览/资金流向/资金异动/资金观察) → 交易组 → 诚实声明。
-    同类信息聚合：板块相关区块不得分散在大盘中间。"""
+    """区块顺序(2026-08-07 v3)：大盘(日期/温度/手册/释义)最前 → 板块聚合卡
+    → 资金观察 → 交易组 → 诚实声明。释义紧跟手册(风险点1)，聚合卡替代旧板块区块。"""
     data = _full_card_data()
     data["board_facts"] = _board_facts_fixture()
     card = build_merged_card(data)
     assert card.startswith("**")                  # 日期行是卡首字符(审查 P3-2)
     i_temp = card.find("## 🔥 市场温度")           # 大盘组
-    i_val = card.find("估值判断")                 # 板块组开头
-    i_board_ov = card.find("板块总览")            # 板块组
-    i_flow = card.find("## 💰 板块资金流向")       # 板块组(base 板块区块)
-    i_anomaly = card.find("## ⚠️ 资金异动")       # 板块组
-    i_ops = card.find("## 🔍 板块操作信号")        # 板块组
-    i_land = card.find("## 📋 板块全貌")           # 板块组
-    i_watch = card.find("## 👀 板块观察池")        # 板块组(审查 P3-2 补断言)
-    i_fund_obs = card.find("资金观察（南向/回购/承接）")  # 板块组尾部
+    i_manual = card.find("## 📖 交易手册")         # 手册
+    i_glossary = card.find("名词释义")             # 释义必须紧跟手册(风险点1)
+    i_agg = card.find("━━━ 🔷 板块判断")          # 板块聚合卡
+    i_fund_obs = card.find("资金观察（南向/回购/承接）")
     i_trade = card.find("## 📊 今日信号")          # 交易组
-    i_insight = card.find("## 📖 每日一得")        # 交易组(审查 P3-2 补断言)
+    i_insight = card.find("## 📖 每日一得")
     i_honest = card.find("诚实声明")
-    # 大盘组在前：温度在板块组(估值判断)之前
-    assert 0 <= i_temp < i_val
-    # 板块组聚合（估值→总览→资金流向→异动→操作信号→全貌→观察池→资金观察），
-    # 且整体先于交易组；交易组内每日一得在诚实声明前
-    assert i_val < i_board_ov < i_flow < i_anomaly < i_ops < i_land < i_watch < i_fund_obs < i_trade < i_insight < i_honest
-    # 板块内容不得出现在大盘(温度)之前
-    assert i_val > i_temp
+    # 大盘组在前：温度→手册→释义，释义不得后置到板块区
+    assert 0 <= i_temp < i_manual < i_glossary < i_agg
+    # 聚合卡 → 资金观察 → 交易组 → 诚实声明
+    assert i_agg < i_fund_obs < i_trade < i_insight < i_honest
+    # 旧板块区块全部被聚合卡替代
+    for gone in ["## 💰 板块资金流向", "## 🔍 板块操作信号", "## 📋 板块全貌",
+                 "━━━ 💰 估值判断", "━━━ 🧭 板块总览"]:
+        assert gone not in card, f"板块区块应并入聚合卡: {gone}"
 
 
 def test_merged_card_fund_observation_enhanced_block():
-    """资金观察增强区块（南向/回购/承接）存在 — 新增区块；原「板块资金流向」保留不动"""
+    """资金观察增强区块（南向/回购/承接）存在（非板块级维度，独立保留）"""
     card = build_merged_card(_full_card_data())
     assert "━━━ 📈 资金观察（南向/回购/承接） ━━━" in card
     assert "南向" in card
     assert "回购" in card
     assert "承接" in card
-    # 原「板块资金流向」区块保留（与新增区块并存，非替换）
-    assert "## 💰 板块资金流向" in card
-    assert "板块资金净流入 TOP5:" in card
+    # 2026-08-07 重构：板块资金流向并入聚合卡（资金列），不再单独输出
+    assert "## 💰 板块资金流向" not in card
 
 
 def test_merged_card_sector_unavailable_block():
-    """板块模块整体异常 → 合并卡出现「板块诊断」+「板块数据暂不可用」（F2 不静默缺块）"""
+    """板块模块整体异常 → 聚合卡输出「板块数据暂不可用」（F2 不静默缺块）"""
     data = _full_card_data()
     data["sector_unavailable"] = True
     data["sectors"] = []
+    data["board_facts"] = []
     card = build_merged_card(data)
-    assert "## 📋 板块诊断" in card
+    assert "━━━ 🔷 板块判断" in card
     assert "板块数据暂不可用" in card
     assert "## 🔍 板块操作信号" not in card  # 空板块不输出空标题
 
@@ -170,10 +166,12 @@ def test_merged_card_no_empty_new_blocks():
 
 
 def test_fund_observation_header_emoji_no_collision():
-    """新增资金观察区块头部 emoji 与估值(💰)/板块资金流向(💰) 去重 → 资金观察用 📈"""
-    card = build_merged_card(_full_card_data())
+    """资金观察区块 emoji(📈)与板块聚合卡(🔷)不冲突(2026-08-07:估值/资金流向区块已并入聚合卡)"""
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()
+    card = build_merged_card(data)
     assert "━━━ 📈 资金观察" in card
-    assert "━━━ 💰 估值判断" in card
+    assert "━━━ 🔷 板块判断" in card
 
 
 def test_compute_fund_state_inflow_confirm():
@@ -800,18 +798,20 @@ def test_build_board_facts_full_contract():
 
 
 def test_merged_card_board_overview_between_valuation_and_dashboard():
-    """板块总览位置(2026-08-06 重排)：大盘(温度)之后、板块组内(估值判断之后、资金观察之前)"""
+    """板块聚合卡(2026-08-07)：位于大盘组(温度/手册/释义)之后、资金观察之前；
+    聚合卡含每板块 事实+短线/定投 行；板块总览/估值判断旧区块不再单独出现"""
     data = _full_card_data()
     data["board_facts"] = _board_facts_fixture()
     card = build_merged_card(data)
-    i_val = card.find("估值判断")
-    i_ov = card.find("🧭 板块总览")
-    i_temp = card.find("## 🔥 市场温度")
+    i_glossary = card.find("名词释义")
+    i_agg = card.find("━━━ 🔷 板块判断")
     i_fund = card.find("资金观察")
     i_honest = card.find("诚实声明")
-    assert -1 not in (i_val, i_ov, i_temp, i_fund, i_honest)
-    assert 0 <= i_temp < i_val < i_ov < i_fund < i_honest
-    assert "◆ 事实" in card
+    assert -1 not in (i_glossary, i_agg, i_fund, i_honest)
+    assert 0 <= i_glossary < i_agg < i_fund < i_honest
+    assert "◆ 板块：" in card  # 聚合卡事实行首行
+    assert "趋势：" in card     # 事实行含趋势
+    assert "◆ 短线：" in card  # 聚合卡判断行
 
 
 def test_merged_card_board_overview_empty_no_header():

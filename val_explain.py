@@ -163,6 +163,34 @@ def judge_dca(valuation: str) -> str:
     return "无法判断：估值证据不足（观察），等待证据（推断）"
 
 
+def dimension_signals(trend_state: str, valuation: str, fund_state: str) -> dict:
+    """三维方向判定（2026-08-07 用户需求：维度分歧标准化标注的前提）。
+    短线=趋势标尺、定投=估值标尺、资金=流向标尺；返回 多/空/中性。"""
+    short = {"above20_rising": "多", "below20_falling": "空",
+             "around20_oscillation": "中性"}.get(trend_state, "中性")
+    dca = {"便宜": "多", "合理": "中性", "贵": "空"}.get(valuation, "中性")
+    fund = {"inflow_confirm": "多", "outflow_confirm": "空"}.get(fund_state, "中性")
+    return {"short": short, "dca": dca, "fund": fund}
+
+
+def format_dimension_conflict(board: str, short_judge: str, dca_judge: str,
+                              fund_text: str, signals: dict) -> str:
+    """维度分歧标准化话术（2026-08-07 用户需求：固定模板，区分「视角不同」与「数据冲突」）。
+    三维中出现多/空相反 → 输出模板明确告知这是评价标尺差异，非系统出错。"""
+    vals = [signals.get("short"), signals.get("dca"), signals.get("fund")]
+    has_bull = "多" in vals
+    has_bear = "空" in vals
+    if not (has_bull and has_bear):
+        return ""
+    lines = [f"维度分歧（{board}）：", "　【短线维度】" + short_judge,
+             "　【定投维度】" + dca_judge]
+    if fund_text:
+        lines.append("　【资金维度】" + fund_text)
+    lines.append("——短线看趋势标尺、定投看估值标尺、资金看流向标尺，三个维度独立成立，"
+                 "结论相反是「视角不同」，不是系统冲突；具体操作以各自维度为准。")
+    return "\n".join(lines)
+
+
 # ============================================================
 # synthesize：三层结构组装
 # ============================================================
