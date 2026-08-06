@@ -350,3 +350,24 @@ def test_main_push_dedup_two_runs(tmp_path, monkeypatch, capsys):
     assert "已推送过" in out2                                     # 第二次打印跳过原因
     assert "跳过本次推送" in out2
     assert calls["send"] == 1                                     # 未重复推送
+
+
+def test_summary_suppresses_aggressive_action_when_mtf_danger(monkeypatch):
+    """冲突3修复(2026-08-07 用户审计)：三周期共振向下(月线空头)时,
+    启动期/加速期的激进 action(如"敢打首板")被抑制为防守提示,
+    与手册"级别不统一不做新买入"对齐。"""
+    import market_dashboard as md
+    from market_dashboard import Signal
+    from pandas import DataFrame
+    sig_danger = Signal(name="三周期趋势", status="danger",
+                        value="月线向下，仅日线向上", meaning="级别不统一",
+                        rule="不做新买入")
+    signals = [sig_danger]
+    cycle = {"name": "启动期", "emoji": "🌱", "position": "30-50%",
+             "action": "识别题材和潜在龙头，小仓位试水。敢打首板是吃肉的第一步。",
+             "watch": ["首板数量"], "quote": "启动试水"}
+    df = DataFrame({"date": ["2026-08-07"], "close": [3000.0]})
+    out = md.format_dashboard(cycle, signals, [], None, df)
+    assert "敢打首板" not in out
+    assert "不做新买入" in out
+    assert "空仓/极轻仓" in out

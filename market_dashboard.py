@@ -1639,11 +1639,10 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # 520战法具体规则
-    lines.append(f"**📖 520战法纪律速查（《趋势交易论》第128-129节）**:")
-    lines.append(f"- 入场：5日均线上穿20日均线（金叉）+ 成交量放大 → 买入")
-    lines.append(f"- 减仓：收盘价跌破5日均线 → 减掉一半仓位")
-    lines.append(f"- 加仓：回踩20日均线不破 + 缩量止跌 → 把减掉的仓位加回来")
-    lines.append(f"- 离场：5日均线下穿20日均线（死叉） → 全部清仓")
+    # 去重(2026-08-07 用户审计):520 战法完整纪律已在《交易手册》3.入场/4.止损,
+    # 此处只保留一句引用,不再整段重写
+    lines.append(f"**📖 520战法纪律速查**：详见《交易手册》3.入场/4.止损——金叉放量买入；"
+                 f"破5日线减半仓；回踩20日线缩量止跌加回；死叉全部清仓。")
     lines.append("")
 
     # ── ⚔️ 信号冲突裁决 ──
@@ -1710,10 +1709,18 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # ── 综合策略 ──
+    # 冲突3修复(2026-08-07 用户审计):三周期共振向下(月线空头)时,启动期/加速期的
+    # 激进 action(如"敢打首板")与手册"级别不统一不做新买入"矛盾 → 抑制为防守提示
+    if mtf_danger and cycle.get("name") in ("启动期", "加速期"):
+        action_line = ("**操作**: ⚠️ 三周期共振向下（月线空头）——手册规则：不做新买入。"
+                       f"{cycle.get('name')}的题材操作建议在此失效，以空仓/极轻仓（0-2成）为准，"
+                       "等三周期中至少两个级别转向上方后再启用。")
+    else:
+        action_line = f"**操作**: {cycle['action']}"
     lines.append(f"## 🎯 综合策略")
     lines.append("")
     lines.append(f"**理论判断**: {cycle['name']} → 仓位{cycle['position']}")
-    lines.append(f"**操作**: {cycle['action']}")
+    lines.append(action_line)
     lines.append("")
     lines.append("**关键观察点**:")
     for w in cycle.get("watch", []): lines.append(f"- {w}")
