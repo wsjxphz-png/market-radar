@@ -81,8 +81,7 @@
         {"id": "INDPRO", "name": "工业生产指数", "freq": "monthly"},
         {"id": "TOTALSL", "name": "消费信贷", "freq": "monthly"},
         {"id": "BOPGSTB", "name": "贸易差额", "freq": "monthly"},
-        {"id": "DCOILWTICO", "name": "WTI原油价格", "freq": "daily"},
-        {"id": "GOLDPMGBD228NLBM", "name": "黄金价格(London PM Fix)", "freq": "daily"}
+        {"id": "DCOILWTICO", "name": "WTI原油价格", "freq": "daily"}
       ]
     },
     "tavily": {

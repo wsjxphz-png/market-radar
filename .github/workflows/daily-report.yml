@@ -2,8 +2,9 @@ name: 市场机会日报
 
 on:
   schedule:
-    # 北京时间 15:00 = UTC 07:00
-    - cron: '0 7 * * *'
+    # 北京时间 19:00 = UTC 11:00（2026-08-06 调整：避开 DeepSeek 高峰价 9-12/14-18 点，
+    # 且 GitHub schedule 实际延迟 ~2.5h → 实际推送约 21:30）
+    - cron: '0 11 * * *'
   workflow_dispatch:
     inputs:
       force:

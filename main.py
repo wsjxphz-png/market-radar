@@ -179,7 +179,14 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
             continue  # 实例已熔断，直接试下一个
         for attempt in range(MAX_RETRIES + 1):
             try:
-                resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+                # SEC WAF 强制 HTTP/2(实测 http1.1 一律 403,h2 200)→ 特判走 curl_cffi
+                if "sec.gov" in url:
+                    from curl_cffi import requests as cffi_requests
+                    from curl_cffi import CurlHttpVersion
+                    resp = cffi_requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT,
+                                            http_version=CurlHttpVersion.V2TLS)
+                else:
+                    resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
                 if resp.status_code == 200:
                     feed = feedparser.parse(resp.content)
                     if feed.entries:
