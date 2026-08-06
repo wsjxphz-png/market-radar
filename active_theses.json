@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-05",
+  "updated": "2026-08-06",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -28,8 +28,14 @@
           "date": "2026-08-05",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-08-06",
+          "status": "加强",
+          "evidence": "黄金单日大涨200美元突破4200美元，在加息预期升温背景下逆势走强，'卖出美国'交易卷土重来，美元走弱"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-08-07 非农数据"
     },
     {
       "id": "81f7586b00c1",
@@ -58,8 +64,14 @@
           "date": "2026-08-05",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-08-06",
+          "status": "加强",
+          "evidence": "伊朗与阿曼接近达成协议，油价单日跌4.87%至81.96美元，但伊朗否认与美直接谈判，协议不确定性仍存"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-08-10 美伊谈判进展"
     },
     {
       "id": "f9a4a0ce363c",
@@ -88,8 +100,14 @@
           "date": "2026-08-05",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-06",
+          "status": "加强",
+          "evidence": "谷歌TPU需求强劲，CSP自研ASIC平台拉货动能较好，三星4nm产能被HBM4和LPU芯片预订至2027年"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09-01 谷歌TPU出货量"
     },
     {
       "id": "6bfed27dede5",
@@ -118,8 +136,14 @@
           "date": "2026-08-05",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-06",
+          "status": "不变",
+          "evidence": "多晶硅价格32元/kg低于成本，企业主动减产，但尚未看到价格企稳的明确信号"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09-01 多晶硅月度产量"
     },
     {
       "id": "381e4ae80419",
@@ -146,6 +170,117 @@
       "history": [
         {
           "date": "2026-08-05",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-06",
+          "status": "加强",
+          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定，公司营收主要来自X和AI计算而非太空业务"
+        }
+      ],
+      "next_checkpoint": "2026-08-07 解禁首日交易"
+    },
+    {
+      "id": "977d2846e811",
+      "name": "黄金趋势性做多",
+      "category": "E防御",
+      "signal_strength": "强",
+      "core_logic": "在美联储加息预期升温、'卖出美国'交易卷土重来、美元走弱、财政赤字扩张的背景下，黄金作为美元信用对冲工具，逆势突破4200美元，技术面和宏观面形成共振",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息并大幅收紧货币政策，美元指数大幅走强，金价跌破4000美元/盎司",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-07",
+          "event": "美国非农就业数据",
+          "what_to_watch": "就业数据强弱对加息预期的影响，以及金价反应"
+        },
+        {
+          "date": "2026-09-16",
+          "event": "FOMC会议",
+          "what_to_watch": "是否加息，以及点阵图对未来路径的指引"
+        },
+        {
+          "date": "2026-10-01",
+          "event": "美国财政部季度再融资",
+          "what_to_watch": "长端国债发行规模，财政赤字扩张程度"
+        }
+      ],
+      "created_date": "2026-08-06",
+      "expiry_date": "2027-02-02",
+      "history": [
+        {
+          "date": "2026-08-06",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "29f2adf49967",
+      "name": "霍尔木兹海峡缓和后的油价下行",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "伊朗与阿曼接近达成航运协议，若海峡重新开放，原油供应恢复，油价将大幅回落，缓解全球通胀压力",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊谈判破裂，海峡局势再度升级，油价突破前高",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-10",
+          "event": "美伊谈判进展",
+          "what_to_watch": "是否有正式协议签署"
+        },
+        {
+          "date": "2026-08-15",
+          "event": "霍尔木兹海峡通航数据",
+          "what_to_watch": "油轮通行量是否恢复"
+        },
+        {
+          "date": "2026-09-01",
+          "event": "OPEC+产量政策",
+          "what_to_watch": "是否调整产量以应对价格变化"
+        }
+      ],
+      "created_date": "2026-08-06",
+      "expiry_date": "2026-11-04",
+      "history": [
+        {
+          "date": "2026-08-06",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "55fb9d69157b",
+      "name": "MLCC国产替代加速",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "日韩MLCC大厂涨价30%，产能转向AI高端规格，消费级订单外溢，国产厂商迎来量价齐升的窗口期",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "AI服务器需求不及预期，MLCC涨价无法持续，国产厂商技术认证受阻",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-01",
+          "event": "MLCC厂商月度出货数据",
+          "what_to_watch": "出货量是否持续创新高"
+        },
+        {
+          "date": "2026-10-01",
+          "event": "国产MLCC厂商Q3财报",
+          "what_to_watch": "营收和毛利率是否环比提升"
+        },
+        {
+          "date": "2026-12-01",
+          "event": "AI服务器出货量",
+          "what_to_watch": "CSP资本开支是否持续上修"
+        }
+      ],
+      "created_date": "2026-08-06",
+      "expiry_date": "2027-08-01",
+      "history": [
+        {
+          "date": "2026-08-06",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
