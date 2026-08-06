@@ -97,15 +97,33 @@ def test_merged_card_keeps_all_original_dashboard_blocks(monkeypatch):
         assert marker in card, f"原仪表盘区块丢失: {marker}"
 
 
-def test_merged_card_order_valuation_top_fund_observation_tail():
-    """区块顺序：估值判断(顶部) → 原仪表盘全量 → 资金观察(尾部) → 诚实声明"""
-    card = build_merged_card(_full_card_data())
-    assert card.startswith("━━━ 💰 估值判断")     # 估值判断区块在卡片顶部
-    i_val = card.find("估值判断")
-    i_temp = card.find("## 🔥 市场温度")
-    i_fund_obs = card.find("资金观察（南向/回购/承接）")
+def test_merged_card_order_market_first_sector_grouped_trade_last():
+    """区块顺序(2026-08-06 用户需求重排)：大盘(日期/温度)最前 → 板块组
+    (估值判断/板块总览/资金流向/资金异动/资金观察) → 交易组 → 诚实声明。
+    同类信息聚合：板块相关区块不得分散在大盘中间。"""
+    data = _full_card_data()
+    data["board_facts"] = _board_facts_fixture()
+    card = build_merged_card(data)
+    assert card.startswith("**")                  # 日期行是卡首字符(审查 P3-2)
+    i_temp = card.find("## 🔥 市场温度")           # 大盘组
+    i_val = card.find("估值判断")                 # 板块组开头
+    i_board_ov = card.find("板块总览")            # 板块组
+    i_flow = card.find("## 💰 板块资金流向")       # 板块组(base 板块区块)
+    i_anomaly = card.find("## ⚠️ 资金异动")       # 板块组
+    i_ops = card.find("## 🔍 板块操作信号")        # 板块组
+    i_land = card.find("## 📋 板块全貌")           # 板块组
+    i_watch = card.find("## 👀 板块观察池")        # 板块组(审查 P3-2 补断言)
+    i_fund_obs = card.find("资金观察（南向/回购/承接）")  # 板块组尾部
+    i_trade = card.find("## 📊 今日信号")          # 交易组
+    i_insight = card.find("## 📖 每日一得")        # 交易组(审查 P3-2 补断言)
     i_honest = card.find("诚实声明")
-    assert 0 <= i_val < i_temp < i_fund_obs < i_honest
+    # 大盘组在前：温度在板块组(估值判断)之前
+    assert 0 <= i_temp < i_val
+    # 板块组聚合（估值→总览→资金流向→异动→操作信号→全貌→观察池→资金观察），
+    # 且整体先于交易组；交易组内每日一得在诚实声明前
+    assert i_val < i_board_ov < i_flow < i_anomaly < i_ops < i_land < i_watch < i_fund_obs < i_trade < i_insight < i_honest
+    # 板块内容不得出现在大盘(温度)之前
+    assert i_val > i_temp
 
 
 def test_merged_card_fund_observation_enhanced_block():
@@ -782,7 +800,7 @@ def test_build_board_facts_full_contract():
 
 
 def test_merged_card_board_overview_between_valuation_and_dashboard():
-    """板块总览位置：估值判断之后、format_dashboard（市场温度）之前"""
+    """板块总览位置(2026-08-06 重排)：大盘(温度)之后、板块组内(估值判断之后、资金观察之前)"""
     data = _full_card_data()
     data["board_facts"] = _board_facts_fixture()
     card = build_merged_card(data)
@@ -792,7 +810,7 @@ def test_merged_card_board_overview_between_valuation_and_dashboard():
     i_fund = card.find("资金观察")
     i_honest = card.find("诚实声明")
     assert -1 not in (i_val, i_ov, i_temp, i_fund, i_honest)
-    assert 0 <= i_val < i_ov < i_temp < i_fund < i_honest
+    assert 0 <= i_temp < i_val < i_ov < i_fund < i_honest
     assert "◆ 事实" in card
 
 

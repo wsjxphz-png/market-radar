@@ -1304,7 +1304,11 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
                      sector_overview: Optional[Dict] = None,
                      flow_anomalies: Optional[List] = None,
                      fund_flow_hist_ok: Optional[bool] = None,
-                     board_ok: Optional[bool] = None) -> str:
+                     board_ok: Optional[bool] = None,
+                     section_groups: bool = False):
+    """section_groups=True 时返回 (大盘, 板块, 交易) 三段文本元组——
+    合并卡据此重排为「大盘在前、板块聚合、交易在后」(2026-08-06 用户需求);
+    False(默认)保持原交织顺序不变。"""
     d = idx["date"].iloc[-1]
     date_str = d.strftime("%Y.%m.%d") if hasattr(d, 'strftime') else str(d)[:10]
     wd = ["一","二","三","四","五","六","日"][d.weekday()] if hasattr(d, 'weekday') else ""
@@ -1321,10 +1325,19 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     icon = {"healthy":"🟢","caution":"🟡","danger":"🔴"}
     sig_map = {s.name: s for s in signals}
 
-    lines = [
-        f"**{date_str} 周{wd}**",
-        f"{idx_summary}",
-    ]
+    if section_groups:
+        m_lines, s_lines = [], []   # 大盘组 / 板块组；lines 即交易组
+        m_lines.extend([
+            f"**{date_str} 周{wd}**",
+            f"{idx_summary}",
+        ])
+        lines = []
+    else:
+        m_lines = s_lines = None
+        lines = [
+            f"**{date_str} 周{wd}**",
+            f"{idx_summary}",
+        ]
 
     # ── 🔥 市场温度 ──
     if temp_data:
@@ -1379,27 +1392,28 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         else:
             temp_lines.append(f"> 📖 **怎么看**：涨跌比反映赚钱效应——指数可能不跌但你手里的票全在跌（分化）。涨停数反映短线资金活跃度——少于20说明游资休息了。成交额是最诚实的指标——放量才有行情，缩量就是大家在等。三者结合判断：指数趋势告诉你方向，市场温度告诉你能不能赚钱。")
             temp_lines.append(f"")
-        lines.extend(temp_lines)
+        (m_lines if section_groups else lines).extend(temp_lines)
 
     # ── 💰 板块资金流向 ──
     if flow_data:
         flows = flow_data.get("sectors", [])
         if flows:
-            lines.extend([
+            _s = s_lines if section_groups else lines
+            _s.extend([
                 f"## 💰 板块资金流向",
                 f"",
             ])
-            lines.append("板块资金净流入 TOP5:")
+            _s.append("板块资金净流入 TOP5:")
             for f in flows[:5]:
-                lines.append(f"- {f}")
-            lines.append("")
+                _s.append(f"- {f}")
+            _s.append("")
             # F9/F10: 裸数字补参照说明 + 代理指标限定（"大钱布局"属推断，非实名披露）
-            lines.append("> 板块净流入为当日快照（解读为\"大钱正在布局\"属推断，通常认为大额资金更接近机构行为）。\"vs 近20日\"参照待 trade_log 积累后补充。和技术面共振时信号更可靠。")
-            lines.append("")
+            _s.append("> 板块净流入为当日快照（解读为\"大钱正在布局\"属推断，通常认为大额资金更接近机构行为）。\"vs 近20日\"参照待 trade_log 积累后补充。和技术面共振时信号更可靠。")
+            _s.append("")
 
     # ── 📊 指数监测（板块模块） — F3: format_sector_for_prompt 的市场概况并入推送正文 ──
     if sector_overview:
-        lines.extend([
+        (m_lines if section_groups else lines).extend([
             "---",
             "",
             "## 📊 指数监测（板块模块）",
@@ -1407,20 +1421,20 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         ])
         for idx_name, idx_data in sector_overview.items():
             pos_str = "站上" if idx_data.get("above_ma5") else "跌破"
-            lines.append(f"- **{idx_name}**: 收盘{idx_data.get('close')} ({pos_str}MA5, 乖离{idx_data.get('bias_pct')}%)")
-        lines.append("")
+            (m_lines if section_groups else lines).append(f"- **{idx_name}**: 收盘{idx_data.get('close')} ({pos_str}MA5, 乖离{idx_data.get('bias_pct')}%)")
+        (m_lines if section_groups else lines).append("")
 
     # ── ⚠️ 资金异动 — F3: flow_anomalies 接入推送正文 ──
     if flow_anomalies:
-        lines.extend([
+        (s_lines if section_groups else lines).extend([
             "---",
             "",
             "## ⚠️ 资金异动",
             "",
         ])
         for a in flow_anomalies:
-            lines.append(f"- **{a['sector']}**: {a['anomaly']} {a.get('attention','')}")
-        lines.append("")
+            (s_lines if section_groups else lines).append(f"- **{a['sector']}**: {a['anomaly']} {a.get('attention','')}")
+        (s_lines if section_groups else lines).append("")
 
     lines.extend([
         f"**{cycle['emoji']} {cycle['name']}**  |  建议仓位 **{cycle['position']}**",
@@ -1642,31 +1656,35 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("")
 
     # ── 🔍 板块操作信号 ──
+    _s = s_lines if section_groups else lines
     if sector_unavailable:
         # F2: 板块模块整体异常时，推送正文必须出现"板块数据暂不可用"，而非静默缺块
-        lines.append("## 📋 板块诊断")
-        lines.append("")
-        lines.append("⚠️ **板块数据暂不可用** — 板块操作信号与板块全貌本日缺失。指数信号不受影响，仍可参考。")
-        lines.append("")
+        # (2026-08-06 审查 P2: 板块诊断警告必须与板块内容同组，不得错投交易组)
+        _s.append("## 📋 板块诊断")
+        _s.append("")
+        _s.append("⚠️ **板块数据暂不可用** — 板块操作信号与板块全貌本日缺失。指数信号不受影响，仍可参考。")
+        _s.append("")
     sector_ops = generate_sector_ops(sectors)
-    lines.extend(sector_ops)
-
-    lines.append("---")
-    lines.append("")
+    _s.extend(sector_ops)
+    # 2026-08-06 审查 P3-1: 操作信号与板块全貌之间的分隔归同组，
+    # 分组模式不得留在交易组造成连续 "---"
+    _s.append("---")
+    _s.append("")
 
     # ── 板块全貌（理论框架诊断） ──
     if sectors:
-        lines.append(f"## 📋 板块全貌（{len(sectors)}个 · 理论框架诊断）")
-        lines.append("")
+        _s = s_lines if section_groups else lines
+        _s.append(f"## 📋 板块全貌（{len(sectors)}个 · 理论框架诊断）")
+        _s.append("")
         # D3: 板块概览全败（返回 None 而非抛异常）→ 降级条目仍须标注，禁止静默缺块。
         # 文案与 F9 异常路径一致（"板块数据暂不可用"），此处补充降级来源说明
         if board_ok is not None and not board_ok:
-            lines.append("> ⚠️ **板块数据暂不可用** — 行业板块概览（当日涨跌/领涨股）获取失败，以下评级基于会议规则+技术面K线，板块当日概览数据缺失。")
-            lines.append("")
+            _s.append("> ⚠️ **板块数据暂不可用** — 行业板块概览（当日涨跌/领涨股）获取失败，以下评级基于会议规则+技术面K线，板块当日概览数据缺失。")
+            _s.append("")
         # F5: 板块资金流 5d/10d 失败时明确标注，避免静默归零误导
         if fund_flow_hist_ok is not None and not fund_flow_hist_ok:
-            lines.append("> ⚠️ 资金流历史数据暂不可用（5日/10日资金流缺失，当日资金流仍显示）。")
-            lines.append("")
+            _s.append("> ⚠️ 资金流历史数据暂不可用（5日/10日资金流缺失，当日资金流仍显示）。")
+            _s.append("")
         for label, filters in [
             ("🟢 可入场/持有", ["🟢 可入场","🟢 持有不动"]),
             ("🟡 等回踩/观察", ["🟡 等回踩再入","🟡 持有但警惕","🟡 观察中","🟡 等反弹减仓","🟡 等调整到位","🟢 可以关注"]),
@@ -1676,11 +1694,11 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         ]:
             matched = [s for s in sectors if s["rating"] in filters]
             if matched:
-                lines.append(f"**{label} ({len(matched)}):**")
+                _s.append(f"**{label} ({len(matched)}):**")
                 for s in matched:
-                    lines.append(f"- {s['rating']} **{s['name']}** ({s['category']}) | {s['phase']}")
-                    if s.get('tags'): lines.append(f"  {s['tags']}")
-                lines.append("")
+                    _s.append(f"- {s['rating']} **{s['name']}** ({s['category']}) | {s['phase']}")
+                    if s.get('tags'): _s.append(f"  {s['tags']}")
+                _s.append("")
 
     lines.append("---")
     lines.append("")
@@ -1700,20 +1718,21 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     # ── 👀 板块观察池 ──
     close_calls = [s for s in sectors if s.get("_entry_check", "").startswith("❌") and "可入场" not in s.get("rating","")]
     if close_calls:
-        lines.append("---")
-        lines.append("")
-        lines.append("## 👀 板块观察池 — 差一个条件就满足入场")
-        lines.append("")
+        _s = s_lines if section_groups else lines
+        _s.append("---")
+        _s.append("")
+        _s.append("## 👀 板块观察池 — 差一个条件就满足入场")
+        _s.append("")
         for s in close_calls[:5]:
             check = s.get("_entry_check", "")
-            lines.append(f"- **{s['name']}** ({s.get('category','')}): {check}")
-        lines.append("")
+            _s.append(f"- **{s['name']}** ({s.get('category','')}): {check}")
+        _s.append("")
 
     if ai_text:
-        lines.append("---")
-        lines.append("")
-        lines.append(f"{ai_text}")
-        lines.append("")
+        (m_lines if section_groups else lines).append("---")
+        (m_lines if section_groups else lines).append("")
+        (m_lines if section_groups else lines).append(f"{ai_text}")
+        (m_lines if section_groups else lines).append("")
 
     # ── 📖 每日一得 ──
     lines.append("---")
@@ -1727,6 +1746,9 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     lines.append("---")
     lines.append("*《趋势交易论》×《炒股的智慧》 | 术道合一 · 每日自动*")
 
+    if section_groups:
+        # 分组模式：返回 (大盘, 板块, 交易) 三段，由 build_merged_card 重排
+        return "\n".join(m_lines), "\n".join(s_lines), "\n".join(lines)
     return "\n".join(lines)
 
 
@@ -1832,7 +1854,10 @@ def build_merged_card(data: dict) -> str:
     fund_observation → 资金观察增强区块（南向/回购/承接，尾部）；
     honest → 诚实声明（覆盖估值/资金推断与操作信号理论性）。"""
     from val_format import build_board_overview, format_valuation_block
-    base = format_dashboard(
+    # 分组渲染：大盘(日期/指数/温度/指数监测/AI) → 板块 → 交易三段，
+    # 由本函数重排为「大盘在前、板块聚合、交易在后」（2026-08-06 用户需求：
+    # 原先板块在前、大盘中间、板块又散在尾部，同类信息不聚合）
+    market_t, sector_t, trade_t = format_dashboard(
         cycle=data["cycle"], signals=data["signals"], sectors=data.get("sectors", []),
         ai_text=data.get("ai_text"), idx=data["idx"],
         indices=data.get("indices"), temp_data=data.get("temp_data"),
@@ -1842,24 +1867,27 @@ def build_merged_card(data: dict) -> str:
         flow_anomalies=data.get("flow_anomalies"),
         fund_flow_hist_ok=data.get("fund_flow_hist_ok"),
         board_ok=data.get("board_ok"),
+        section_groups=True,
     )
     parts = []
-    # 估值判断区块：插入顶部（独立成表：东财口径 12 板块，不挂仪表盘板块列表）
+    # ── 大盘组：日期/指数/温度/指数监测/AI 解读 ──
+    parts.append(market_t)
+    # ── 板块组：估值判断 + 板块总览 + base 板块区块 + 资金观察增强 ──
     val = format_valuation_block(data.get("valuation_judgements", []),
                                  data.get("valuation_snapshots", []))
     if val:
         parts.append(val)
-    # 板块总览区块：紧随估值判断之后、format_dashboard 之前（板块详情作为核心）
     board_ov = build_board_overview(data.get("board_facts", []))
     if board_ov:
         parts.append(board_ov)
-    # 原仪表盘全量区块（估值/资金新增之外的顺序与文案完全保留）
-    parts.append(base)
-    # 资金观察增强区块：追加尾部（南向/回购/承接 — 原「板块资金流向」区块保留在 base 内不动）
+    if sector_t:  # 审查 P3-4: 板块数据全缺时避免空段
+        parts.append(sector_t)
     fund_obs = data.get("fund_observation")
     if fund_obs:
         parts.append(f"━━━ 📈 资金观察（南向/回购/承接） ━━━\n{fund_obs}")
-    # 诚实声明：原合并卡保留（覆盖估值/资金推断，均属推断非实名）
+    # ── 交易组：信号/仓位/纪律 ──
+    parts.append(trade_t)
+    # 诚实声明收尾
     if data.get("honest"):
         parts.append(f"━━━ 🔎 诚实声明 ━━━\n{data['honest']}")
     return "\n\n".join(parts)
