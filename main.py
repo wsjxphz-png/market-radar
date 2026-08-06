@@ -181,8 +181,12 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
             try:
                 # SEC WAF 强制 HTTP/2(实测 http1.1 一律 403,h2 200)→ 特判走 curl_cffi
                 if "sec.gov" in url:
-                    from curl_cffi import requests as cffi_requests
-                    from curl_cffi import CurlHttpVersion
+                    try:
+                        from curl_cffi import requests as cffi_requests
+                        from curl_cffi import CurlHttpVersion
+                    except ImportError as ie:
+                        log(f"   ⚠️ {task['source_name']}: 需要 curl_cffi({ie})")
+                        break
                     resp = cffi_requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT,
                                             http_version=CurlHttpVersion.V2TLS)
                 else:
@@ -197,6 +201,7 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
                 elif resp.status_code == 429:
                     time.sleep((attempt + 1) * 5); continue  # 限流：短暂等待后重试
                 else:
+                    log(f"   ❌ {task['source_name']}: HTTP {resp.status_code}")  # 失败原因可见（2026-08-06）
                     break  # 403/404/5xx：本实例本次失败，快速换下一实例
             except Exception:
                 break  # 连接错误：不再重试烧时间，快速换下一实例
@@ -627,11 +632,15 @@ SPAM_KW = [
 SPAM_RE = [re.compile(kw, re.IGNORECASE) for kw in SPAM_KW]
 
 
+MAX_ITEMS_PER_SOURCE = 30  # 每源最多 30 条：东财研报类单源 50 条冗余高，限条控 token（2026-08-06）
+
+
 def pre_filter(items: List[Dict]) -> Tuple[List[Dict], int, int]:
     now_utc = datetime.now(timezone.utc)
     cutoff = now_utc - timedelta(hours=24)
     filtered, seen = [], set()
     old_c, spam_c = 0, 0
+    per_source = {}
     for item in items:
         try:
             if datetime.fromisoformat(item["pub_date"]) < cutoff: old_c += 1; continue
@@ -645,6 +654,11 @@ def pre_filter(items: List[Dict]) -> Tuple[List[Dict], int, int]:
         txt = f"{item['title']} {item.get('description','')[:500]}"
         if any(p.search(txt) for p in SPAM_RE): spam_c += 1; continue
         if len(item["title"].strip()) < 5: continue
+        src = item.get("source_name", "?")
+        if per_source.get(src, 0) >= MAX_ITEMS_PER_SOURCE:
+            old_c += 1  # 超限条目计入"去旧"统计（同为裁剪，避免新增计数维度）
+            continue
+        per_source[src] = per_source.get(src, 0) + 1
         filtered.append(item)
     log(f"\n🔎 预过滤: 去旧{old_c} 去噪音{spam_c} | {len(items)}→{len(filtered)}")
     return filtered, old_c, spam_c
@@ -973,22 +987,26 @@ def build_ai_input(items: List[Dict], fred_items: List[Dict], akshare_text: str,
 
     # 信息条目
     idx = 0
+    # description 按类别分层截断：研报/快讯冗余高截短，深度新闻保留更多（token 优化 2026-08-06）
+    DESC_LIMITS = {"research_cn": 200, "news_cn": 250, "community_cn": 150,
+                   "sentiment": 150, "trading": 200, "news_global": 300, "industry": 300}
 
     # Tavily 实时搜索（放在最前面，AI 优先参考最新搜索）
     if tavily_items:
         parts.append(f"\n## 🔍 实时搜索补充 ({len(tavily_items)}条)\n")
         for item in tavily_items:
             idx += 1
-            parts.append(f"[{idx}]【{item['platform']}】{item['source_name']} | {item.get('pub_date_display','?')}\n    {item['title']}\n    {item['description'][:500]}\n    {item.get('url','')}\n")
+            parts.append(f"[{idx}]【{item['platform']}】{item['source_name']} | {item.get('pub_date_display','?')}\n    {item['title']}\n    {item['description'][:DESC_LIMITS.get(item.get('category',''), 300)]}\n    {item.get('url','')}\n")
     priority_order = ["macro", "policy", "news_cn", "news_global", "research_cn", "equity", "industry", "value", "corporate", "trading", "crypto", "tech", "sentiment", "income", "community_cn", "education"]
     for cat_key in priority_order:
         cat_items = cats.pop(cat_key, [])
         if not cat_items: continue
         label = cat_labels.get(cat_key, cat_key)
         parts.append(f"\n## {label} ({len(cat_items)}条)\n")
+        limit = DESC_LIMITS.get(cat_key, 300)
         for item in cat_items:
             idx += 1
-            parts.append(f"[{idx}]【{item['platform']}】{item['source_name']} | {item.get('pub_date_display','?')}\n    {item['title']}\n    {item['description'][:500]}\n    {item.get('url','')}\n")
+            parts.append(f"[{idx}]【{item['platform']}】{item['source_name']} | {item.get('pub_date_display','?')}\n    {item['title']}\n    {item['description'][:limit]}\n    {item.get('url','')}\n")
 
     # 剩余类别
     for cat_key, cat_items in cats.items():
