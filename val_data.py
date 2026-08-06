@@ -1,5 +1,8 @@
 """估值数据源：中证 PE 全历史分位 / 中证成分×BaoStock PB 聚合 / 价格位置兜底"""
+import io
 import logging
+import threading
+import time
 from typing import Dict, List, Optional
 import pandas as pd
 import requests
@@ -10,6 +13,13 @@ from val_config import INDEX_MAP, is_cyclical
 logger = logging.getLogger(__name__)
 H = {"User-Agent": "Mozilla/5.0"}
 PE_LOOKBACK_DAYS = 2440  # 10 年交易日窗口
+# PB 聚合性能护栏（2026-08-06：GitHub runner 上 baostock 单只查询实测 ~8.5s，
+# 50 只/板块 × 11 板块理论 78 分钟，必爆 workflow 20 分钟上限 → 降样本+板块级预算+单只软超时）
+PB_SAMPLE_LIMIT = 20        # 每板块最多采样成分股数
+PB_BUDGET_SECONDS = 60      # 每板块 PB 聚合总预算，超时即降级（估值卡有三级兜底链）
+PB_QUERY_TIMEOUT = 10       # 单只查询软超时（baostock 阻塞式 API，daemon 线程放弃等待）
+_BS_LOCK = threading.Lock()  # baostock 模块级全局 socket 无内部锁：软超时后旧线程仍存活，
+                             # 不持锁并发 send/recv 会串包 → PB 静默掺入他股数据（2026-08-06 审查 F1）
 
 def _safe(fn, *args, **kwargs):
     try:
@@ -53,7 +63,10 @@ def fetch_constituents(index_code: str) -> Optional[List[str]]:
     """中证 cons xls 成分股 → BaoStock 代码格式（sh./sz.）"""
     url = (f"https://oss-ch.csindex.com.cn/static/html/csindex/public/uploads/"
            f"file/autofile/cons/{index_code}cons.xls")
-    df = pd.read_excel(url)
+    # read_excel(url) 直连无超时：连接失败会挂数分钟等服务端关闭（2026-08-06 实测 6 分钟）
+    r = requests.get(url, timeout=15, headers=H)
+    r.raise_for_status()
+    df = pd.read_excel(io.BytesIO(r.content))
     codes = []
     for raw in df.iloc[:, 4].dropna().astype(str):
         raw = raw.strip().zfill(6)  # 部分 cons 文件数值型存储丢前导零（000983→983）
@@ -71,6 +84,22 @@ def _bs_login():
         raise RuntimeError(f"BaoStock 登录失败: {lg.error_msg}")
     return lg
 
+def _query_pb(code: str) -> Optional[float]:
+    """单只成分股近 10 日 pbMRQ。持 _BS_LOCK 串行化：baostock 阻塞式 API 无法中断，
+    软超时后 daemon 线程仍存活，锁保证同一时刻只有一条查询在 socket 上。"""
+    with _BS_LOCK:
+        rs = bs.query_history_k_data_plus(code, "date,pbMRQ",
+                                          start_date=(pd.Timestamp.now() - pd.Timedelta(days=10)).strftime("%Y-%m-%d"),
+                                          end_date=pd.Timestamp.now().strftime("%Y-%m-%d"),
+                                          frequency="d")
+        row = None
+        while rs.error_code == "0" and rs.next():
+            row = rs.get_row_data()
+        if row and row[1] and row[1] not in ("", "0"):
+            return float(row[1])
+    return None
+
+
 def fetch_sector_pb(sector: str) -> Optional[dict]:
     """板块 PB = 中证成分股 pbMRQ 中位数（BaoStock，官方源）"""
     code = INDEX_MAP.get(sector)
@@ -84,16 +113,26 @@ def fetch_sector_pb(sector: str) -> Optional[dict]:
         return None
     try:
         pb_vals = []
-        for c in cons[:50]:  # 每板块最多 50 只代表成分，控制耗时
-            rs = bs.query_history_k_data_plus(c, "date,pbMRQ",
-                                              start_date=(pd.Timestamp.now() - pd.Timedelta(days=10)).strftime("%Y-%m-%d"),
-                                              end_date=pd.Timestamp.now().strftime("%Y-%m-%d"),
-                                              frequency="d")
-            row = None
-            while rs.error_code == "0" and rs.next():
-                row = rs.get_row_data()
-            if row and row[1] and row[1] not in ("", "0"):
-                pb_vals.append(float(row[1]))
+        deadline = time.time() + PB_BUDGET_SECONDS
+        for c in cons[:PB_SAMPLE_LIMIT]:
+            if time.time() > deadline:
+                logger.warning("板块 %s PB 聚合超预算，已采样 %d 只，降级处理", sector, len(pb_vals))
+                break
+            box = {}
+
+            def worker(code=c):  # 参数绑定防闭包共享循环变量（超时线程仍存活时下一轮 c 已变）
+                try:
+                    box["v"] = _query_pb(code)
+                except Exception:
+                    pass  # 单只查询失败=该只放弃，避免 daemon 线程异常刷 stderr
+
+            t = threading.Thread(target=worker, daemon=True)
+            t.start()
+            # max(0.0, ...)：预算将尽时 timeout 可能算成微负，Python 3.12 的 join 会抛 ValueError
+            t.join(timeout=max(0.0, min(PB_QUERY_TIMEOUT, deadline - time.time())))
+            v = box.get("v")
+            if v is not None:
+                pb_vals.append(v)
         if not pb_vals:
             return None
         import statistics
@@ -166,7 +205,7 @@ def fetch_valuation_snapshot(boards: List[str], history: List[dict]) -> List[dic
         if pb is not None:
             ref = _safe(_pb_reference, history, board)
             pb_pct = _safe(_pb_percentile, history, board, pb["pb"])
-            note = f"PB={pb['pb']}（成分中位数）"
+            note = f"PB={pb['pb']}（成分中位数 n={pb.get('n', '?')}）"
             if ref is not None:
                 note += f"，近20日均值 {ref:.2f}"
             else:

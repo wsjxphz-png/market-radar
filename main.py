@@ -1785,6 +1785,12 @@ def main():
                       f"⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n请检查 DeepSeek API。\n\n"
                       + (fail or ""))
         card = build_alert_card("⚠️ 市场机会发现 · AI 暂不可用", content_md)
+        send_feishu_card(card)
+        send_feishu_webhook(card)
+        # AI 失败必须可见：推送降级卡后非零退出 → workflow 显式失败（失败通知步骤触发），
+        # 避免 "告警被 exit 0 吞" 再次掩盖故障（2026-08-05 整支复审教训的同款遗留）。
+        # 留痕提交步骤不受影响（daily-report.yml 仅依赖 checkout outcome）。
+        sys.exit(1)
     else:
         card = format_feishu(ai_result, stats)
 

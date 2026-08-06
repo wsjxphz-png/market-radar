@@ -22,7 +22,7 @@ A股市场全景仪表盘 — 基于《趋势交易论》(710页)
   python market_dashboard.py --dry-run # 仅打印
 """
 
-import os, sys, json, argparse
+import os, sys, json, argparse, socket
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Dict, Optional, List, Tuple
@@ -2389,6 +2389,10 @@ def merge_main():
 # ═══════════════════════════════════════════════════════════
 
 def main():
+    # F2（2026-08-06 审查）：akshare 内部请求普遍不传 timeout，静默挂起时
+    # 双源熔断永不触发（熔断只认异常）。socket 级默认超时兜底所有阻塞调用。
+    socket.setdefaulttimeout(30)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")

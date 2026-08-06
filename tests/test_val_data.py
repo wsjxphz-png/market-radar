@@ -143,7 +143,58 @@ def test_pb_reference_sector_pb_none():
 def test_fetch_constituents_zfill(monkeypatch):
     # 数值型存储的 cons 文件丢前导零（000983→983），必须补零后再归类
     fake = pd.DataFrame({i: ["x"] * 5 for i in range(4)} | {4: ["601398", "983", "000001", "300750", "830799"]})
-    monkeypatch.setattr("val_data.pd.read_excel", lambda url: fake)
+    class FakeResp:  # requests.get 下载（带超时），read_excel 从内存解析
+        content = b"xls-fake"
+        def raise_for_status(self):
+            pass
+    monkeypatch.setattr("val_data.requests.get", lambda *a, **k: FakeResp())
+    monkeypatch.setattr("val_data.pd.read_excel", lambda buf: fake)
     from val_data import fetch_constituents
     out = fetch_constituents("000000")
     assert out == ["sh.601398", "sz.000983", "sz.000001", "sz.300750", "bj.830799"]
+
+def test_fetch_constituents_has_timeout(monkeypatch):
+    # 回归：下载必须带 timeout（2026-08-06 无超时直连连接失败挂 6 分钟，拖死整个 workflow）
+    captured = {}
+    class FakeResp:
+        content = b"xls-fake"
+        def raise_for_status(self):
+            pass
+    def fake_get(url, **kwargs):
+        captured.update(kwargs)
+        return FakeResp()
+    monkeypatch.setattr("val_data.requests.get", fake_get)
+    monkeypatch.setattr("val_data.pd.read_excel",
+                        lambda buf: pd.DataFrame({i: ["x"] for i in range(4)} | {4: ["601398"]}))
+    from val_data import fetch_constituents
+    fetch_constituents("000000")
+    # 锁具体值：15s 对几十 KB 的 xls 绰绰有余，防回退成无超时直连（挂 6 分钟）或激进小值
+    assert captured.get("timeout") == 15
+
+def test_fetch_sector_pb_budget_breaker(monkeypatch):
+    """F3（2026-08-06 审查）：板块 PB 聚合预算熔断——慢查询不得拖死整个 workflow。
+    预算耗尽后循环终止并降级返回，绝不满 50 只全量串行。"""
+    import time
+    monkeypatch.setattr("val_data.fetch_constituents", lambda code: [f"sh.{i:06d}" for i in range(50)])
+    monkeypatch.setattr("val_data._bs_login", lambda: object())
+    monkeypatch.setattr("val_data.PB_BUDGET_SECONDS", 0.3)
+    monkeypatch.setattr("val_data.PB_QUERY_TIMEOUT", 1)
+    queries = {"n": 0}
+    def slow_query(code):
+        queries["n"] += 1
+        time.sleep(5)  # 远超预算的慢查询
+        return 1.0
+    monkeypatch.setattr("val_data._query_pb", slow_query)
+    from val_data import fetch_sector_pb
+    out = fetch_sector_pb("银行")
+    assert out is None                 # 预算耗尽 → 降级（本板块 PB 缺失走兜底链）
+    assert queries["n"] < 10           # 绝不满量查询：预算熔断生效
+
+def test_fetch_sector_pb_worker_exception_safe(monkeypatch):
+    """F3（2026-08-06 审查）：单只查询抛异常（daemon 线程内）不击穿主流程，正常降级返回。"""
+    monkeypatch.setattr("val_data.fetch_constituents", lambda code: [f"sh.{i:06d}" for i in range(3)])
+    monkeypatch.setattr("val_data._bs_login", lambda: object())
+    monkeypatch.setattr("val_data._query_pb", lambda code: (_ for _ in ()).throw(RuntimeError("socket broken")))
+    from val_data import fetch_sector_pb
+    out = fetch_sector_pb("银行")
+    assert out is None  # 全部查询异常 → 返回 None，由调用方降级链兜底
