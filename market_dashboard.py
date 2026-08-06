@@ -1864,7 +1864,10 @@ def build_merged_card(data: dict) -> str:
     #（2026-08-07 用户审计：估值判断/板块总览/操作信号/板块全貌四区块重复输出
     # 同一板块的多套结论 → 合并为 render_board_aggregate 一张聚合卡）
     agg_glossary, agg_card = render_board_aggregate(
-        data.get("board_facts", []), data.get("sectors", []))
+        data.get("board_facts", []), data.get("sectors", []),
+        judgements=data.get("valuation_judgements"),
+        board_ok=data.get("board_ok"),
+        fund_flow_hist_ok=data.get("fund_flow_hist_ok"))
     market_t, sector_t, trade_t = format_dashboard(
         cycle=data["cycle"], signals=data["signals"], sectors=data.get("sectors", []),
         ai_text=data.get("ai_text"), idx=data["idx"],
@@ -1887,6 +1890,13 @@ def build_merged_card(data: dict) -> str:
     elif data.get("sector_unavailable"):
         # F2(2026-08-07 迁移):板块模块整体异常 → 聚合卡为空时必须显式标注,禁止静默缺块
         parts.append("━━━ 🔷 板块判断 ━━━\n⚠️ **板块数据暂不可用** — 板块操作信号与板块全貌本日缺失。指数信号不受影响，仍可参考。")
+    # ── 资金异动（M1: 审查发现随 sector_t 静默丢失 → 独立区块保留，方向反转是重要信号）──
+    anomalies = data.get("flow_anomalies")
+    if anomalies:
+        a_lines = ["━━━ ⚠️ 资金异动 ━━━"]
+        for a in anomalies:
+            a_lines.append(f"- **{a['sector']}**: {a['anomaly']} {a.get('attention', '')}")
+        parts.append("\n".join(a_lines))
     # ── 资金观察增强（南向/回购/承接，非板块级维度，独立保留）──
     fund_obs = data.get("fund_observation")
     if fund_obs:

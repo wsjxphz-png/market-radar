@@ -315,3 +315,42 @@ def test_glossary_for_dedup_and_unknown_skipped():
 
 def test_glossary_for_empty():
     assert glossary_for([]) == ""
+
+
+# ═══════════════════════════════════════════════════════════
+# 维度分歧标准化（2026-08-07 用户风险点2）
+# ═══════════════════════════════════════════════════════════
+
+def test_dimension_signals_mapping():
+    from val_explain import dimension_signals
+    assert dimension_signals("above20_rising", "贵", "inflow_confirm") == \
+        {"short": "多", "dca": "空", "fund": "多"}
+    assert dimension_signals("below20_falling", "便宜", "outflow_confirm") == \
+        {"short": "空", "dca": "多", "fund": "空"}
+    assert dimension_signals("around20_oscillation", "合理", "single_day") == \
+        {"short": "中性", "dca": "中性", "fund": "中性"}
+    assert dimension_signals("unknown", "观察", "unknown") == \
+        {"short": "中性", "dca": "中性", "fund": "中性"}
+
+
+def test_dimension_conflict_emits_standard_template():
+    from val_explain import format_dimension_conflict, fund_state_short
+    sig = {"short": "空", "dca": "多", "fund": "中性"}
+    out = format_dimension_conflict("煤炭", "短线（推断）：不抄底", "定投（推断）：可加码",
+                                    fund_state_short("outflow_confirm", -3.2), sig)
+    assert "维度分歧（煤炭）" in out
+    assert "【短线维度】" in out and "【定投维度】" in out
+    assert "【资金维度】" not in out          # 中性维度不列出（L2）
+    assert "视角不同" in out and "不是系统冲突" in out  # 固定话术
+    # 资金维度文本为精简格式（L1: 不与事实行全文重复）
+    assert fund_state_short("outflow_confirm", -3.2) == "连续净流出（-3.2亿）"
+
+
+def test_dimension_conflict_silent_when_aligned_or_neutral():
+    from val_explain import format_dimension_conflict
+    # 三维同向 → 不输出
+    assert format_dimension_conflict("银行", "顺势持有", "按计划",
+                                     "", {"short": "多", "dca": "中性", "fund": "多"}) == ""
+    # 只有一个方向明确（其余中性）→ 不输出（len(clear)<2）
+    assert format_dimension_conflict("通信", "无法判断", "无法判断",
+                                     "", {"short": "中性", "dca": "中性", "fund": "多"}) == ""

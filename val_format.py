@@ -92,18 +92,23 @@ def build_board_overview(board_facts: list) -> str:
     return "\n".join(lines)
 
 
-def render_board_aggregate(facts_list: list, sectors: list) -> tuple:
+def render_board_aggregate(facts_list: list, sectors: list,
+                           judgements: list = None,
+                           board_ok: bool = True,
+                           fund_flow_hist_ok: bool = True) -> tuple:
     """板块聚合卡(2026-08-07 用户审计重构)：12 核心板块 × (事实+短线/定投判断)，
     返回 (glossary, card)：名词释义独立返回，由调用方渲染到交易手册之后
     （2026-08-07 用户风险点1：一行式板块信息密度高，释义必须紧跟手册，不能后置）；
     未映射的 THS 板块一行列出；三维方向矛盾时输出标准化「维度分歧」模板
     （用户风险点2：区分「视角不同」与「数据冲突」）。
-    替代 估值判断/板块总览/板块操作信号/板块全貌 四个重复区块。
+    替代 估值判断/板块总览/板块操作信号/板块全貌/资金流向 五个重复区块。
 
     facts_list: build_board_facts 输出(12 板块，含 trend_state/valuation/fund_state/
-      sl_net/main_pct/metric/years/terms)；sectors: THS 板块列表(29，含 name/rating)。"""
+      sl_net/main_pct/metric/years/terms)；sectors: THS 板块列表(29，含 name/rating)；
+    judgements: 估值判定(confidence/action/note，聚合卡判断行加置信度)；
+    board_ok/fund_flow_hist_ok: 数据状态标注(M2：降级必须可见，禁止静默缺块)。"""
     from val_explain import (synthesize, glossary_for, dimension_signals,
-                             format_dimension_conflict, explain_fund_state)
+                             format_dimension_conflict, fund_state_short)
     from val_config import em_name_for
 
     if not facts_list:
@@ -128,6 +133,13 @@ def render_board_aggregate(facts_list: list, sectors: list) -> tuple:
     glossary = glossary_for(sorted(all_terms))
 
     lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 事实+短线/定投） ━━━"]
+    # M2: 数据降级必须显式标注（板块当日概览/资金流历史缺失时，读者须知道来源缺口）
+    if board_ok is not None and not board_ok:
+        lines.append("> ⚠️ 板块当日概览（涨跌/领涨股）数据缺失，以下评级基于技术面K线+估值。")
+    if fund_flow_hist_ok is not None and not fund_flow_hist_ok:
+        lines.append("> ⚠️ 资金流历史数据缺失（5日/10日），当日资金流仍显示。")
+    jmap = {j.get("board"): j for j in (judgements or []) if isinstance(j, dict)}
+
     em_names = {f.get("board") for f in facts_list if isinstance(f, dict)}
     for i, (facts, syn) in enumerate(per_board, 1):
         board = syn.get("board") or "未知板块"
@@ -138,11 +150,16 @@ def render_board_aggregate(facts_list: list, sectors: list) -> tuple:
         lines.append("")
         lines.append(f"▌{i}. {board}")
         lines.append(f"◆ {facts_block}")
+        # M3: 估值判定附加置信度/动作（原估值判断区块信息保留，防信息维度丢失）
+        j = jmap.get(board)
+        if j and j.get("confidence"):
+            conf = {"高": "高置信", "中": "中置信", "低": "低置信"}.get(j["confidence"], j["confidence"])
+            dca = f"{dca}（{conf}）"
         # 维度分歧标准化：三维(趋势/估值/资金)方向相反 → 模板话术，非自由发挥
         sig = dimension_signals(facts.get("trend_state", "") if isinstance(facts, dict) else "",
                                 facts.get("valuation", "") if isinstance(facts, dict) else "",
                                 fund_state or "")
-        fund_text = explain_fund_state(fund_state, facts.get("sl_net") if isinstance(facts, dict) else None)
+        fund_text = fund_state_short(fund_state, facts.get("sl_net") if isinstance(facts, dict) else None)
         conflict = format_dimension_conflict(board, short, dca, fund_text, sig)
         if conflict:
             lines.append(conflict)
@@ -155,7 +172,7 @@ def render_board_aggregate(facts_list: list, sectors: list) -> tuple:
         em = em_name_for(s.get("name", ""))
         if em in em_names:
             continue  # 已入聚合卡
-        others.append(f"{s['name']}({s.get('rating', '?')})")
+        others.append(f"{s.get('name', '?')}({s.get('rating', '?')})")
     if others:
         lines.append("")
         lines.append(f"📋 其他板块（{len(others)}）：{'、'.join(others)}")

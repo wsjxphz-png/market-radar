@@ -163,6 +163,15 @@ def judge_dca(valuation: str) -> str:
     return "无法判断：估值证据不足（观察），等待证据（推断）"
 
 
+def fund_state_short(fund_state: str, sl_net: Optional[float]) -> str:
+    """资金维度精简文本（维度分歧模板用，避免与事实行全文重复，2026-08-07 L1）"""
+    label = {"inflow_confirm": "连续净流入", "outflow_confirm": "连续净流出",
+             "single_day": "单日净流入", "cold_start": "数据不足"}.get(fund_state, "资金中性")
+    if sl_net is not None:
+        label += f"（{sl_net:+.1f}亿）"
+    return label
+
+
 def dimension_signals(trend_state: str, valuation: str, fund_state: str) -> dict:
     """三维方向判定（2026-08-07 用户需求：维度分歧标准化标注的前提）。
     短线=趋势标尺、定投=估值标尺、资金=流向标尺；返回 多/空/中性。"""
@@ -176,18 +185,22 @@ def dimension_signals(trend_state: str, valuation: str, fund_state: str) -> dict
 def format_dimension_conflict(board: str, short_judge: str, dca_judge: str,
                               fund_text: str, signals: dict) -> str:
     """维度分歧标准化话术（2026-08-07 用户需求：固定模板，区分「视角不同」与「数据冲突」）。
-    三维中出现多/空相反 → 输出模板明确告知这是评价标尺差异，非系统出错。"""
-    vals = [signals.get("short"), signals.get("dca"), signals.get("fund")]
-    has_bull = "多" in vals
-    has_bear = "空" in vals
-    if not (has_bull and has_bear):
+    仅当至少两个维度方向明确(多/空)且方向相反 → 输出模板；只列方向明确的维度行
+    （L2: 无法判断的维度不参与，避免"三个维度独立成立"的夸大表述）。"""
+    dims = [("短线", signals.get("short"), short_judge),
+            ("定投", signals.get("dca"), dca_judge),
+            ("资金", signals.get("fund"), fund_text)]
+    clear = [(label, direction, judge) for label, direction, judge in dims
+             if direction in ("多", "空") and judge]
+    has_bull = any(d == "多" for _, d, _ in clear)
+    has_bear = any(d == "空" for _, d, _ in clear)
+    if not (has_bull and has_bear) or len(clear) < 2:
         return ""
-    lines = [f"维度分歧（{board}）：", "　【短线维度】" + short_judge,
-             "　【定投维度】" + dca_judge]
-    if fund_text:
-        lines.append("　【资金维度】" + fund_text)
-    lines.append("——短线看趋势标尺、定投看估值标尺、资金看流向标尺，三个维度独立成立，"
-                 "结论相反是「视角不同」，不是系统冲突；具体操作以各自维度为准。")
+    lines = [f"维度分歧（{board}）："]
+    for label, _, judge in clear:
+        lines.append(f"　【{label}维度】{judge}")
+    lines.append("——短线看趋势标尺、定投看估值标尺、资金看流向标尺，结论相反是"
+                 "「视角不同」，不是系统冲突；具体操作以各自维度为准。")
     return "\n".join(lines)
 
 
