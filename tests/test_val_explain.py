@@ -75,193 +75,111 @@ def test_explain_fund_state_unknown_no_sl_net():
 # ══════════ 趋势翻译 ══════════
 
 def test_explain_trend_up():
-    # "20 日线上方上升期 = 短线处于顺势"
     out = explain_trend("above20_rising")
     assert "20 日线上方上升期" in out
-    assert "顺势" in out
+    assert "短期趋势向上" in out
 
 def test_explain_trend_down():
     out = explain_trend("below20_falling")
     assert "20 日线下方下降期" in out
-    assert "逆势" in out
+    assert "短期趋势向下" in out
 
 def test_explain_trend_oscillation():
     out = explain_trend("around20_oscillation")
-    assert "震荡" in out
-    assert "方向不明" in out
+    assert "震荡" in out and "方向不明" in out
 
 def test_explain_trend_unknown():
     out = explain_trend("unknown")
     assert "不足" in out or "不可用" in out
 
 
-# ══════════ 短线判断三态（趋势交易论）══════════
+# ══════════ 定投决策表（2026-08-07 重构：便宜度×趋势→买入条件）══════════
 
-def test_judge_short_term_uptrend_hold():
-    # 趋势上升 → 顺势持有不破 20 日线不动
-    out = judge_short_term("above20_rising", "合理")
-    assert "持有" in out
-    assert "20 日线" in out
-    assert "推断" in out
+def test_judge_dca_cheap_launched_buy():
+    # 便宜+趋势启动 → 多买（符合【便宜+趋势】买入条件，中长期持有）
+    out = judge_dca("便宜", "above20_rising", "above60")
+    assert "多买" in out
+    assert "便宜+趋势启动" in out
+    assert "中长期持有" in out
 
-def test_judge_short_term_downtrend_no_bottom_fishing():
-    # 趋势下降 → 不抄底（永不下跌补仓）等反转
-    out = judge_short_term("below20_falling", "合理")
-    assert "不抄底" in out
-    assert "永不下跌补仓" in out
-    assert "反转" in out
-    assert "推断" in out
+def test_judge_dca_cheap_emerging_wait():
+    # 便宜+趋势初现 → 观察（等 60 日线确认）
+    out = judge_dca("便宜", "above20_rising", "below60")
+    assert "观察" in out
+    assert "60日线" in out
 
-def test_judge_short_term_oscillation_wait():
-    # 震荡 → 等待明确，不强行给方向
-    out = judge_short_term("around20_oscillation", "合理")
-    assert "等待" in out
-    assert "推断" in out
-
-def test_judge_short_term_unknown_cannot_judge():
-    # 无法裁决 → "无法判断：…等待证据"，绝不强行凑结论
-    out = judge_short_term("unknown", "便宜")
-    assert "无法判断" in out
-    assert "等待证据" in out
-    assert "推断" in out
-
-def test_judge_short_term_cheap_downtrend_no_contradiction():
-    # 趋势下降 + 估值便宜：不抄底的立场不被估值动摇（估值便宜不等于见底）
-    out = judge_short_term("below20_falling", "便宜")
-    assert "不抄底" in out
-    assert "便宜" in out          # 明确点名冲突中的估值，说明层解释
-    assert "加码" not in out      # 短线场景绝不给出定投口径的结论
-
-
-# ══════════ 定投判断三态（微笑曲线）══════════
-
-def test_judge_dca_cheap_add():
-    # 便宜 → 可加码（跌时多买）
-    out = judge_dca("便宜")
-    assert "加码" in out
-    assert "微笑曲线" in out
-    assert "推断" in out
+def test_judge_dca_cheap_not_started_wait():
+    # 便宜+趋势未启动 → 观察（便宜但没人买，等趋势）
+    out = judge_dca("便宜", "below20_falling", "below60")
+    assert "观察" in out
+    assert "趋势未启动" in out
 
 def test_judge_dca_fair_normal():
-    out = judge_dca("合理")
+    out = judge_dca("合理", "around20_oscillation", None)
     assert "按计划" in out
-    assert "推断" in out
 
-def test_judge_dca_expensive_reduce():
-    out = judge_dca("贵")
+def test_judge_dca_expensive_launched_reduce():
+    # 贵+趋势启动 → 减量不追
+    out = judge_dca("贵", "above20_rising", "above60")
     assert "减量" in out
-    assert "推断" in out
+    assert "不追" in out
+
+def test_judge_dca_expensive_pause():
+    out = judge_dca("贵", "below20_falling", "below60")
+    assert "暂停/减量" in out
 
 def test_judge_dca_watch_cannot_judge():
-    # 观察（PB 否决/数据不足）→ 无法判断，等待证据
+    # 观察（估值证据不足）→ 无法判断，等待证据
     out = judge_dca("观察")
-    assert "无法判断" in out
-    assert "等待证据" in out
+    assert "无法判断" in out and "等待证据" in out
 
 
-# ══════════ 冲突分流：场景不互相覆盖 ══════════
-
-def test_scene_split_trend_down_valuation_cheap():
-    # 趋势下降 + 估值便宜：短线"不抄底"、定投"可加码"，两套结论并存
-    short = judge_short_term("below20_falling", "便宜")
-    dca = judge_dca("便宜")
-    assert "不抄底" in short
-    assert "加码" in dca
-    assert "不抄底" not in dca    # 定投结论不带短线口径
-    assert "加码" not in short    # 短线结论不带定投口径
-    syn = synthesize({"board": "银行", "trend_state": "below20_falling",
-                      "valuation": "便宜", "fund_state": "inflow_confirm",
-                      "sl_net": 10.0, "main_pct": 15.0, "metric": "PE",
-                      "years": 10, "terms": ["PE", "分位"]})
-    assert "不抄底" in syn["short_term_judge"]
-    assert "加码" in syn["dca_judge"]
-    assert "场景分流" in syn["conflict_note"]
-    assert "无法" in syn["conflict_note"]   # 无法统一裁决：两场景方向相反
-    assert "等待" in syn["conflict_note"]
-
-def test_scene_split_trend_up_valuation_expensive():
-    # 趋势上升 + 估值贵：短线顺势持有 vs 定投减量，分流不覆盖
-    short = judge_short_term("above20_rising", "贵")
-    dca = judge_dca("贵")
-    assert "持有" in short
-    assert "减量" in dca
-    syn = synthesize({"board": "半导体", "trend_state": "above20_rising",
-                      "valuation": "贵", "fund_state": "outflow_confirm",
-                      "sl_net": -5.0, "main_pct": 85.0, "metric": "PE",
-                      "years": 10, "terms": []})
-    assert "场景分流" in syn["conflict_note"]
-    assert "不互相覆盖" in syn["conflict_note"]
-
-
-# ══════════ synthesize 三层组装 ══════════
+# ══════════ synthesize 结构（2026-08-07 重构：去 short_term_judge/conflict_note）══════════
 
 def test_synthesize_three_layers_structure():
-    facts = {"board": "银行", "trend_state": "above20_rising",
+    facts = {"board": "银行", "trend_state": "above20_rising", "trend_mid": "above60",
              "valuation": "合理", "fund_state": "inflow_confirm",
              "sl_net": 12.5, "main_pct": 50.0, "metric": "PE",
              "years": 10, "terms": ["PE", "分位", "净流入"]}
     out = synthesize(facts)
-    assert set(out) == {"board", "facts", "explanation",
-                        "short_term_judge", "dca_judge", "conflict_note"}
-    # 事实层：机器可核验数据
+    assert set(out) == {"board", "facts", "explanation", "dca_judge", "trend_ok", "cheap"}
     assert "银行" in out["facts"]
     assert "PE 分位 50%" in out["facts"]
     assert "12.5" in out["facts"]
-    # 说明层：翻译 + 名词解释
-    assert "只有 50% 的时间比现在便宜" in out["explanation"]
     assert "市盈率" in out["explanation"]            # PE 大白话
     assert "百分位" in out["explanation"]            # 分位大白话
     assert "持续性的买入" in out["explanation"]       # 净流入翻译
-    # 判断层：双场景 + 推断标记
-    assert "推断" in out["short_term_judge"]
-    assert "推断" in out["dca_judge"]
-    assert "持有" in out["short_term_judge"]
+    assert "正常定投" in out["dca_judge"]            # 合理+趋势启动
+    assert out["trend_ok"] is True and out["cheap"] is False
 
-def test_synthesize_judge_absent_when_trend_unknown():
-    # 趋势数据不足 → 短线判断缺席（"无法判断"），其余层照常
-    out = synthesize({"board": "煤炭", "trend_state": "unknown",
-                      "valuation": "便宜", "fund_state": "cold_start",
-                      "sl_net": None, "main_pct": 20.0, "metric": "PE",
-                      "years": 10, "terms": []})
-    assert "无法判断" in out["short_term_judge"]
-    assert "等待证据" in out["short_term_judge"]
-    assert "加码" in out["dca_judge"]                # 定投场景独立裁决，不受影响
-    assert "板块：煤炭" in out["facts"]               # 事实层数据原样在场
+def test_synthesize_cheap_launched_buy_condition():
+    # 便宜+趋势启动 → 【便宜+趋势】买入条件成立
+    out = synthesize({"board": "医药生物", "trend_state": "above20_rising",
+                      "trend_mid": "above60", "valuation": "便宜",
+                      "fund_state": "inflow_confirm", "sl_net": 10.0,
+                      "main_pct": 15.0, "metric": "PE", "years": 10, "terms": []})
+    assert out["cheap"] is True and out["trend_ok"] is True
+    assert "多买" in out["dca_judge"]
+
+def test_synthesize_cheap_not_started_wait():
+    # 便宜+趋势未启动 → 买入条件不成立（便宜≠马上买，等趋势）
+    out = synthesize({"board": "煤炭", "trend_state": "below20_falling",
+                      "trend_mid": "below60", "valuation": "便宜",
+                      "fund_state": "cold_start", "sl_net": None,
+                      "main_pct": 20.0, "metric": "PE", "years": 10, "terms": []})
+    assert out["cheap"] is True and out["trend_ok"] is False
+    assert "观察" in out["dca_judge"]
+    assert "板块：煤炭" in out["facts"]
     assert "20%" in out["facts"]
 
-def test_synthesize_both_insufficient_conflict_note():
-    # 趋势+估值均无证据 → conflict_note 无法判断
-    out = synthesize({"board": "汽车", "trend_state": "unknown",
+def test_synthesize_unknown_valuation_cannot_judge():
+    # 趋势+估值均无证据 → 无法判断
+    out = synthesize({"board": "汽车", "trend_state": "unknown", "trend_mid": None,
                       "valuation": "观察", "fund_state": "unknown",
                       "sl_net": None, "main_pct": None, "metric": "PE",
                       "years": None, "terms": []})
-    assert "无法判断" in out["short_term_judge"]
     assert "无法判断" in out["dca_judge"]
-    assert "无法判断" in out["conflict_note"]
-    assert "等待证据" in out["conflict_note"]
-
-def test_synthesize_no_conflict_when_directions_agree():
-    # 趋势上升 + 估值合理：无冲突 → conflict_note 为空
-    out = synthesize({"board": "半导体", "trend_state": "above20_rising",
-                      "valuation": "合理", "fund_state": "inflow_confirm",
-                      "sl_net": 8.0, "main_pct": 50.0, "metric": "PE",
-                      "years": 10, "terms": []})
-    assert out["conflict_note"] == ""
-
-def test_synthesize_price_position_metric():
-    # 兜底口径（价格位置）：说明层不误用"时间占比"句式；
-    # 窗口诚实性：价格位置来自 K 线全程（fetch_board_kline days=1300 约 5 年）min/max，
-    # 无"近一年"截断——输出不得虚构窗口（"近一年"），只能如实说"历史区间"
-    out = synthesize({"board": "煤炭", "trend_state": "around20_oscillation",
-                      "valuation": "合理", "fund_state": "unknown",
-                      "sl_net": None, "main_pct": 30.0, "metric": "价格位置",
-                      "years": None, "terms": []})
-    assert "价格位置 30%" in out["facts"]
-    assert "只有 30% 的时间" not in out["explanation"]  # 位置≠时间占比，不得虚构
-    assert "近一年" not in out["explanation"]           # 不得虚构窗口（回归锁）
-    assert "历史区间" in out["explanation"]
-    assert "位置" in out["explanation"]
-
+    assert out["cheap"] is False and out["trend_ok"] is False
 
 def test_synthesize_missing_key_logs_warning(caplog):
     # 契约违反（key 缺失）→ logger.warning 告警 + 降级不崩溃（Task 4 Issue 3 加固：

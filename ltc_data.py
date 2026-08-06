@@ -150,8 +150,18 @@ def _pick_kline_cols(df: pd.DataFrame) -> Optional[tuple]:
         return None
     return date_col, close_col, find("成交量"), find("成交额")
 
+def _ths_kline_names(board_name: str) -> list:
+    """东财板块名 → THS K线候选名列表（2026-08-07 移植自 V2.0 修复：THS 接口用
+    细分行业名，东财"医药生物/食品饮料/有色/计算机/电力设备/煤炭/非银/汽车/军工"
+    在 THS 无同名板块 → 复用 val_config.THS_TO_EM 反向映射取子行业名依次尝试；
+    无映射原样返回。口径：代表性子行业 K线（与资金流映射同一张表，不双维护）。"""
+    from val_config import THS_TO_EM
+    alts = [k for k, v in THS_TO_EM.items() if v == board_name]
+    return alts or [board_name]
+
+
 def fetch_board_kline(board_name: str, days: int = 1300) -> Optional[pd.DataFrame]:
-    """板块K线：东财优先，同花顺兜底；返回 date/close/volume/amount（升序）
+    """板块K线：东财优先，同花顺兜底（细分名依次尝试）；返回 date/close/volume/amount（升序）
 
     双源熔断：网络类异常（连接/超时/HTTP）首次出现即熔断该源并置 _XX_AVAILABLE=False，
     后续板块跳过死源快速失败；数据质量问题（响应存在但 <60 行等）只算单板失败，不熔断。
@@ -170,11 +180,16 @@ def fetch_board_kline(board_name: str, days: int = 1300) -> Optional[pd.DataFram
         if df is None or len(df) < 60:
             df = None  # 数据质量问题不熔断，继续尝试 THS
     if df is None and _THS_AVAILABLE:
-        df, exc = _probe_kline(ak.stock_board_industry_index_ths,
-                               symbol=board_name, start_date=start, end_date=end, retries=1)
-        if _is_network_error(exc):
-            _THS_AVAILABLE = False
-            logger.error("THS 板块K线源熔断（网络异常）: %s", str(exc)[:80])
+        # THS 细分名依次尝试：东财"医药生物"→ 化学制药/中药/医疗服务/医疗器械...
+        for ths_name in _ths_kline_names(board_name):
+            df, exc = _probe_kline(ak.stock_board_industry_index_ths,
+                                   symbol=ths_name, start_date=start, end_date=end, retries=1)
+            if _is_network_error(exc):
+                _THS_AVAILABLE = False
+                logger.error("THS 板块K线源熔断（网络异常）: %s", str(exc)[:80])
+                break
+            if df is not None and len(df) >= 60:
+                break
     if df is None or len(df) < 60:
         return None
     picked = _pick_kline_cols(df)

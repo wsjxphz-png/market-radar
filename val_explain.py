@@ -54,10 +54,11 @@ GLOSSARY = {
 }
 
 # 趋势状态 → 大白话翻译（对 TREND_STATE 词表）
+# 2026-08-07 用户需求重构：去"短线"语言（用户为基金定投者，中长期持有）
 TREND_STATE_EXPLAIN = {
-    "above20_rising": "20 日线上方上升期 = 短线处于顺势",
-    "below20_falling": "20 日线下方下降期 = 短线处于逆势",
-    "around20_oscillation": "20 日线附近震荡 = 短线方向不明",
+    "above20_rising": "20 日线上方上升期（短期趋势向上）",
+    "below20_falling": "20 日线下方下降期（短期趋势向下）",
+    "around20_oscillation": "20 日线附近震荡（方向不明）",
     "unknown": "趋势状态数据不足",
 }
 
@@ -152,15 +153,45 @@ def judge_short_term(trend_state: str, valuation: str) -> str:
     return "无法判断：趋势状态不明，等待证据（推断）"
 
 
-def judge_dca(valuation: str) -> str:
-    """定投判断（微笑曲线）：便宜多买、合理按计划、贵则减量；观察=无法判断"""
+def _trend_launched(trend_state: str, trend_mid: Optional[str]) -> bool:
+    """【便宜+趋势】的趋势条件（2026-08-07 用户需求：中长期持有看中期趋势）：
+    20 日线上方上升期 且 多数子行业站上 60 日线 → 趋势启动。"""
+    return trend_state == "above20_rising" and trend_mid == "above60"
+
+
+def judge_dca(valuation: str, trend_state: str = "unknown",
+              trend_mid: Optional[str] = None) -> str:
+    """定投决策表（2026-08-07 用户需求重构：板块便宜+趋势启动→买入基金→中长期持有）。
+
+    决策表（估值 × 趋势）：
+      便宜+趋势启动 → 多买（符合【便宜+趋势】买入条件）
+      便宜+趋势初现 → 观察（等站上60日线确认）
+      便宜+方向不明/未启动 → 观察（便宜但没人买，等趋势）
+      贵+趋势启动     → 减量（趋势好但贵，不追）
+      贵+其他         → 暂停/减量
+      合理+趋势启动   → 正常定投（趋势确认估值合理）
+      合理+其他       → 按计划
+    观察（估值证据不足）→ 无法判断。"""
+    if valuation == "观察":
+        return "无法判断：估值证据不足（观察），等待证据（推断）"
+    launched = _trend_launched(trend_state, trend_mid)
+    emerging = trend_state == "above20_rising" and trend_mid != "above60"
     if valuation == "便宜":
-        return "定投（推断）：可加码——估值便宜时多买份额（微笑曲线：跌时多买）"
-    if valuation == "合理":
-        return "定投（推断）：按计划——估值合理，维持正常定投"
+        if launched:
+            return "多买——便宜+趋势启动，符合【便宜+趋势】买入条件（中长期持有）"
+        if emerging:
+            return "观察——便宜+趋势初现，等站上60日线确认再加"
+        return "观察——便宜但趋势未启动，等趋势呈现"
     if valuation == "贵":
-        return "定投（推断）：减量——估值贵时少买或暂停（微笑曲线：高位不追买）"
-    return "无法判断：估值证据不足（观察），等待证据（推断）"
+        if launched:
+            return "减量——趋势好但估值贵，定投减量不追"
+        return "暂停/减量——贵+趋势未确认"
+    # 合理
+    if launched:
+        return "正常定投——趋势启动且估值合理"
+    if emerging:
+        return "按计划——趋势初现，维持正常定投"
+    return "按计划——估值合理，维持正常定投"
 
 
 def fund_state_short(fund_state: str, sl_net: Optional[float]) -> str:
@@ -209,11 +240,12 @@ def format_dimension_conflict(board: str, short_judge: str, dca_judge: str,
 # ============================================================
 
 def synthesize(facts: dict) -> dict:
-    """板块事实 → 三层结构（facts / explanation / short_term_judge / dca_judge / conflict_note）
+    """板块事实 → 三层结构（facts / explanation / dca_judge / trend_ok）
 
     facts 契约（key 可缺省，缺省按"数据不足"降级）：
       board       板块名
       trend_state TREND_STATE 词表
+      trend_mid   中期趋势确认（2026-08-07 新增）：above60/below60/None
       valuation   val_judge 的 verdict：便宜/合理/贵/观察
       fund_state  compute_fund_state 词表：inflow_confirm/outflow_confirm/single_day/cold_start/unknown
       sl_net      当日主力净额（亿元，可 None）
@@ -221,9 +253,12 @@ def synthesize(facts: dict) -> dict:
       metric      主指标名：PE/PB/价格位置
       years       分位数据窗口年数（可 None）
       terms       首次出现的名词（渲染层判定，本函数直接解释）
-    """
+
+    2026-08-07 用户需求重构（板块基金定投视角）：删除个股短线判断
+    （short_term_judge），判断层=定投决策表（便宜度 × 趋势 → 买入条件）。"""
     board = _facts_get(facts, "board", "")
     trend_state = _facts_get(facts, "trend_state", "unknown") or "unknown"
+    trend_mid = facts.get("trend_mid")
     valuation = _facts_get(facts, "valuation", "观察") or "观察"
     fund_state = _facts_get(facts, "fund_state", "unknown") or "unknown"
     sl_net = facts.get("sl_net")            # None = 数据不可用（合法），非契约违反
@@ -261,14 +296,13 @@ def synthesize(facts: dict) -> dict:
         expl_parts.append("名词解释：\n" + glossary)
     explanation = "\n".join(expl_parts)
 
-    # ── 判断层：双场景独立裁决 + 冲突分流 ──
-    short_term_judge = judge_short_term(trend_state, valuation)
-    dca_judge = judge_dca(valuation)
-    conflict_note = _conflict_note(trend_state, valuation, short_term_judge, dca_judge)
+    # ── 判断层（2026-08-07 重构）：定投决策表——便宜度 × 趋势 → 买入条件 ──
+    dca_judge = judge_dca(valuation, trend_state, trend_mid)
+    trend_ok = _trend_launched(trend_state, trend_mid)   # 【便宜+趋势】的"趋势"条件
+    cheap = valuation == "便宜"                            # 【便宜+趋势】的"便宜"条件
 
     return {"board": board, "facts": facts_block, "explanation": explanation,
-            "short_term_judge": short_term_judge, "dca_judge": dca_judge,
-            "conflict_note": conflict_note}
+            "dca_judge": dca_judge, "trend_ok": trend_ok, "cheap": cheap}
 
 
 def _fact_valuation(main_pct, metric, years) -> str:

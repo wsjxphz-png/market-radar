@@ -132,19 +132,20 @@ def render_board_aggregate(facts_list: list, sectors: list,
     # 名词释义（一次，给手册后渲染用）
     glossary = glossary_for(sorted(all_terms))
 
-    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 事实+短线/定投） ━━━"]
-    # 趋势共振统计(2026-08-08 用户需求:综合策略的"关键观察点=确认趋势"，
-    # 板块部分直接回答:多少板块站上20日线,趋势是否被板块共振确认)
+    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 便宜度+趋势+定投决策） ━━━"]
+    # 趋势共振统计：多少板块站上 20/60 日线（2026-08-07 用户需求：中长期持有看中期趋势）
     n_up = sum(1 for f, _ in per_board if isinstance(f, dict)
                and f.get("trend_state") == "above20_rising")
+    n_mid = sum(1 for f, _ in per_board if isinstance(f, dict)
+                and f.get("trend_mid") == "above60")
     n_down = sum(1 for f, _ in per_board if isinstance(f, dict)
                  and f.get("trend_state") == "below20_falling")
     n_flat = len(per_board) - n_up - n_down
     reso = ("趋势共振向上" if n_up >= len(per_board) * 0.7 else
             "趋势共振向下" if n_down >= len(per_board) * 0.7 else
             "板块分化，趋势未确认")
-    lines.append(f"📊 趋势共振：站上20日线 {n_up}/{len(per_board)} · 20日线下 {n_down} · "
-                 f"方向不明 {n_flat} → **{reso}**")
+    lines.append(f"📊 趋势共振：站上20日线 {n_up}/{len(per_board)} · 站上60日线 "
+                 f"{n_mid}/{len(per_board)} · 20日线下 {n_down} · 方向不明 {n_flat} → **{reso}**")
     # M2: 数据降级必须显式标注（板块当日概览/资金流历史缺失时，读者须知道来源缺口）
     if board_ok is not None and not board_ok:
         lines.append("> ⚠️ 板块当日概览（涨跌/领涨股）数据缺失，以下评级基于技术面K线+估值。")
@@ -155,28 +156,46 @@ def render_board_aggregate(facts_list: list, sectors: list,
     em_names = {f.get("board") for f in facts_list if isinstance(f, dict)}
     for i, (facts, syn) in enumerate(per_board, 1):
         board = syn.get("board") or "未知板块"
-        facts_block = syn.get("facts") or "（数据缺失）"
-        short = syn.get("short_term_judge") or "无法判断（推断）"
         dca = syn.get("dca_judge") or "无法判断（推断）"
+        # 2026-08-07 用户需求重构：板块行=便宜度/趋势/资金/定投决策（删除个股短线语言）
+        val_short = {"便宜": "便宜", "合理": "合理", "贵": "贵"}.get(
+            facts.get("valuation") if isinstance(facts, dict) else "", "—")
+        pct = facts.get("main_pct") if isinstance(facts, dict) else None
+        metric = facts.get("metric", "PE") if isinstance(facts, dict) else "PE"
+        years = facts.get("years") if isinstance(facts, dict) else None
+        val_line = f"{val_short}" + (f"（{metric} 分位 {pct:.0f}%" if pct is not None else f"（{metric} 分位不可用")
+        val_line += f"，窗口 {_fmt_years(years)} 年）" if years is not None else "）"
+        trend_state = facts.get("trend_state") if isinstance(facts, dict) else "unknown"
+        trend_mid = facts.get("trend_mid") if isinstance(facts, dict) else None
+        if trend_state == "above20_rising" and trend_mid == "above60":
+            trend_line = "上升期（站上20/60日线）——趋势已启动"
+        elif trend_state == "above20_rising":
+            trend_line = "上升期（站上20日线，60日线下）——趋势初现"
+        elif trend_state == "around20_oscillation":
+            trend_line = "震荡（20日线附近）——方向不明"
+        elif trend_state == "below20_falling":
+            trend_line = "下降期（20日线下方）——趋势未启动"
+        else:
+            trend_line = "趋势数据不足"
         fund_state = facts.get("fund_state") if isinstance(facts, dict) else None
+        fund_line = fund_state_short(fund_state,
+                                     facts.get("sl_net") if isinstance(facts, dict) else None)
         lines.append("")
         lines.append(f"▌{i}. {board}")
-        lines.append(f"◆ {facts_block}")
-        # M3: 估值判定附加置信度/动作（原估值判断区块信息保留，防信息维度丢失）
+        lines.append(f"◆ 便宜度：{val_line}")
+        lines.append(f"◆ 趋势：{trend_line}")
+        lines.append(f"◆ 资金：{fund_line}")
+        # M3: 估值判定附加置信度（原估值判断区块信息保留，防信息维度丢失）
         j = jmap.get(board)
         if j and j.get("confidence"):
             conf = {"高": "高置信", "中": "中置信", "低": "低置信"}.get(j["confidence"], j["confidence"])
             dca = f"{dca}（{conf}）"
-        # 维度分歧标准化：三维(趋势/估值/资金)方向相反 → 模板话术，非自由发挥
-        sig = dimension_signals(facts.get("trend_state", "") if isinstance(facts, dict) else "",
-                                facts.get("valuation", "") if isinstance(facts, dict) else "",
-                                fund_state or "")
-        fund_text = fund_state_short(fund_state, facts.get("sl_net") if isinstance(facts, dict) else None)
-        conflict = format_dimension_conflict(board, short, dca, fund_text, sig)
-        if conflict:
-            lines.append(conflict)
-        else:
-            lines.append(f"◆ 短线：{short}｜定投：{dca}")
+        lines.append(f"◆ 定投：{dca}")
+        # 定投矛盾解释（2026-08-07）：便宜+趋势未启动 = 微笑曲线与"等待趋势"的关系
+        if (facts.get("valuation") == "便宜" if isinstance(facts, dict) else False) \
+                and trend_state in ("around20_oscillation", "below20_falling", "unknown"):
+            lines.append("  → 便宜≠马上买：微笑曲线的「跌时多买」是定投纪律（有估值支撑），"
+                         "但须等趋势启动（站上20/60日线）再加大买入，避免越买越跌")
 
     # 其他板块（THS 未映射进核心 12 板块的，一行列出不展开）
     others = []

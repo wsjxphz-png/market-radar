@@ -76,7 +76,7 @@ def test_merged_card_keeps_all_original_dashboard_blocks(monkeypatch):
     monkeypatch.setattr("market_dashboard.detect_signal_flips",
                         lambda signals, log_path=None: ["量价结构: healthy→danger ↓"])
     data = _full_card_data()
-    data["board_facts"] = _board_facts_fixture()
+    data["board_facts"] = _agg_facts_fixture()
     card = build_merged_card(data)
     for marker in [
         "## 🔥 市场温度",                       # 市场温度
@@ -101,7 +101,7 @@ def test_merged_card_order_market_first_sector_grouped_trade_last():
     """区块顺序(2026-08-07 v3)：大盘(日期/温度/手册/释义)最前 → 板块聚合卡
     → 资金观察 → 交易组 → 诚实声明。释义紧跟手册(风险点1)，聚合卡替代旧板块区块。"""
     data = _full_card_data()
-    data["board_facts"] = _board_facts_fixture()
+    data["board_facts"] = _agg_facts_fixture()
     card = build_merged_card(data)
     assert card.startswith("**")                  # 日期行是卡首字符(审查 P3-2)
     i_temp = card.find("## 🔥 市场温度")           # 大盘组
@@ -168,7 +168,7 @@ def test_merged_card_no_empty_new_blocks():
 def test_fund_observation_header_emoji_no_collision():
     """资金观察区块 emoji(📈)与板块聚合卡(🔷)不冲突(2026-08-07:估值/资金流向区块已并入聚合卡)"""
     data = _full_card_data()
-    data["board_facts"] = _board_facts_fixture()
+    data["board_facts"] = _agg_facts_fixture()
     card = build_merged_card(data)
     assert "━━━ 📈 资金观察" in card
     assert "━━━ 🔷 板块判断" in card
@@ -622,196 +622,54 @@ def test_market_volume_unavailable_when_source_fails(monkeypatch):
 
 
 # ═══════════════════════════════════════════════════════════
-# Task 5: 板块总览三层结构（事实→说明→判断）+ TREND_STATE 映射（渲染层）
-# synthesize 输出契约（Task 4 实测）：board/facts/explanation/short_term_judge/
-# dca_judge/conflict_note 六 key——渲染层逐 key 核对，错位会静默降级（Issue 3 交接）
+# 聚合卡渲染（render_board_aggregate，2026-08-07 用户审计替代板块总览五区块）
+# 2026-08-07 用户需求重构：板块行=便宜度/趋势/资金/定投决策（删除短线语言）
 # ═══════════════════════════════════════════════════════════
 
-def _board_facts_fixture():
-    """synthesize 输入契约全 key 事实（上升/下降/全缺三态）"""
+def _agg_facts_fixture():
+    """synthesize 输入契约全 key 事实（上升启动/下降未启动/全缺三态）"""
     return [
-        {"board": "银行", "trend_state": "above20_rising", "valuation": "合理",
-         "fund_state": "inflow_confirm", "sl_net": 12.5, "main_pct": 50.0,
-         "metric": "PE", "years": 10.0, "terms": ["PE", "分位", "20日线"]},
-        {"board": "煤炭", "trend_state": "below20_falling", "valuation": "便宜",
-         "fund_state": "outflow_confirm", "sl_net": -3.2, "main_pct": 15.0,
-         "metric": "PB", "years": 8.0,
+        {"board": "银行", "trend_state": "above20_rising", "trend_mid": "above60",
+         "valuation": "合理", "fund_state": "inflow_confirm", "sl_net": 12.5,
+         "main_pct": 50.0, "metric": "PE", "years": 10.0, "terms": ["PE", "分位", "20日线"]},
+        {"board": "煤炭", "trend_state": "below20_falling", "trend_mid": "below60",
+         "valuation": "便宜", "fund_state": "outflow_confirm", "sl_net": -3.2,
+         "main_pct": 15.0, "metric": "PB", "years": 8.0,
          "terms": ["PB", "分位", "20日线", "永不下跌补仓", "微笑曲线"]},
-        {"board": "通信设备", "trend_state": "unknown", "valuation": "观察",
-         "fund_state": "unknown", "sl_net": None, "main_pct": None,
-         "metric": "PE", "years": None, "terms": []},
+        {"board": "通信设备", "trend_state": "unknown", "trend_mid": None,
+         "valuation": "观察", "fund_state": "unknown", "sl_net": None,
+         "main_pct": None, "metric": "PE", "years": None, "terms": []},
     ]
 
 
-def test_board_overview_three_layers():
-    """每板块包含 事实/说明/判断 三个标记；判断含短线+定投两场景；名词首次出现有解释"""
-    from val_format import build_board_overview
-    out = build_board_overview(_board_facts_fixture())
-    assert "🧭 板块总览" in out
-    assert "3 板块" in out
-    assert out.count("◆ 事实") == 3
-    assert out.count("◆ 说明") == 3
-    assert out.count("◆ 判断") == 3
-    assert "短线（推断）" in out
-    assert "定投（推断）" in out
-    # 名词首次出现有解释（PE/分位 大白话）
-    assert "PE：市盈率" in out
-    assert "分位：百分位" in out
+def test_agg_card_three_layers():
+    from val_format import render_board_aggregate
+    glossary, out = render_board_aggregate(_agg_facts_fixture(), [])
+    assert "便宜度" in out and "趋势" in out and "资金" in out and "定投" in out
+    # 银行：合理+趋势启动 → 正常定投
+    assert "正常定投" in out
+    # 煤炭：便宜+趋势未启动 → 观察 + 便宜≠马上买解释
+    assert "观察" in out
+    assert "便宜≠马上买" in out
+    # 通信设备：全缺 → 无法判断
+    assert "无法判断" in out
+    # 趋势共振统计含 60 日线
+    assert "站上60日线" in out
 
 
-def test_board_overview_judgment_can_be_absent():
-    """数据不足 → "无法判断"照常渲染（判断可缺席是设计，不强行给结论）"""
-    from val_format import build_board_overview
-    out = build_board_overview(_board_facts_fixture())
-    assert "无法判断：趋势状态不明" in out       # 短线缺席
-    assert "无法判断：估值证据不足" in out       # 定投缺席
-    assert "无法判断：趋势与估值证据均不足" in out  # 冲突分流整体缺席
-    assert "◆ 事实" in out and "◆ 说明" in out and "◆ 判断" in out
+def test_agg_card_judgment_can_be_absent():
+    from val_format import render_board_aggregate
+    _, out = render_board_aggregate([], [])
+    assert out == ""  # 无事实 → 不输出空标题
 
 
-def test_board_overview_trend_framework_loaded():
-    """判断措辞含趋势交易论框架：不破20日线 / 永不下跌补仓 / 微笑曲线"""
-    from val_format import build_board_overview
-    out = build_board_overview(_board_facts_fixture())
-    assert "不破 20 日线" in out          # 银行：上升顺势持有
-    assert "永不下跌补仓" in out          # 煤炭：下降不抄底
-    assert "微笑曲线" in out              # 煤炭：便宜可加码（定投场景）
-
-
-def test_board_overview_renders_all_synthesize_keys():
-    """渲染层逐 key 核对 synthesize 输出契约（facts/explanation/short_term_judge/
-    dca_judge/conflict_note 全部渲染，错位会静默降级——Task 4 Issue 3 交接）"""
-    from val_format import build_board_overview
-    out = build_board_overview(_board_facts_fixture())
-    # facts 层：趋势/估值/资金三行原样在场
-    assert "板块：银行" in out
-    assert "趋势：" in out and "估值：" in out and "资金：" in out
-    # explanation 层：翻译文本透出（分位/趋势/资金三翻译）
-    assert "只有 50% 的时间比现在便宜" in out
-    assert "20 日线上方上升期" in out
-    assert "有持续性的买入" in out
-    # judgment 层：短线 + 定投 + 冲突分流（煤炭=下降+便宜 冲突存在）
-    assert "场景分流（推断）" in out
-
-
-def test_board_overview_per_board_exception_degraded(monkeypatch):
-    """Task 6 审查 Important：单板块 synthesize 抛错 → 该板块降级"无法判断：数据异常（推断）"，
-    其余板块三层照常渲染，不击穿整卡（val_format.py 裸下标 KeyError 击穿修复）"""
-    from val_format import build_board_overview
-    import val_explain
-    real = val_explain.synthesize
-    def flaky(facts):
-        if facts.get("board") == "煤炭":
-            raise ValueError("模拟 synthesize 异常")
-        return real(facts)
-    monkeypatch.setattr(val_explain, "synthesize", flaky)
-    out = build_board_overview(_board_facts_fixture())
-    assert out.count("◆ 事实") == 3                 # 3 板块都渲染（煤炭降级，不击穿整卡）
-    assert "无法判断：数据异常（推断）" in out        # 煤炭降级文案
-    assert "数据异常，事实层缺失" in out             # 事实层降级标注
-    assert "只有 50% 的时间比现在便宜" in out         # 银行（正常板块）说明层照常
-    assert "不破 20 日线" in out                     # 银行判断层照常（永不下跌补仓在降级板块上）
-
-
-def test_board_overview_syn_missing_key_fallback(monkeypatch):
-    """Task 6 审查 Important：synthesize 输出缺 key（契约违反）→ .get 兜底降级而非 KeyError"""
-    from val_format import build_board_overview
-    import val_explain
-    real = val_explain.synthesize
-    def partial(facts):
-        syn = real(facts)
-        if facts.get("board") == "煤炭":
-            del syn["dca_judge"]                    # 模拟契约违反：判断 key 缺失
-        return syn
-    monkeypatch.setattr(val_explain, "synthesize", partial)
-    out = build_board_overview(_board_facts_fixture())
-    assert "无法判断：数据异常（推断）" in out        # 缺 key 板块降级
-    assert out.count("◆ 判断") == 3                  # 三板块判断层仍在
-
-
-def test_trend_state_map():
-    """sector_monitor trend_phase → val_explain TREND_STATE 词表（渲染层映射）：
-    topping（筑顶）在 20 日线上方应归"震荡"而非"上升"（val_explain docstring 标注）"""
-    from market_dashboard import trend_state_map
-    assert trend_state_map("rally") == "above20_rising"
-    assert trend_state_map("downtrend") == "below20_falling"
-    for phase in ("oscillation", "topping", "bottoming", "mixed"):
-        assert trend_state_map(phase) == "around20_oscillation"
-    assert trend_state_map("unknown") == "unknown"
-    assert trend_state_map(None) == "unknown"
-    assert trend_state_map("不存在的阶段") == "unknown"
-
-
-def test_build_board_facts_full_contract():
-    """synthesize 输入契约端到端组装（Task 4 Issue 3 交接：逐 key 核对，缺 key 静默降级）：
-    snapshots+judgements+history+sector 条目 → 每板块事实全 key；
-    多子行业 trend_phase 全一致取该值、不一致归 mixed（→震荡）、无 THS 映射 → unknown"""
-    from market_dashboard import build_board_facts
-    snapshots = [
-        {"board": "银行", "source": "pb", "main_pct": 12.0, "pb_pct": 12.0,
-         "pe_pct": None, "trend": "flat", "years": 1.2, "note": "PB=0.42"},
-        {"board": "医药生物", "source": "pe", "main_pct": 55.0, "pe_pct": 55.0,
-         "pb_pct": None, "trend": "flat", "years": 4.0, "note": ""},
-        {"board": "计算机", "source": "pe", "main_pct": 40.0, "pe_pct": 40.0,
-         "pb_pct": None, "trend": "flat", "years": 2.5, "note": ""},
-        {"board": "半导体", "source": "pe", "main_pct": None, "pe_pct": None,
-         "pb_pct": None, "trend": "flat", "years": None, "note": ""},
-    ]
-    judgements = [
-        {"board": "银行", "verdict": "便宜", "confidence": "高", "action": "full", "note": ""},
-        {"board": "医药生物", "verdict": "合理", "confidence": "中", "action": "half", "note": ""},
-        {"board": "计算机", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
-        {"board": "半导体", "verdict": "观察", "confidence": "低", "action": "skip", "note": ""},
-    ]
-    history = [
-        {"tags": {"银行": {"sl_net": 2.1}}, "fund_by_board": {"银行": 3.3}},
-        {"tags": {"银行": {"sl_net": 1.5}}, "fund_by_board": {"银行": 2.2}},
-        {"tags": {"银行": {"sl_net": 0.9}}, "fund_by_board": {"银行": 1.1}},
-    ]
-    sectors = [
-        {"name": "银行", "technical": {"trend_phase": "topping"}},          # 筑顶 → 震荡
-        {"name": "化学制药", "technical": {"trend_phase": "rally"}},        # → 医药生物
-        {"name": "中药", "technical": {"trend_phase": "rally"}},            # 全一致 → rally
-        {"name": "IT服务", "technical": {"trend_phase": "rally"}},          # → 计算机
-        {"name": "软件开发", "technical": {"trend_phase": "oscillation"}},  # 不一致 → mixed
-    ]
-    facts = build_board_facts(snapshots, judgements, history, sectors)
-    assert len(facts) == 4
-    by_board = {f["board"]: f for f in facts}
-    # 单子行业 topping → 震荡（非上升）
-    b = by_board["银行"]
-    assert b["trend_state"] == "around20_oscillation"
-    assert b["valuation"] == "便宜"
-    assert b["fund_state"] == "inflow_confirm"      # fund_by_board 优先（Task 2 口径）
-    assert b["sl_net"] == 1.1                        # 最新留痕优先（列表末条为最新）
-    assert b["main_pct"] == 12.0 and b["metric"] == "PB" and b["years"] == 1.2
-    assert "PB" in b["terms"] and "20日线" in b["terms"] and "微笑曲线" in b["terms"]
-    # 多子行业全一致 → 取该阶段
-    assert by_board["医药生物"]["trend_state"] == "above20_rising"
-    assert by_board["医药生物"]["valuation"] == "合理"
-    # 多子行业不一致 → mixed → 震荡（诚实，不取单边）
-    assert by_board["计算机"]["trend_state"] == "around20_oscillation"
-    # 无 THS 映射 → unknown；数据缺 → main_pct None 透传
-    assert by_board["半导体"]["trend_state"] == "unknown"
-    assert by_board["半导体"]["main_pct"] is None
-    assert "20日线" not in by_board["半导体"]["terms"]
-
-
-def test_merged_card_board_overview_between_valuation_and_dashboard():
-    """板块聚合卡(2026-08-07)：位于大盘组(温度/手册/释义)之后、资金观察之前；
-    聚合卡含每板块 事实+短线/定投 行；板块总览/估值判断旧区块不再单独出现"""
-    data = _full_card_data()
-    data["board_facts"] = _board_facts_fixture()
-    card = build_merged_card(data)
-    i_glossary = card.find("名词释义")
-    i_agg = card.find("━━━ 🔷 板块判断")
-    i_fund = card.find("资金观察")
-    i_honest = card.find("诚实声明")
-    assert -1 not in (i_glossary, i_agg, i_fund, i_honest)
-    assert 0 <= i_glossary < i_agg < i_fund < i_honest
-    assert "◆ 板块：" in card  # 聚合卡事实行首行
-    assert "趋势：" in card     # 事实行含趋势
-    assert "◆ 短线：" in card  # 聚合卡判断行
+def test_agg_card_buy_condition_highlight():
+    from val_format import render_board_aggregate
+    facts = _agg_facts_fixture()[:1]
+    facts[0]["valuation"] = "便宜"   # 便宜+趋势启动 → 多买（符合买入条件）
+    _, out = render_board_aggregate(facts, [])
+    assert "多买" in out
+    assert "【便宜+趋势】买入条件" in out
 
 
 def test_merged_card_board_overview_empty_no_header():
@@ -824,10 +682,12 @@ def test_merged_card_board_overview_empty_no_header():
 
 
 def test_board_aggregate_trend_resonance_line():
-    """聚合卡顶部输出趋势共振统计(2026-08-08):直接回答综合策略的"确认趋势"观察点"""
+    """聚合卡顶部输出趋势共振统计(2026-08-08):直接回答综合策略的"确认趋势"观察点。
+    2026-08-07 用户需求：增加 60 日线中期确认统计。"""
     data = _full_card_data()
-    data["board_facts"] = _board_facts_fixture()  # 1 站上20日线(银行)/1 下方(煤炭)/1 不明(通信)
+    data["board_facts"] = _agg_facts_fixture()  # 1 站上20日线(银行)/1 下方(煤炭)/1 不明(通信)
     card = build_merged_card(data)
     assert "📊 趋势共振" in card
     assert "站上20日线 1/3" in card
+    assert "站上60日线 1/3" in card
     assert "板块分化，趋势未确认" in card

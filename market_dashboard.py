@@ -388,7 +388,7 @@ def compute_signals(df: pd.DataFrame, m1_df: Optional[pd.DataFrame]) -> List[Sig
     elif rsi < RSI_EXTREME_OVERSOLD:
         s = Signal("RSI", f"RSI={rsi:.0f} 极端超卖", "caution",
             "RSI<20=极端恐慌。冰点是希望的开始。但不急于抄底——等底部确认信号（底分型+金叉+放量）。",
-            "「冰点是赚大钱的埋伏期，留意新题材和换手首板」—情绪周期第6阶段")
+            "「冰点是赚大钱的埋伏期，留意新题材方向」—情绪周期第6阶段")
     elif rsi < RSI_OVERSOLD:
         s = Signal("RSI", f"RSI={rsi:.0f} 超卖", "caution",
             "RSI<30=市场偏恐慌。好股票可能被错杀，但需要等止跌企稳信号。",
@@ -584,19 +584,19 @@ SENTIMENT_CYCLE = {
     "ice": {
         "name": "冰点期", "emoji": "❄️", "position": "20-30%",
         "action": "轻仓观察，不急于抄底。留意新题材的萌芽——'冰点是希望的开始'。",
-        "watch": ["下一个情绪周期的首板龙头", "是否有新题材异动", "成交量是否见底回升"],
+        "watch": ["下一个情绪周期的题材方向", "是否有新题材异动", "成交量是否见底回升"],
         "quote": "冰点不动——等确认信号，不要自作聪明去抄底。"
     },
     "startup": {
         "name": "启动期", "emoji": "🌱", "position": "30-50%",
-        "action": "识别题材和潜在龙头，小仓位试水。敢打首板是吃肉的第一步。",
-        "watch": ["首板股票的数量和质量", "成交量是否放大", "板块效应是否形成"],
+        "action": "小仓位试水，等【便宜+趋势】板块信号确认后再加大。",
+        "watch": ["符合【便宜+趋势】条件的板块数量", "成交量是否放大", "板块效应是否形成"],
         "quote": "启动试水——确认趋势再加大仓位。"
     },
     "acceleration": {
         "name": "加速期", "emoji": "🔥", "position": "70-80%",
-        "action": "果断上车核心龙头或前排强势股。这是最赚钱的阶段——但仓位不要打满，留余地。",
-        "watch": ["龙头股是否健康换手", "板块内高低切是否活跃", "赚钱效应是否扩散"],
+        "action": "顺势持有强势板块基金——但仓位不要打满，留余地。",
+        "watch": ["强势板块是否持续", "板块内高低切是否活跃", "赚钱效应是否扩散"],
         "quote": "加速重仓——但要控制仓位，防止过热。牛市中最大的风险是没上车，第二大的风险是满仓。"
     },
     "climax": {
@@ -608,7 +608,7 @@ SENTIMENT_CYCLE = {
     "divergence": {
         "name": "分化期", "emoji": "🔻", "position": "0-20%",
         "action": "坚决离场，空仓等待。不割就是被割——别做接盘侠。等冰点再考虑入场。",
-        "watch": ["龙头是否见顶杀跌", "亏钱效应是否蔓延", "热点题材是否无人接力"],
+        "watch": ["强势板块是否见顶回落", "亏钱效应是否蔓延", "热点题材是否无人接力"],
         "quote": "退潮空仓——'不割就是被割'，保住本金是第一位的。"
     },
     "downtrend": {
@@ -1626,14 +1626,14 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
     elif mtf_danger:
         summary = "🔴 三周期共振向下——这是《趋势交易论》最危险的信号。**理论建议：空仓或极轻仓（2成以下）。** 虽然有底背离等积极信号，但三周期向下的力量更大，不宜逆势操作。等三周期中至少两个级别转向上方，再考虑入场。"
     elif mtf_healthy:
-        summary = "🟢 三周期共振向上——这是最强的做多信号。**理论建议：可以重仓持有（7-8成）。** 按520战法纪律操作：不破5日线就拿着，破5日线减半仓，回踩20日线加回。"
+        summary = "🟢 三周期共振向上——这是最强的做多信号。**理论建议：可以重仓持有（7-8成）。**"
     else:
         # 无共振，按信号数量判断
         bear_count = len(signals_bear); bull_count = len(signals_bull)
         if bear_count > bull_count:
             summary = f"🟡 空头信号略占优（空{bear_count} vs 多{bull_count}）。**理论建议：轻仓观望（3-5成），等方向明确。**"
         elif bull_count > bear_count:
-            summary = f"🟢 多头信号略占优（多{bull_count} vs 空{bear_count}）。**理论建议：可以持仓或逐步入场，按520战法纪律操作。**"
+            summary = f"🟢 多头信号略占优（多{bull_count} vs 空{bear_count}）。**理论建议：可以持仓或逐步入场。**"
         else:
             summary = "🟡 信号均衡。**理论建议：轻仓观望，等方向明确后再行动。**"
 
@@ -1712,7 +1712,7 @@ def format_dashboard(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 
     # ── 综合策略 ──
     # 冲突3修复(2026-08-07 用户审计):三周期共振向下(月线空头)时,启动期/加速期的
-    # 激进 action(如"敢打首板")与手册"级别不统一不做新买入"矛盾 → 抑制为防守提示
+    # 激进 action 与手册"级别不统一不做新买入"矛盾 → 抑制为防守提示
     if mtf_danger and cycle.get("name") in ("启动期", "加速期"):
         action_line = ("**操作**: ⚠️ 三周期共振向下（月线空头）——手册规则：不做新买入。"
                        f"{cycle.get('name')}的题材操作建议在此失效，以空仓/极轻仓（0-2成）为准，"
@@ -2017,6 +2017,34 @@ def _board_trend_phase(sector_entries: list, board: str) -> str:
     return "mixed"
 
 
+def _board_mid_trend(sector_entries: list, board: str) -> Optional[str]:
+    """该东财板块的中期趋势确认（2026-08-07 用户需求：中长期持有看 60 日线）：
+    多数子行业（≥70%）站上 60 日线 → "above60"；多数在 60 日线下 → "below60"；
+    混杂/无数据 → None。sector_entries 结构同 _board_trend_phase。"""
+    from val_config import em_name_for
+    above, below = 0, 0
+    for s in sector_entries:
+        if not isinstance(s, dict):
+            continue
+        if em_name_for(str(s.get("name", ""))) != board:
+            continue
+        tech = s.get("technical")
+        if not isinstance(tech, dict):
+            continue
+        if tech.get("above_ma60"):
+            above += 1
+        else:
+            below += 1
+    total = above + below
+    if total == 0:
+        return None
+    if above >= total * 0.7:
+        return "above60"
+    if below >= total * 0.7:
+        return "below60"
+    return None
+
+
 def _latest_sl_net(history: list, board: str):
     """当日（最新留痕）主力净额（亿元）：fund_by_board 优先，回退 tags；全无 → None。
     与 compute_fund_state 同口径（Task 2 fund_by_board 12 板块全覆盖）。"""
@@ -2085,6 +2113,7 @@ def build_board_facts(snapshots: list, judgements: list, history: list,
             facts.append({
                 "board": board,
                 "trend_state": trend_state_map(trend_phase),
+                "trend_mid": _board_mid_trend(sector_entries, board),  # 60日线中期确认
                 "valuation": verdict,
                 "fund_state": compute_fund_state(history, board),
                 "sl_net": _latest_sl_net(history, board),
@@ -2187,6 +2216,37 @@ def _build_merged_history_entry(data_date: str, sb_value, focus: list, snapshots
     if sector_pb:
         entry["sector_pb"] = sector_pb
     return entry
+
+
+FUND_DECISIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "data", "fund_decisions.jsonl")
+
+_DCA_ACTION = [("多买", "多买"), ("观察", "观察"), ("暂停/减量", "暂停/减量"),
+               ("减量", "减量"), ("正常定投", "正常定投"), ("按计划", "按计划")]
+
+
+def _record_fund_decisions(data_date: str, board_facts: list,
+                           path: str = FUND_DECISIONS_FILE) -> None:
+    """板块定投决策留痕（2026-08-07 反馈环）：每板块 {date, board, cheap, trend, action}。
+    基准日收盘价由 fund_review 回看时用板块K线定位（留痕不存价，K线覆盖窗口）。
+    写失败仅记日志不阻塞推送（同 _record_merge_success 惯例）。"""
+    import ltc_store
+    from val_explain import synthesize
+    try:
+        for facts in board_facts:
+            if not isinstance(facts, dict) or not facts.get("board"):
+                continue
+            syn = synthesize(facts)
+            dca = syn.get("dca_judge") or ""
+            action = next((a for k, a in _DCA_ACTION if k in dca), "无法判断")
+            ltc_store.append_history(path, {
+                "date": data_date, "board": facts["board"],
+                "cheap": syn.get("cheap"), "trend": syn.get("trend_ok"),
+                "action": action,
+            })
+        print(f"  [i] 板块决策留痕: {len(board_facts)} 板块 → fund_decisions.jsonl")
+    except Exception as e:
+        print(f"  [!] 板块决策留痕失败(不阻塞): {str(e)[:80]}")
 
 
 def _record_merge_success(data_date: str, sb_value, focus: list, snapshots: list,
@@ -2435,6 +2495,8 @@ def merge_main():
         # ltc_main workflow 已停用），否则 history.jsonl 永远停在 Task 7 清空后的状态，
         # 资金维确认/PB 分位/南向参照永久冷启动。写失败不阻塞（_record_merge_success 内部兜底）
         _record_merge_success(data_date, sb_value, focus, snapshots, flow=flow)
+        # 反馈环（2026-08-07 用户裁决问题2）：板块定投决策留痕——fund_review 回看用
+        _record_fund_decisions(data_date, board_facts)
     return 0 if ok else 1
 
 
