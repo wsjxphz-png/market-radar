@@ -99,8 +99,12 @@ def build_rss_urls(config: Dict) -> List[Dict]:
                           "platform": "youtube", "source_name": yt["name"],
                           "category": yt.get("category", "other"), "note": yt.get("note", "")})
 
-    # Reddit
-    for rd in sources.get("reddit", []):
+    # Reddit（限流感知：无认证 RSS 每 IP 每窗口仅放行 1-2 个请求，实测 429；
+    # 按日期轮换抓取顺序 → 每天优先的 subreddit 不同，N 天轮遍全部，零额外请求）
+    reddit_list = sources.get("reddit", [])
+    shift = datetime.now(ZoneInfo("Asia/Shanghai")).toordinal() % max(len(reddit_list), 1)
+    reddit_rotated = reddit_list[shift:] + reddit_list[:shift]
+    for rd in reddit_rotated:
         sub = rd.get("subreddit", "")
         if sub:
             tasks.append({"url": f"https://www.reddit.com/r/{sub}/.rss",
@@ -165,7 +169,9 @@ def _mark_instance_failure(inst: str):
 
 def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
     urls = [task["url"]] + task.get("alt_urls", [])
-    headers = {"User-Agent": "MarketRadar/1.0"}
+    # UA 必须含邮箱格式联系方式：SEC EDGAR 强制要求（2023 起），否则 403。
+    # 实测：URL 格式/浏览器 UA 均 403，contact: 邮箱格式 200（2026-08-06）
+    headers = {"User-Agent": "MarketRadar/1.0 (contact: market-radar@users.noreply.github.com)"}
     headers.update(task.get("extra_headers", {}))
     for url in urls:
         inst = _instance_of(url)
@@ -187,7 +193,10 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
                     break  # 403/404/5xx：本实例本次失败，快速换下一实例
             except Exception:
                 break  # 连接错误：不再重试烧时间，快速换下一实例
-        _mark_instance_failure(inst)
+        # 实例熔断仅对 RSSHub 多实例轮换生效：SEC 等单 URL 源失败
+        # 不应触发熔断（否则 2 个 SEC 源失败后其余 4 个被跳过，2026-08-06 实测）
+        if task.get("platform") == "rss_cn":
+            _mark_instance_failure(inst)
         # 这个 URL 的所有尝试都失败了，继续试下一个 fallback
     return None
 

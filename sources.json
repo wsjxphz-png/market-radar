@@ -28,20 +28,17 @@
       {"name": "格隆汇快讯", "url": "https://rsshub.app/gelonghui/live", "category": "news_cn", "note": "港股+A股实时快讯"},
       {"name": "东方财富-策略研报", "url": "https://rsshub.app/eastmoney/report/strategyreport", "category": "research_cn", "note": "券商策略研报汇总"},
       {"name": "东方财富-宏观研报", "url": "https://rsshub.app/eastmoney/report/macresearch", "category": "research_cn", "note": "券商宏观研究汇总"},
-      {"name": "东方财富-行业研报", "url": "https://rsshub.app/eastmoney/report/industry", "category": "research_cn", "note": "券商行业研究汇总"},
-      {"name": "中国央行公开市场操作", "url": "https://rsshub.app/gov/pbc/tradeAnnouncement", "category": "policy", "note": "央行逆回购/MLF/LPR操作"},
-      {"name": "雪球热帖", "url": "https://rsshub.app/xueqiu/hots", "category": "community_cn", "note": "雪球热门讨论，散户+专业投资者混合"}
+      {"name": "东方财富-行业研报", "url": "https://rsshub.app/eastmoney/report/industry", "category": "research_cn", "note": "券商行业研究汇总"}
     ],
     "rss_global": [
       {"name": "CNBC Top News", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "category": "news_global", "note": "美国财经头条，覆盖全市场"},
       {"name": "MarketWatch Top Stories", "url": "https://feeds.marketwatch.com/marketwatch/topstories", "category": "news_global", "note": "市场深度报道+数据"},
       {"name": "Bloomberg Markets", "url": "https://feeds.bloomberg.com/markets/news.rss", "category": "news_global", "note": "彭博市场新闻，机构视角"},
       {"name": "Yahoo Finance", "url": "https://finance.yahoo.com/news/rssindex", "category": "news_global", "note": "综合财经新闻，覆盖美股+全球"},
-      {"name": "Investopedia", "url": "https://www.investopedia.com/feed-builder/feed/rss", "category": "education", "note": "投资教育+市场分析"},
+      {"name": "Investopedia", "url": "https://feeds-api.dotdashmeredith.com/v1/rss/google/f8466ec3-5044-46bc-94b7-2df65f770eff", "category": "education", "note": "投资教育+市场分析(2026-08-06 换官方新 feed，原 feed-builder 已下线)"},
       {"name": "美联储新闻发布", "url": "https://www.federalreserve.gov/feeds/press_all.xml", "category": "policy", "note": "Fed政策声明+FOMC+监管变化"},
-      {"name": "美联储褐皮书", "url": "https://www.federalreserve.gov/feeds/beige_book.xml", "category": "policy", "note": "12个联储区经济状况汇总"},
-      {"name": "美联储演讲", "url": "https://www.federalreserve.gov/feeds/speech.xml", "category": "policy", "note": "联储官员讲话，政策信号"},
-      {"name": "ECB新闻发布", "url": "https://www.ecb.europa.eu/rss/news.html", "category": "policy", "note": "欧洲央行政策声明+发布会"},
+      {"name": "美联储演讲", "url": "https://www.federalreserve.gov/feeds/speeches.xml", "category": "policy", "note": "联储官员讲话，政策信号(2026-08-06 修正为复数路径，原 speech.xml 404)"},
+      {"name": "ECB新闻发布", "url": "https://www.ecb.europa.eu/rss/press.xml", "category": "policy", "note": "欧洲央行政策声明+发布会(2026-08-06 修正，原 rss/news.html 404)"},
       {"name": "SEC 8-K 文件", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "美国公司重大事件披露（CEO变更/并购/诉讼）"},
       {"name": "SEC 10-K 年报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "年度报告，管理层讨论+风险披露+完整财务"},
       {"name": "SEC 10-Q 季报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-Q&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "季度报告，经营变化+收入结构+利润率趋势"},
@@ -50,17 +47,17 @@
       {"name": "SEC S-1 IPO申请", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=S-1&company=&dateb=&owner=exclude&start=0&count=20&output=atom", "category": "corporate", "note": "新上市公司最详细信息披露"},
       {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "industry", "note": "科技行业一手动态，创业+融资+产品"},
       {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "category": "industry", "note": "科技+消费电子，产品战略+竞争格局"},
-      {"name": "FierceBiotech", "url": "https://www.fiercebiotech.com/feed", "category": "industry", "note": "生物医药行业，管线进展+FDA审批+并购"}
+      {"name": "FierceBiotech", "url": "https://www.fiercebiotech.com/rss.xml", "category": "industry", "note": "生物医药行业，管线进展+FDA审批+并购(2026-08-06 修正路径，原 /feed 404)"}
     ],
     "youtube": [
-      {"name": "Patrick Boyle", "channel_id": "UCY1kMZp36IQ2N3zG0ZljkNw", "category": "macro", "note": "投资分析+市场历史+行为金融"},
+      {"name": "Patrick Boyle", "channel_id": "UCASM0cgfkJxQ1ICmRilfHLw", "category": "macro", "note": "投资分析+市场历史+行为金融(2026-08-06 换新ID,旧ID失效)"},
       {"name": "Bloomberg Podcasts", "channel_id": "UCIALMKvObZNtJ6AmdCLP7Lg", "category": "macro", "note": "彭博市场深度分析"},
-      {"name": "Real Vision Finance", "channel_id": "UC2JykWmBz6B4RFQPhxdikMA", "category": "macro", "note": "顶级投资人访谈+宏观分析"},
+      {"name": "Real Vision Finance", "channel_id": "UCGXWKlq1Oxr3ddEtmKhAkPg", "category": "macro", "note": "顶级投资人访谈+宏观分析(2026-08-06 换新ID)"},
       {"name": "CNBC Television", "channel_id": "UCrp_UI8XtuYfpiqluWLD7Lw", "category": "news_global", "note": "CNBC市场直播+采访"},
-      {"name": "Joseph Carlson", "channel_id": "UCGmHqEJv5hN2AokyHG7c3PA", "category": "equity", "note": "股息投资组合+个股深度分析"},
+      {"name": "Joseph Carlson", "channel_id": "UCbta0n8i6Rljh0obO7HzG9A", "category": "equity", "note": "股息投资组合+个股深度分析(2026-08-06 换新ID)"},
       {"name": "Ben Felix", "channel_id": "UCDXTQ8nWmx_EhZ2v-kp7QxA", "category": "value", "note": "学术证据驱动的投资策略"},
-      {"name": "The Plain Bagel", "channel_id": "UCFQ4VhkQHtHyVmPqey5CRbw", "category": "education", "note": "投资基础+市场教育"},
-      {"name": "Sven Carlin", "channel_id": "UC9GZ5_iHBJmQqEh7UONlVqg", "category": "value", "note": "价值投资+个股研究"}
+      {"name": "The Plain Bagel", "channel_id": "UCFCEuCsyWP0YkP3CZ3Mr01Q", "category": "education", "note": "投资基础+市场教育(2026-08-06 换新ID)"},
+      {"name": "Sven Carlin", "channel_id": "UCrTTBSUr0zhPU56UQljag5A", "category": "value", "note": "价值投资+个股研究(2026-08-06 换新ID)"}
     ],
     "fred": {
       "enabled": true,
@@ -85,7 +82,7 @@
         {"id": "TOTALSL", "name": "消费信贷", "freq": "monthly"},
         {"id": "BOPGSTB", "name": "贸易差额", "freq": "monthly"},
         {"id": "DCOILWTICO", "name": "WTI原油价格", "freq": "daily"},
-        {"id": "GOLDAMGBD228NLBM", "name": "黄金价格(London Fix)", "freq": "daily"}
+        {"id": "GOLDPMGBD228NLBM", "name": "黄金价格(London PM Fix)", "freq": "daily"}
       ]
     },
     "tavily": {
