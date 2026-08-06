@@ -39,12 +39,6 @@
       {"name": "美联储新闻发布", "url": "https://www.federalreserve.gov/feeds/press_all.xml", "category": "policy", "note": "Fed政策声明+FOMC+监管变化"},
       {"name": "美联储演讲", "url": "https://www.federalreserve.gov/feeds/speeches.xml", "category": "policy", "note": "联储官员讲话，政策信号(2026-08-06 修正为复数路径，原 speech.xml 404)"},
       {"name": "ECB新闻发布", "url": "https://www.ecb.europa.eu/rss/press.xml", "category": "policy", "note": "欧洲央行政策声明+发布会(2026-08-06 修正，原 rss/news.html 404)"},
-      {"name": "SEC 8-K 文件", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "美国公司重大事件披露（CEO变更/并购/诉讼）"},
-      {"name": "SEC 10-K 年报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-K&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "年度报告，管理层讨论+风险披露+完整财务"},
-      {"name": "SEC 10-Q 季报", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-Q&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "季度报告，经营变化+收入结构+利润率趋势"},
-      {"name": "SEC 13F 机构持仓", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=13F-HR&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "机构每季度持仓披露，看聪明钱方向"},
-      {"name": "SEC Form 4 内部人交易", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=4&company=&dateb=&owner=exclude&start=0&count=40&output=atom", "category": "corporate", "note": "CEO/CFO/Director买卖自己股票，最强信号"},
-      {"name": "SEC S-1 IPO申请", "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=S-1&company=&dateb=&owner=exclude&start=0&count=20&output=atom", "category": "corporate", "note": "新上市公司最详细信息披露"},
       {"name": "TechCrunch", "url": "https://techcrunch.com/feed/", "category": "industry", "note": "科技行业一手动态，创业+融资+产品"},
       {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "category": "industry", "note": "科技+消费电子，产品战略+竞争格局"},
       {"name": "FierceBiotech", "url": "https://www.fiercebiotech.com/rss.xml", "category": "industry", "note": "生物医药行业，管线进展+FDA审批+并购(2026-08-06 修正路径，原 /feed 404)"}
@@ -95,7 +89,8 @@
         {"query": "geopolitical risk trade war tariffs affecting markets {year}", "category": "macro"},
         {"query": "sector rotation unusual market activity this week", "category": "market"},
         {"query": "China stock market A-share policy stimulus {year}", "category": "news_cn"},
-        {"query": "commodity prices oil gold copper moves this week", "category": "macro"}
+        {"query": "commodity prices oil gold copper moves this week", "category": "macro"},
+        {"query": "SEC filings 8-K Form 4 13F insider trading notable {month} {year}", "category": "corporate"}
       ]
     },
     "akshare": {
