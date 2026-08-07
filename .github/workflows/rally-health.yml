@@ -74,5 +74,7 @@ jobs:
           git add data/ltc || true
           git add data/fund_decisions.jsonl || true
           git diff --cached --quiet || git commit -m "data: 仪表盘信号留痕 [skip ci]"
-          git push
+          # 2026-08-07：手动触发与本地手动 push 并发时留痕 push 会被拒（fetch first）——
+          # 容忍失败（|| true），run 不红；并发场景留痕可能丢失（罕见，可接受）
+          git push || true
 
