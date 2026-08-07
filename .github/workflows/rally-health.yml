@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     # 2026-08-06: 20 分钟在 runner 慢网络下不足（baostock 单只 ~8.5s），PB 聚合已有板块级预算，
     # 放宽到 35 分钟给数据抓取留余量
-    timeout-minutes: 35
+    timeout-minutes: 60
 
     steps:
       - name: 检出代码

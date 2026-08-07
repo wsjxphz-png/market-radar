@@ -157,7 +157,9 @@ def _ths_kline_names(board_name: str) -> list:
     无映射原样返回。口径：代表性子行业 K线（与资金流映射同一张表，不双维护）。"""
     from val_config import THS_TO_EM
     alts = [k for k, v in THS_TO_EM.items() if v == board_name]
-    return alts or [board_name]
+    # 2026-08-07 部署优化：只试前 2 个子行业名（THS_TO_EM 定义顺序=主代表优先）——
+    # runner 网络慢时逐个试 4-6 个子行业名会放大到超时（35min 被杀实测）
+    return (alts or [board_name])[:2]
 
 
 def fetch_board_kline(board_name: str, days: int = 1300) -> Optional[pd.DataFrame]:
