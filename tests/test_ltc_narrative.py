@@ -57,3 +57,11 @@ def test_validate_output_blocks_banned():
     assert validate_output("今天资金流入半导体") is True
     assert validate_output("你可以考虑买入半导体") is False
     assert validate_output("建议加仓银行") is False
+
+def test_validate_output_blocks_tendency_phrases():
+    # 2026-08-07 用户通读：AI 输出"更值得留意"绕过操作指令检查 → 倾向词必须拦截
+    from ltc_narrative import validate_output
+    assert not validate_output("医疗服务可能更值得留意")
+    assert not validate_output("建议关注半导体")
+    assert not validate_output("值得关注的方向是医药")
+    assert validate_output("医疗服务当日涨8.3%，资金净流入45.6亿")

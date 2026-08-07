@@ -691,3 +691,27 @@ def test_board_aggregate_trend_resonance_line():
     assert "站上20日线 1/3" in card
     assert "站上60日线 1/3" in card
     assert "板块分化，趋势未确认" in card
+
+def test_flow_sl_map_uses_today_flow():
+    # 2026-08-07 用户通读：聚合卡单日净额用当日实时抓取（与资金观察同源），
+    # 不用历史留痕（跨日抓取值不同，实测差 20 倍）
+    import pandas as pd
+    from market_dashboard import _flow_sl_map
+    flow = pd.DataFrame({
+        "industry": ["化学制药", "半导体", "贵金属"],
+        "super_large_net_yi": [45.6, 119.5, 30.6],
+    })
+    m = _flow_sl_map(flow)
+    assert m["医药生物"] == 45.6     # 化学制药 → 医药生物（THS_TO_EM 反向）
+    assert m["半导体"] == 119.5      # 同名直映
+    assert m.get("煤炭") is None     # 未出现的板块不编造
+
+def test_agg_card_metric_note_degradation_visible():
+    # 2026-08-07 用户通读：PB 冷启动→PE 降级口径必须可见（不得静默）
+    from val_format import render_board_aggregate
+    facts = [{"board": "银行", "trend_state": "above20_rising", "trend_mid": "above60",
+              "valuation": "合理", "fund_state": "inflow_confirm", "sl_net": 9.3,
+              "main_pct": 67.0, "metric": "PE", "years": 10.0, "terms": [],
+              "metric_note": "主指标=PE 分位（PB 分位积累中，冷启动降级）"}]
+    _, out = render_board_aggregate(facts, [])
+    assert "冷启动降级" in out
