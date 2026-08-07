@@ -165,6 +165,10 @@ def render_board_aggregate(facts_list: list, sectors: list,
         years = facts.get("years") if isinstance(facts, dict) else None
         val_line = f"{val_short}" + (f"（{metric} 分位 {pct:.0f}%" if pct is not None else f"（{metric} 分位不可用")
         val_line += f"，窗口 {_fmt_years(years)} 年）" if years is not None else "）"
+        # 2026-08-07 用户通读：降级口径必须可见（PB 冷启动→PE 代替时不得静默）
+        m_note = facts.get("metric_note") if isinstance(facts, dict) else None
+        if m_note and "冷启动" in str(m_note):
+            val_line += f"（{m_note}）"
         trend_state = facts.get("trend_state") if isinstance(facts, dict) else "unknown"
         trend_mid = facts.get("trend_mid") if isinstance(facts, dict) else None
         if trend_state == "above20_rising" and trend_mid == "above60":

@@ -1805,10 +1805,12 @@ def send_feishu(content: str) -> bool:
 LTC_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ltc", "history.jsonl")
 LTC_SIGNALS_CFG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "ltc", "signals_config.json")
 
-# 合并卡片诚实声明：覆盖资金推断 / 估值推断 / 操作信号理论性
+# 合并卡片诚实声明：覆盖资金推断 / 估值推断 / 板块判断体系
+# 2026-08-07 更新：板块判断为「便宜度+趋势（20/60日线）+定投决策」体系（非个股短线规则）
 MERGED_HONEST = ("资金净额按板块流入-流出推断资金方向（推断，非实名数据）；"
                  "估值分位基于中证指数 PE/PB 历史与成分股聚合，属推断；"
-                 "板块操作信号基于《趋势交易论》规则，理论判断非保证；"
+                 "板块判断基于「便宜度+趋势+定投决策」规则体系，理论判断非保证；"
+                 "《趋势交易论》内容为知识学习参考，不构成个股操作依据；"
                  "本内容不构成任何买卖建议。")
 
 
@@ -2086,8 +2088,26 @@ def _fact_terms(source: str, trend_phase: str, verdict: str) -> list:
     return terms
 
 
+def _flow_sl_map(flow_df) -> dict:
+    """当日板块资金流（东财名 → 净额）——2026-08-07 修复：聚合卡单日净额用
+    当日实时抓取（与资金观察同源），不再用历史留痕（跨日抓取值不同，实测差 20 倍）。"""
+    from val_config import THS_TO_EM
+    if flow_df is None or len(flow_df) == 0:
+        return {}
+    em_rev = {}
+    for ths_name, em in THS_TO_EM.items():
+        em_rev.setdefault(em, ths_name)
+    out = {}
+    for _, row in flow_df.iterrows():
+        ths = str(row.get("industry", ""))
+        em = next((e for e, t in em_rev.items() if t == ths), None)
+        if em:
+            out[em] = float(row.get("super_large_net_yi", 0) or 0)
+    return out
+
+
 def build_board_facts(snapshots: list, judgements: list, history: list,
-                      sector_entries: list = None) -> list:
+                      sector_entries: list = None, flow_df=None) -> list:
     """12 板块事实列表（val_explain.synthesize 输入契约，逐 key 组装防静默降级）：
 
       board       东财板块名
@@ -2110,15 +2130,19 @@ def build_board_facts(snapshots: list, judgements: list, history: list,
             trend_phase = _board_trend_phase(sector_entries, board)
             verdict = (jmap.get(board) or {}).get("verdict", "观察")
             source = s.get("source", "price")
+            # 2026-08-07 修复：单日净额用当日实时抓取（与资金观察同源）；留痕只用于
+            # fund_state 的连续 3 日方向确认（留痕跨日抓取值不同，实测差 20 倍）
+            today_sl = _flow_sl_map(flow_df).get(board, _latest_sl_net(history, board))
             facts.append({
                 "board": board,
                 "trend_state": trend_state_map(trend_phase),
                 "trend_mid": _board_mid_trend(sector_entries, board),  # 60日线中期确认
                 "valuation": verdict,
                 "fund_state": compute_fund_state(history, board),
-                "sl_net": _latest_sl_net(history, board),
+                "sl_net": today_sl,
                 "main_pct": s.get("main_pct"),
                 "metric": {"pe": "PE", "pb": "PB"}.get(source, "价格位置"),
+                "metric_note": s.get("note") or "",   # 降级口径标注（PB 冷启动→PE 等）
                 "years": s.get("years"),
                 "terms": _fact_terms(source, trend_phase, verdict),
             })
@@ -2402,7 +2426,7 @@ def merge_main():
 
     # ── 板块总览事实（12 板块 × synthesize 三层结构；TREND_STATE 映射在渲染层） ──
     board_facts = build_board_facts(snapshots, judgements, history,
-                                    (sector_data or {}).get("sectors", []))
+                                    (sector_data or {}).get("sectors", []), flow=flow)
     print(f"  板块总览事实: {len(board_facts)} 个板块")
 
     # ── 资金观察（归因/南向/回购 + AI 解读，复用 ltc_main 组装逻辑） ──
