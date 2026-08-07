@@ -261,7 +261,11 @@ def test_dimension_conflict_emits_standard_template():
     assert "【资金维度】" not in out          # 中性维度不列出（L2）
     assert "视角不同" in out and "不是系统冲突" in out  # 固定话术
     # 资金维度文本为精简格式（L1: 不与事实行全文重复）
-    assert fund_state_short("outflow_confirm", -3.2) == "连续净流出（-3.2亿）"
+    # 2026-08-07 用户通读：方向词按符号 + 数值标注"当日"
+    assert fund_state_short("outflow_confirm", -3.2) == "连续净流出（当日 -3.2亿）"
+    assert fund_state_short("single_day", -26.1) == "单日净流出（当日 -26.1亿）"
+    assert fund_state_short("single_day", 5.3) == "单日净流入（当日 +5.3亿）"
+    assert fund_state_short("cold_start", None) == "数据不足"
 
 
 def test_dimension_conflict_silent_when_aligned_or_neutral():

@@ -195,12 +195,17 @@ def judge_dca(valuation: str, trend_state: str = "unknown",
 
 
 def fund_state_short(fund_state: str, sl_net: Optional[float]) -> str:
-    """资金维度精简文本（维度分歧模板用，避免与事实行全文重复，2026-08-07 L1）"""
-    label = {"inflow_confirm": "连续净流入", "outflow_confirm": "连续净流出",
-             "single_day": "单日净流入", "cold_start": "数据不足"}.get(fund_state, "资金中性")
+    """资金维度精简文本（维度分歧模板用，避免与事实行全文重复，2026-08-07 L1）。
+    2026-08-07 用户通读修复：方向词按当日净额符号（"单日净流入（-26.1亿）"自相矛盾）；
+    数值标注"当日"，防"连续净流入（+119.5亿）"被误读为连续累计。"""
+    if fund_state == "cold_start":
+        return "数据不足"
+    period = {"inflow_confirm": "连续", "outflow_confirm": "连续",
+              "single_day": "单日"}.get(fund_state, "资金")
     if sl_net is not None:
-        label += f"（{sl_net:+.1f}亿）"
-    return label
+        direction = "净流入" if sl_net >= 0 else "净流出"
+        return f"{period}{direction}（当日 {sl_net:+.1f}亿）"
+    return f"{period}资金方向未知"
 
 
 def dimension_signals(trend_state: str, valuation: str, fund_state: str) -> dict:
