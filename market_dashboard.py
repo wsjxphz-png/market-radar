@@ -2424,6 +2424,9 @@ def merge_main():
     judgements = _with_metric_disclosure(judgements, snapshots)
     print(f"  估值判定: {len(judgements)} 个板块")
 
+    # ── 当日资金流（聚合卡单日净额用当日实时值——2026-08-07 修复：留痕跨日值差20倍）──
+    flow = _safe_ltc(ltc_data.fetch_sector_flow)
+
     # ── 板块总览事实（12 板块 × synthesize 三层结构；TREND_STATE 映射在渲染层） ──
     board_facts = build_board_facts(snapshots, judgements, history,
                                     (sector_data or {}).get("sectors", []), flow=flow)
@@ -2445,8 +2448,7 @@ def merge_main():
                            default={"period": "近4周", "items": []})
     refs = {"southbound_label": sb_label}
 
-    flow = _safe_ltc(ltc_data.fetch_sector_flow)
-    flow_ok = flow is not None
+    flow_ok = flow is not None  # flow 已在 build_board_facts 前抓取（2428）
     focus = []
     if flow_ok:
         analyses = ltc_analysis.analyze_flows(flow)
