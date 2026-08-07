@@ -2425,11 +2425,12 @@ def merge_main():
     print(f"  估值判定: {len(judgements)} 个板块")
 
     # ── 当日资金流（聚合卡单日净额用当日实时值——2026-08-07 修复：留痕跨日值差20倍）──
+    import ltc_data  # noqa: F401（2437 行再 import 一次无害；此处提前供 flow 抓取）
     flow = _safe_ltc(ltc_data.fetch_sector_flow)
 
     # ── 板块总览事实（12 板块 × synthesize 三层结构；TREND_STATE 映射在渲染层） ──
     board_facts = build_board_facts(snapshots, judgements, history,
-                                    (sector_data or {}).get("sectors", []), flow=flow)
+                                    (sector_data or {}).get("sectors", []), flow_df=flow)
     print(f"  板块总览事实: {len(board_facts)} 个板块")
 
     # ── 资金观察（归因/南向/回购 + AI 解读，复用 ltc_main 组装逻辑） ──
