@@ -93,13 +93,18 @@ def _fetch_kline(board: str):
     return fetch_board_kline(board, days=1300)
 
 
+def _fmt_pct(v):
+    """None（数据不足）→ —；有值 → xx.x%"""
+    return "—" if v is None else f"{v}%"
+
+
 def render_report(summary: List[dict], lookbacks: tuple = DEFAULT_LOOKBACKS) -> str:
     lines = [f"## 📋 板块建议→结果反馈（{datetime.now():%Y-%m-%d}）", "",
              "动作 | 样本 | " + " | ".join(f"{n}日均涨幅" for n in lookbacks)
              + " | " + " | ".join(f"{n}日胜率" for n in lookbacks)]
     for g in summary:
-        avg = " | ".join(f"{g.get(f'ret_{n}_avg', '—')}%" for n in lookbacks)
-        win = " | ".join(f"{g.get(f'ret_{n}_win', '—')}%" for n in lookbacks)
+        avg = " | ".join(_fmt_pct(g.get(f"ret_{n}_avg")) for n in lookbacks)
+        win = " | ".join(_fmt_pct(g.get(f"ret_{n}_win")) for n in lookbacks)
         lines.append(f"{g['action']} | {g['n']} | {avg} | {win}")
     lines.append("")
     lines.append("> 「多买」胜率>55% 说明【便宜+趋势】买入条件有预测力；≤50% 说明无信息——"
