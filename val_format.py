@@ -132,7 +132,8 @@ def render_board_aggregate(facts_list: list, sectors: list,
     # 名词释义（一次，给手册后渲染用）
     glossary = glossary_for(sorted(all_terms))
 
-    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 便宜度+趋势+定投决策） ━━━"]
+    # 2026-08-07 用户完善：数据源可能滞后（8/7 实测资金流滞后一日）——区块头短提醒
+    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 便宜度+趋势+定投决策 · 数据源可能滞后一日） ━━━"]
     # 趋势共振统计：多少板块站上 20/60 日线（2026-08-07 用户需求：中长期持有看中期趋势）
     n_up = sum(1 for f, _ in per_board if isinstance(f, dict)
                and f.get("trend_state") == "above20_rising")
@@ -211,4 +212,7 @@ def render_board_aggregate(facts_list: list, sectors: list,
     if others:
         lines.append("")
         lines.append(f"📋 其他板块（{len(others)}）：{'、'.join(others)}")
+        # 2026-08-07 用户完善：升级条件透明化（⬆️ 评级依据）
+        lines.append("  （⬆️=趋势转强/资金流入/突破信号等接近核心标准，满足后进入核心板块判断；"
+                     "⚠️=异动关注）")
     return glossary, "\n".join(lines)

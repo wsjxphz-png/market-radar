@@ -1130,11 +1130,29 @@ def detect_signal_flips(signals: List[Signal], log_path: Optional[str] = None) -
             if yest_status and yest_status != today_status:
                 arrow = "↑" if today_status == "healthy" and yest_status != "healthy" else \
                         "↓" if today_status == "danger" and yest_status != "danger" else "→"
-                flips.append(f"{name}: {yest_status}→{today_status} {arrow}")
+                # 2026-08-07 用户完善：翻转带影响说明（特化常见信号 + 通用兜底）
+                impact = FLIP_IMPACT.get((name, today_status)) or \
+                    FLIP_IMPACT_GENERIC.get(today_status, "")
+                flips.append(f"{name}: {yest_status}→{today_status} {arrow}"
+                             + (f"（{impact}）" if impact else ""))
 
         return flips
     except Exception:
         return []
+
+
+# 信号翻转影响说明（2026-08-07 用户完善：翻转只说"healthy→caution"用户不知道意味着什么）
+FLIP_IMPACT = {
+    ("支撑压力", "caution"): "注意回调风险",
+    ("支撑压力", "danger"): "支撑破位风险，防守优先",
+    ("三周期趋势", "danger"): "大级别转空，仓位应防守",
+    ("三周期趋势", "healthy"): "大级别转多，可积极",
+    ("年线位置", "caution"): "年线附近压力",
+    ("年线位置", "danger"): "跌破年线，趋势转弱",
+    ("520战法", "danger"): "趋势走弱",
+    ("520战法", "healthy"): "趋势转强",
+}
+FLIP_IMPACT_GENERIC = {"healthy": "信号转强", "caution": "信号转谨慎", "danger": "信号转弱"}
 
 
 def append_signal_snapshot(date_str: str, signals: List[Signal],
