@@ -22,3 +22,15 @@
 {"date": "2026-08-07", "board": "非银金融", "cheap": true, "trend": false, "action": "观察"}
 {"date": "2026-08-07", "board": "汽车", "cheap": false, "trend": false, "action": "正常定投"}
 {"date": "2026-08-07", "board": "国防军工", "cheap": true, "trend": false, "action": "观察"}
+{"date": "2026-08-10", "board": "半导体", "cheap": false, "trend": false, "action": "暂停/减量"}
+{"date": "2026-08-10", "board": "银行", "cheap": false, "trend": false, "action": "正常定投"}
+{"date": "2026-08-10", "board": "医药生物", "cheap": true, "trend": false, "action": "观察"}
+{"date": "2026-08-10", "board": "食品饮料", "cheap": true, "trend": false, "action": "观察"}
+{"date": "2026-08-10", "board": "有色金属", "cheap": false, "trend": true, "action": "正常定投"}
+{"date": "2026-08-10", "board": "通信设备", "cheap": false, "trend": false, "action": "暂停/减量"}
+{"date": "2026-08-10", "board": "计算机", "cheap": true, "trend": false, "action": "观察"}
+{"date": "2026-08-10", "board": "电力设备", "cheap": false, "trend": false, "action": "正常定投"}
+{"date": "2026-08-10", "board": "煤炭", "cheap": false, "trend": true, "action": "减量"}
+{"date": "2026-08-10", "board": "非银金融", "cheap": true, "trend": false, "action": "观察"}
+{"date": "2026-08-10", "board": "汽车", "cheap": false, "trend": false, "action": "正常定投"}
+{"date": "2026-08-10", "board": "国防军工", "cheap": true, "trend": false, "action": "观察"}
