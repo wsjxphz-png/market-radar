@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-07",
+  "updated": "2026-08-10",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -58,9 +58,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "金价突破4300美元，中国央行连续21个月增持，瑞银预测明年上半年金价回到5000美元"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "金价突破4300美元，ETF资金流入，央行购金持续，非农爆冷削弱加息预期"
         }
       ],
-      "next_checkpoint": "美国非农数据"
+      "next_checkpoint": "8月12日CPI数据"
     },
     {
       "id": "81f7586b00c1",
@@ -119,9 +124,14 @@
           "date": "2026-08-07",
           "status": "削弱",
           "evidence": "伊朗拟禁止美以船只通行，谈判前景不明，油价反弹"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "削弱",
+          "evidence": "伊朗态度强硬，谈判反复，油价反弹至84美元"
         }
       ],
-      "next_checkpoint": "伊朗-阿曼谈判进展"
+      "next_checkpoint": "8月15日谈判进展"
     },
     {
       "id": "f9a4a0ce363c",
@@ -180,9 +190,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "Anthropic组建芯片团队，谷歌TPU需求强劲，三星4nm产能被预订至2027年"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "Anthropic组建芯片团队，谷歌TPU需求强劲，三星4nm产能被预订至2027年"
         }
       ],
-      "next_checkpoint": "主要CSP财报"
+      "next_checkpoint": "10月台积电财报"
     },
     {
       "id": "6bfed27dede5",
@@ -241,9 +256,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "八家硅料企业签署反内卷倡议，承诺不低于成本价销售"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "八家硅料企业签署反内卷倡议，承诺不低于成本价销售"
         }
       ],
-      "next_checkpoint": "多晶硅价格走势"
+      "next_checkpoint": "9月硅料价格走势"
     },
     {
       "id": "381e4ae80419",
@@ -302,9 +322,14 @@
           "date": "2026-08-07",
           "status": "削弱",
           "evidence": "解禁后股价未跌反涨，Argus上调评级至买入"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "削弱",
+          "evidence": "解禁后股价未跌反涨，Argus上调评级至买入"
         }
       ],
-      "next_checkpoint": "SpaceX股价走势"
+      "next_checkpoint": "9月二级市场交易数据"
     },
     {
       "id": "977d2846e811",
@@ -363,9 +388,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "金价突破4300美元，中国央行连续增持，瑞银看多"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "金价突破4300美元，央行连续增持，瑞银看多"
         }
       ],
-      "next_checkpoint": "美国非农数据"
+      "next_checkpoint": "8月12日CPI数据"
     },
     {
       "id": "29f2adf49967",
@@ -424,9 +454,14 @@
           "date": "2026-08-07",
           "status": "削弱",
           "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "削弱",
+          "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
         }
       ],
-      "next_checkpoint": "伊朗-阿曼谈判进展"
+      "next_checkpoint": "8月15日谈判进展"
     },
     {
       "id": "55fb9d69157b",
@@ -485,9 +520,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同"
         }
       ],
-      "next_checkpoint": "MLCC价格走势"
+      "next_checkpoint": "10月村田财报"
     },
     {
       "id": "19b4fdd693fd",
@@ -536,9 +576,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
         }
       ],
-      "next_checkpoint": "香港保险销售数据"
+      "next_checkpoint": "12月香港保监局保费数据"
     },
     {
       "id": "5b6333c526d9",
@@ -587,9 +632,14 @@
           "date": "2026-08-07",
           "status": "加强",
           "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
         }
       ],
-      "next_checkpoint": "美国CPI数据"
+      "next_checkpoint": "8月12日CPI数据"
     },
     {
       "id": "641705bbf5a9",
@@ -613,8 +663,14 @@
           "date": "2026-08-07",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-10",
+          "status": "削弱",
+          "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
         }
-      ]
+      ],
+      "next_checkpoint": "8月15日谈判进展"
     }
   ]
 }
