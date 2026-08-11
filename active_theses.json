@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-10",
+  "updated": "2026-08-11",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -61,6 +61,11 @@
         },
         {
           "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "金价突破4300美元，ETF资金流入，央行购金持续，非农爆冷削弱加息预期"
+        },
+        {
+          "date": "2026-08-11",
           "status": "加强",
           "evidence": "金价突破4300美元，ETF资金流入，央行购金持续，非农爆冷削弱加息预期"
         }
@@ -129,9 +134,14 @@
           "date": "2026-08-10",
           "status": "削弱",
           "evidence": "伊朗态度强硬，谈判反复，油价反弹至84美元"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "削弱",
+          "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹至84美元以上"
         }
       ],
-      "next_checkpoint": "8月15日谈判进展"
+      "next_checkpoint": "美伊谈判进展"
     },
     {
       "id": "f9a4a0ce363c",
@@ -195,9 +205,14 @@
           "date": "2026-08-10",
           "status": "加强",
           "evidence": "Anthropic组建芯片团队，谷歌TPU需求强劲，三星4nm产能被预订至2027年"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "加强",
+          "evidence": "Anthropic组建芯片团队，谷歌TPU需求强劲，三星4nm产能被预订至2027年"
         }
       ],
-      "next_checkpoint": "10月台积电财报"
+      "next_checkpoint": "科技巨头财报"
     },
     {
       "id": "6bfed27dede5",
@@ -261,9 +276,14 @@
           "date": "2026-08-10",
           "status": "加强",
           "evidence": "八家硅料企业签署反内卷倡议，承诺不低于成本价销售"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "加强",
+          "evidence": "八家硅料企业签署反内卷倡议，承诺不低于成本价销售"
         }
       ],
-      "next_checkpoint": "9月硅料价格走势"
+      "next_checkpoint": "多晶硅价格走势"
     },
     {
       "id": "381e4ae80419",
@@ -327,9 +347,14 @@
           "date": "2026-08-10",
           "status": "削弱",
           "evidence": "解禁后股价未跌反涨，Argus上调评级至买入"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "削弱",
+          "evidence": "解禁后股价未跌反涨，大摩上调目标价至300美元"
         }
       ],
-      "next_checkpoint": "9月二级市场交易数据"
+      "next_checkpoint": "SpaceX财报"
     },
     {
       "id": "977d2846e811",
@@ -391,6 +416,11 @@
         },
         {
           "date": "2026-08-10",
+          "status": "加强",
+          "evidence": "金价突破4300美元，央行连续增持，瑞银看多"
+        },
+        {
+          "date": "2026-08-11",
           "status": "加强",
           "evidence": "金价突破4300美元，央行连续增持，瑞银看多"
         }
@@ -459,9 +489,14 @@
           "date": "2026-08-10",
           "status": "削弱",
           "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "削弱",
+          "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹"
         }
       ],
-      "next_checkpoint": "8月15日谈判进展"
+      "next_checkpoint": "美伊谈判进展"
     },
     {
       "id": "55fb9d69157b",
@@ -525,9 +560,14 @@
           "date": "2026-08-10",
           "status": "加强",
           "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "加强",
+          "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同"
         }
       ],
-      "next_checkpoint": "10月村田财报"
+      "next_checkpoint": "MLCC价格走势"
     },
     {
       "id": "19b4fdd693fd",
@@ -581,9 +621,14 @@
           "date": "2026-08-10",
           "status": "加强",
           "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "加强",
+          "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
         }
       ],
-      "next_checkpoint": "12月香港保监局保费数据"
+      "next_checkpoint": "征税政策推广情况"
     },
     {
       "id": "5b6333c526d9",
@@ -637,6 +682,11 @@
           "date": "2026-08-10",
           "status": "加强",
           "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "加强",
+          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
         }
       ],
       "next_checkpoint": "8月12日CPI数据"
@@ -668,9 +718,44 @@
           "date": "2026-08-10",
           "status": "削弱",
           "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
+        },
+        {
+          "date": "2026-08-11",
+          "status": "削弱",
+          "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹"
         }
       ],
-      "next_checkpoint": "8月15日谈判进展"
+      "next_checkpoint": "美伊谈判进展"
+    },
+    {
+      "id": "f343b645371c",
+      "name": "欧洲股市相对美股的超额收益",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "欧洲股市盈利增长强劲，高盛上调STOXX 600 EPS增速预测至15%，且估值相对美股折价，资金可能持续流入。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "欧洲经济陷入衰退，或地缘政治风险升级",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-01",
+          "event": "欧洲PMI数据",
+          "what_to_watch": "经济是否持续扩张"
+        },
+        {
+          "date": "2026-10-01",
+          "event": "欧洲企业财报",
+          "what_to_watch": "盈利增长是否持续"
+        }
+      ],
+      "created_date": "2026-08-11",
+      "expiry_date": "2027-08-06",
+      "history": [
+        {
+          "date": "2026-08-11",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
     }
   ]
 }
