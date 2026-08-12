@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-11",
+  "updated": "2026-08-12",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -68,6 +68,11 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "金价突破4300美元，ETF资金流入，央行购金持续，非农爆冷削弱加息预期"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "金价突破4400美元，非农转负削弱加息预期，央行购金持续，IEA上调油价供应缺口强化避险"
         }
       ],
       "next_checkpoint": "8月12日CPI数据"
@@ -139,6 +144,11 @@
           "date": "2026-08-11",
           "status": "削弱",
           "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹至84美元以上"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "削弱",
+          "evidence": "伊朗态度强硬，提出多项条件，革命卫队宣称进攻性作战理念，IEA上调供应缺口，油价反弹"
         }
       ],
       "next_checkpoint": "美伊谈判进展"
@@ -210,9 +220,14 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "Anthropic组建芯片团队，谷歌TPU需求强劲，三星4nm产能被预订至2027年"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "三星电子引入Anthropic Claude提升芯片研发效率，新思科技实现HBM4 IP验证，AI基础设施公司财报超预期"
         }
       ],
-      "next_checkpoint": "科技巨头财报"
+      "next_checkpoint": "英伟达财报"
     },
     {
       "id": "6bfed27dede5",
@@ -281,9 +296,14 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "八家硅料企业签署反内卷倡议，承诺不低于成本价销售"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "8家硅料巨头签署反内卷倡议书，占产能超90%，承诺不低于成本价销售"
         }
       ],
-      "next_checkpoint": "多晶硅价格走势"
+      "next_checkpoint": "多晶硅现货价格"
     },
     {
       "id": "381e4ae80419",
@@ -352,9 +372,14 @@
           "date": "2026-08-11",
           "status": "削弱",
           "evidence": "解禁后股价未跌反涨，大摩上调目标价至300美元"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "削弱",
+          "evidence": "解禁后股价未跌反涨，挪威主权基金首次披露SpaceX持仓，市场情绪偏多"
         }
       ],
-      "next_checkpoint": "SpaceX财报"
+      "next_checkpoint": "SpaceX后续融资或发射进展"
     },
     {
       "id": "977d2846e811",
@@ -423,6 +448,11 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "金价突破4300美元，央行连续增持，瑞银看多"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "金价突破4400美元，非农转负，央行连续增持，瑞银看多"
         }
       ],
       "next_checkpoint": "8月12日CPI数据"
@@ -494,6 +524,11 @@
           "date": "2026-08-11",
           "status": "削弱",
           "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "削弱",
+          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
         }
       ],
       "next_checkpoint": "美伊谈判进展"
@@ -565,9 +600,14 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同，国产厂商迎来量价齐升窗口"
         }
       ],
-      "next_checkpoint": "MLCC价格走势"
+      "next_checkpoint": "MLCC现货价格"
     },
     {
       "id": "19b4fdd693fd",
@@ -626,9 +666,14 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
         }
       ],
-      "next_checkpoint": "征税政策推广情况"
+      "next_checkpoint": "政策推广范围"
     },
     {
       "id": "5b6333c526d9",
@@ -687,6 +732,11 @@
           "date": "2026-08-11",
           "status": "加强",
           "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "加强",
+          "evidence": "非农转负、薪资降温，高盛预计全年维持利率不变，长端利率技术面见顶"
         }
       ],
       "next_checkpoint": "8月12日CPI数据"
@@ -723,6 +773,11 @@
           "date": "2026-08-11",
           "status": "削弱",
           "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "削弱",
+          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
         }
       ],
       "next_checkpoint": "美伊谈判进展"
@@ -752,6 +807,72 @@
       "history": [
         {
           "date": "2026-08-11",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-12",
+          "status": "不变",
+          "evidence": "高盛上调STOXX 600 EPS增速预测至15%，估值折价，但缺乏新的催化剂"
+        }
+      ],
+      "next_checkpoint": "欧元区PMI数据"
+    },
+    {
+      "id": "a6e90cb91cda",
+      "name": "AI基础设施（算力租赁/云）",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave、Nebius财报超预期，RPO达1290亿美元，英伟达联合华尔街融资5000亿美元，AI算力需求从训练向推理扩散",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "AI云厂商出现违约或失去大合同，积压订单开始下降，融资安排出现问题",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-26",
+          "event": "英伟达财报",
+          "what_to_watch": "数据中心收入增速、Blackwell出货指引"
+        },
+        {
+          "date": "2026-10-05",
+          "event": "CME算力期货上线",
+          "what_to_watch": "算力期货定价和流动性，反映市场对AI算力的长期定价"
+        }
+      ],
+      "created_date": "2026-08-12",
+      "expiry_date": "2027-08-07",
+      "history": [
+        {
+          "date": "2026-08-12",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "da1fbe5ad249",
+      "name": "油价上行交易（霍尔木兹风险溢价）",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，油价获强支撑",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊达成协议，海峡重新开放，油价大幅回落",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-15",
+          "event": "美伊谈判进展",
+          "what_to_watch": "若谈判取得突破，油价将回落；若破裂，油价上行"
+        },
+        {
+          "date": "2026-09-01",
+          "event": "OPEC+月度会议",
+          "what_to_watch": "OPEC+产量政策是否调整以应对供应缺口"
+        }
+      ],
+      "created_date": "2026-08-12",
+      "expiry_date": "2026-11-10",
+      "history": [
+        {
+          "date": "2026-08-12",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
