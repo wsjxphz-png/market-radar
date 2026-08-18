@@ -799,7 +799,7 @@ def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         prompt = build_ai_prompt(cycle, signals, sectors, temp_data)
 
         resp = requests.post(
-            f"{AI_BASE_URL}/chat/completions",
+            f"{AI_BASE_URL.rstrip('/')}/chat/completions",
             headers={"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"},
             json={"model": AI_MODEL, "messages": [
                 {"role": "system", "content": "你是交易纪律审计员。严格根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则评判，不打感情分。只说事实，不发表投资建议。"},

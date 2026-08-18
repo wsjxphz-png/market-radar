@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# ⚠️ 已弃用 (2026-08-19)：功能已并入 market_dashboard.py。仍硬编码 DeepSeek 旧平台，
+#    无 workflow 引用，禁止复用——复用前先迁移到 AI_* 环境变量。
 """
 A股上涨持续性监测 — 每日运行
 =============================

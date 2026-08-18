@@ -1403,7 +1403,7 @@ def call_deepseek(user_content: str) -> Optional[Dict]:
     log(f"\n🤖 调用 AI({AI_MODEL})...")
     for attempt in range(MAX_RETRIES + 1):
         try:
-            resp = requests.post(f"{AI_BASE_URL}/chat/completions",
+            resp = requests.post(f"{AI_BASE_URL.rstrip('/')}/chat/completions",
                 headers={"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"},
                 json=payload, timeout=180)
             if resp.status_code == 200:

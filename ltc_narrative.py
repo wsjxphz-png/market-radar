@@ -69,7 +69,7 @@ def call_deepseek(facts: dict, api_key: str, model: str = None) -> Optional[str]
     user = json.dumps(facts, ensure_ascii=False)
     try:
         resp = requests.post(
-            f"{base_url}/chat/completions",
+            f"{base_url.rstrip('/')}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={"model": model, "messages": [
                 {"role": "system", "content": system},
