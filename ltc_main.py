@@ -122,7 +122,7 @@ def run_once(env: dict, data_dir: str = DATA_DIR) -> int:
     facts = ltc_narrative.build_facts(
         {"data_date": data_date, "southbound": southbound, "repurchase": repurchase,
          "valuation": valuation_facts}, focus, refs)
-    interp = ltc_narrative.interpretation(facts, env.get("DEEPSEEK_API_KEY", ""))
+    interp = ltc_narrative.interpretation(facts, env.get("AI_API_KEY", env.get("DEEPSEEK_API_KEY", "")))
 
     # 过期警告由 build_quarterly_block 内部自带，format_card 无独立过期参数（单通道）
     card = ltc_format.format_card(data_date, interp, focus, southbound, valuation,

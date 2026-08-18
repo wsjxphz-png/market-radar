@@ -40,7 +40,10 @@ warnings.filterwarnings("ignore")
 # 配置 — 所有阈值来自《趋势交易论》
 # ═══════════════════════════════════════════════════════════
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+# AI 平台统一配置（2026-08-19 迁移：DeepSeek → Agnes AI，兼容旧变量名）
+AI_API_KEY = os.environ.get("AI_API_KEY", os.environ.get("DEEPSEEK_API_KEY", ""))
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
+AI_MODEL = os.environ.get("AI_MODEL", "agnes-2.5-flash")
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "")
@@ -741,6 +744,14 @@ def build_ai_prompt(cycle: Dict, signals: List[Signal], sectors: List[Dict],
         f"- {s['rating']} {s['name']}({s['category']}): {s['phase']} | {s['tags']}"
         for s in sorted(sectors, key=lambda x: x['rating'])
     )
+    # 2026-08-11 审计：板块概览为同花顺口径名（SECTOR_RULES），估值表/资金观察为
+    # 东财口径——AI 解读引用板块名时须知两套体系（医药生物=化学制药/中药…），
+    # 否则解读文案混名，用户无法与卡片板块对应
+    sec_text += ("\n【口径说明】以上板块名为同花顺细分口径；估值表/板块判断/资金观察"
+                 "为东财板块口径（医药生物=化学制药/中药/医疗服务/医疗器械，"
+                 "食品饮料=白酒/食品加工制造/饮料制造，有色金属=工业/贵/小/能源金属，"
+                 "电力设备=电池/光伏/电网/风电设备，汽车=整车/零部件，非银金融=证券/保险）。"
+                 "解读时优先使用东财板块名。")
     # F1: 宽度不可用时不得拼"涨0家/跌0家"喂 AI，且明示本日不得据此下判断
     breadth_ok = temp_data.get("breadth_ok", False) or temp_data.get("total", 0) > 0
     if breadth_ok:
@@ -782,15 +793,15 @@ def build_ai_prompt(cycle: Dict, signals: List[Signal], sectors: List[Dict],
 def ai_audit(cycle: Dict, signals: List[Signal], sectors: List[Dict],
              idx_tail: pd.DataFrame, temp_data: Dict) -> Optional[str]:
     """AI 决策审计 — 不发表观点，只做合规检查。为六大模块逐项评分（含心理纪律）。"""
-    if not DEEPSEEK_API_KEY:
+    if not AI_API_KEY:
         return None
     try:
         prompt = build_ai_prompt(cycle, signals, sectors, temp_data)
 
         resp = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
-            json={"model": "deepseek-chat", "messages": [
+            f"{AI_BASE_URL}/chat/completions",
+            headers={"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"},
+            json={"model": AI_MODEL, "messages": [
                 {"role": "system", "content": "你是交易纪律审计员。严格根据《趋势交易论》五大模块+《炒股的智慧》心理纪律规则评判，不打感情分。只说事实，不发表投资建议。"},
                 {"role": "user", "content": prompt}
             ], "temperature": 0.3, "max_tokens": 400},
@@ -1108,17 +1119,18 @@ def detect_signal_flips(signals: List[Signal], log_path: Optional[str] = None) -
 
     try:
         # 北京时间，避免 GitHub Actions UTC 环境下日期错位
-        yesterday = (datetime.now(ZoneInfo("Asia/Shanghai")) - timedelta(days=1)).strftime("%Y-%m-%d")
+        # 2026-08-11 审计修复：取"最近一个交易日（date < 今日）"而非 today-1——
+        # 周一/节假日 today-1 无记录，翻转检测静默失效（保守方向）；倒序遍历取最新
+        today_str = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d")
         yest_sigs = {}
-        with open(log_path, encoding='utf-8') as f:
-            for line in f:
-                try:
-                    e = json.loads(line.strip())
-                    if e.get("date") == yesterday and e.get("type") == "index" and "signals" in e:
-                        yest_sigs = e["signals"]
-                        break
-                except Exception:
-                    continue
+        for line in reversed(open(log_path, encoding='utf-8').readlines()):
+            try:
+                e = json.loads(line.strip())
+                if e.get("type") == "index" and "signals" in e and (e.get("date") or "") < today_str:
+                    yest_sigs = e["signals"]
+                    break
+            except Exception:
+                continue
 
         if not yest_sigs:
             return []
@@ -1843,9 +1855,18 @@ def compute_fund_state(history: list, sector: str, days: int = 3) -> str:
     嵌套异常防护（Task 6 Important 2）：行非 dict / tags 非 dict / 板块条目非 dict /
     sl_net 非数值 → 跳过该条不计数，不得击穿 merge_main"""
     flows = []
+    seen_dates = set()
     for h in reversed(history):
         if not isinstance(h, dict):
             continue
+        # 2026-08-11 审计修复：按 data_date 去重——"连续 ≥3 日"应为交易日数而非
+        # 留痕条数（同日重复留痕（08-07 16:14 补记 data_date=08-06）会把 2 个
+        # 交易日当 3 日误判 inflow_confirm；compute_reference 南向 20 日均同理被稀释）
+        d = h.get("data_date") or h.get("date") or ""
+        if d and d in seen_dates:
+            continue
+        if d:
+            seen_dates.add(d)
         sl_net = None
         fb = h.get("fund_by_board")
         if isinstance(fb, dict):
@@ -1928,13 +1949,17 @@ def build_merged_card(data: dict) -> str:
     anomalies = data.get("flow_anomalies")
     if anomalies:
         a_lines = ["━━━ ⚠️ 资金异动 ━━━"]
+        from val_config import em_name_for
         for a in anomalies:
-            a_lines.append(f"- **{a['sector']}**: {a['anomaly']} {a.get('attention', '')}")
+            # 2026-08-11 审计：异动板块名统一为东财口径（与板块判断一致），
+            # 检测源是同花顺细分名（无映射的保留原名）
+            sector = em_name_for(a.get("sector", "")) or a.get("sector", "")
+            a_lines.append(f"- **{sector}**: {a['anomaly']} {a.get('attention', '')}")
         parts.append("\n".join(a_lines))
     # ── 资金观察增强（南向/回购/承接，非板块级维度，独立保留）──
     fund_obs = data.get("fund_observation")
     if fund_obs:
-        parts.append(f"━━━ 📈 资金观察（南向/回购/承接） ━━━\n{fund_obs}")
+        parts.append(f"━━━ 📈 资金观察（板块归因·东财板块名口径，与板块判断一致；南向/回购/承接） ━━━\n{fund_obs}")
     # 诚实声明收尾
     if data.get("honest"):
         parts.append(f"━━━ 🔎 诚实声明 ━━━\n{data['honest']}")
@@ -2110,19 +2135,19 @@ def _fact_terms(source: str, trend_phase: str, verdict: str) -> list:
 
 def _flow_sl_map(flow_df) -> dict:
     """当日板块资金流（东财名 → 净额）——2026-08-07 修复：聚合卡单日净额用
-    当日实时抓取（与资金观察同源），不再用历史留痕（跨日抓取值不同，实测差 20 倍）。"""
+    当日实时抓取（与资金观察同源），不再用历史留痕（跨日抓取值不同，实测差 20 倍）。
+    2026-08-11 审计修复：逐行 THS_TO_EM 映射+按东财板块聚合求和——原实现 em_rev
+    只保留每东财板块的第一个子行业名（setdefault），flow 中其余子行业（中药/
+    医疗服务/光伏设备等）匹配不到，12 板块中 9 个的资金行静默"数据不足"，且
+    单子行业展示值与 compute_fund_state 的全聚合判断口径不一致。"""
     from val_config import THS_TO_EM
     if flow_df is None or len(flow_df) == 0:
         return {}
-    em_rev = {}
-    for ths_name, em in THS_TO_EM.items():
-        em_rev.setdefault(em, ths_name)
     out = {}
     for _, row in flow_df.iterrows():
-        ths = str(row.get("industry", ""))
-        em = next((e for e, t in em_rev.items() if t == ths), None)
+        em = THS_TO_EM.get(str(row.get("industry", "")))
         if em:
-            out[em] = float(row.get("super_large_net_yi", 0) or 0)
+            out[em] = out.get(em, 0.0) + float(row.get("super_large_net_yi", 0) or 0)
     return out
 
 
@@ -2162,7 +2187,10 @@ def build_board_facts(snapshots: list, judgements: list, history: list,
                 "sl_net": today_sl,
                 "main_pct": s.get("main_pct"),
                 "metric": {"pe": "PE", "pb": "PB"}.get(source, "价格位置"),
-                "metric_note": s.get("note") or "",   # 降级口径标注（PB 冷启动→PE 等）
+                # 降级口径标注（PB 冷启动→PE 等）；2026-08-11 审计：非银金融
+                # INDEX_MAP=399975 中证全指证券公司（仅券商成分），口径必须披露
+                "metric_note": ("券商口径（中证全指证券公司，保险/多元金融不在成分）"
+                                if board == "非银金融" else (s.get("note") or "")),
                 "years": s.get("years"),
                 "terms": _fact_terms(source, trend_phase, verdict),
             })
@@ -2266,7 +2294,13 @@ FUND_DECISIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "data", "fund_decisions.jsonl")
 
 _DCA_ACTION = [("多买", "多买"), ("观察", "观察"), ("暂停/减量", "暂停/减量"),
-               ("减量", "减量"), ("正常定投", "正常定投"), ("按计划", "按计划")]
+               ("减量", "减量"), ("按计划", "按计划"), ("正常定投", "正常定投"),
+               ("无法判断", "无法判断")]
+# 匹配用 startswith 前缀（2026-08-11 审计修复）：judge_dca 全部返回文本以动作词开头，
+# 子串匹配有两处误配——①"按计划——估值合理，维持正常定投"含"正常定投"子串被误记
+# 正常定投；②"无法判断：估值证据不足（观察）"含"观察"子串被误记观察（"无法判断"
+# 从不出现在留痕）。修复前 data/fund_decisions.jsonl 08-07 起两种误配污染，月度复盘
+# 归组失真——校准月须先清洗污染区间
 
 
 def _record_fund_decisions(data_date: str, board_facts: list,
@@ -2282,7 +2316,7 @@ def _record_fund_decisions(data_date: str, board_facts: list,
                 continue
             syn = synthesize(facts)
             dca = syn.get("dca_judge") or ""
-            action = next((a for k, a in _DCA_ACTION if k in dca), "无法判断")
+            action = next((a for k, a in _DCA_ACTION if dca.startswith(k)), "无法判断")
             ltc_store.append_history(path, {
                 "date": data_date, "board": facts["board"],
                 "cheap": syn.get("cheap"), "trend": syn.get("trend_ok"),
@@ -2486,7 +2520,8 @@ def merge_main():
             kline = _safe_ltc(ltc_data.fetch_board_kline, f["industry"])
             backing = backing_active and any(b in f["industry"] for b in BACKING_SECTORS)
             f["accum"] = ltc_analysis.compute_accumulation(kline, f["chg_pct"], f["sl_net"], backing, None)
-    fund_section = build_fund_section(focus, southbound, repurchase, refs)
+    # 2026-08-11 审计：传完整 flow——资金观察净额与板块判断同源同算法（东财聚合）
+    fund_section = build_fund_section(focus, southbound, repurchase, refs, flow)
 
     interpretation = ""
     if focus:
@@ -2497,7 +2532,7 @@ def merge_main():
                            for s in snapshots
                            if s.get("source") == "price" and s.get("main_pct") is not None]},
             focus, refs)
-        interpretation = ltc_narrative.interpretation(facts, DEEPSEEK_API_KEY)
+        interpretation = ltc_narrative.interpretation(facts, AI_API_KEY)
         if "北向" in interpretation:
             # 北向硬性不出现：AI 越界引用事实外内容 → 回退事实模板（事实清单不包含北向）
             interpretation = ltc_narrative.template_interpretation(facts)

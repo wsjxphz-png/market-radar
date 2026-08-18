@@ -1,6 +1,6 @@
 # ltc_narrative.py
 """规则保真 + AI 润色：事实清单 → DeepSeek 解读 → 校验 → 模板回退"""
-import json, logging
+import json, os, logging
 from typing import Optional
 import requests
 from ltc_config import BANNED_PHRASES
@@ -53,9 +53,11 @@ def validate_output(text: str) -> bool:
             return False
     return True
 
-def call_deepseek(facts: dict, api_key: str, model: str = "deepseek-chat") -> Optional[str]:
+def call_deepseek(facts: dict, api_key: str, model: str = None) -> Optional[str]:
     if not api_key:
         return None
+    model = model or os.environ.get("AI_MODEL", "agnes-2.5-flash")
+    base_url = os.environ.get("AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
     system = (
         "你是《每日资金观察》的解读员。读者是零基础股票小白，不提供任何买卖建议。"
         "只允许引用给定事实中的数字和标签，禁止编造任何数字、新闻、传闻或人物观点。"
@@ -67,7 +69,7 @@ def call_deepseek(facts: dict, api_key: str, model: str = "deepseek-chat") -> Op
     user = json.dumps(facts, ensure_ascii=False)
     try:
         resp = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
+            f"{base_url}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json={"model": model, "messages": [
                 {"role": "system", "content": system},
@@ -86,7 +88,7 @@ def call_deepseek(facts: dict, api_key: str, model: str = "deepseek-chat") -> Op
         logger.warning("DeepSeek call failed: %s", str(e)[:120])
         return None
 
-def interpretation(facts: dict, api_key: str = "", model: str = "deepseek-chat") -> str:
+def interpretation(facts: dict, api_key: str = "", model: str = None) -> str:
     """AI 解读 → 校验失败/调用失败 → 模板回退"""
     ai = call_deepseek(facts, api_key, model)
     if ai:
