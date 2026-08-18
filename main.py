@@ -24,13 +24,15 @@ import feedparser
 # ============================================================
 # 配置
 # ============================================================
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+# AI 平台统一配置（2026-08-19 迁移：DeepSeek → Agnes AI，环境变量驱动，兼容旧 DEEPSEEK_API_KEY 名）
+AI_API_KEY = os.environ.get("AI_API_KEY", os.environ.get("DEEPSEEK_API_KEY", ""))
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "https://apihub.agnes-ai.com/v1")
+AI_MODEL = os.environ.get("AI_MODEL", "agnes-2.5-flash")
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "")
 FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
-DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 TIMEZONE_OFFSET = 8
 REQUEST_TIMEOUT = 30
 REQUEST_DELAY = 0.5
@@ -830,7 +832,7 @@ SYSTEM_PROMPT = """你是世界顶级买方基金研究员、产业分析师和�
 2. 不要为了凑数而降低标准。一个真信号胜过十个填充物。
 3. 如果你不能写出一条具体的、可检验的失效条件，这个判断就不够成熟。要么继续完善它，要么丢弃它。
 4. 信号强度评定必须诚实。"中"或"弱"不丢人。把"弱"标成"强"才是对读者的欺骗。
-5. 输出长度硬上限（防止超长截断，2026-08-18 事故修复）：key_changes ≤ 5 条、expectation_gaps ≤ 5 条、opportunity_ranking ≤ 8 条、deep_dives ≤ 3 条、watchlist_30d ≤ 5 条、cross_sectional_patterns ≤ 3 条、logic_tracker.still_active ≤ 10 条。每个字段一句话以内。总输出控制在 4000 tokens 以内，绝不超过 6000 tokens。
+5. 输出长度硬上限（防止超长截断，2026-08-18 事故修复）：key_changes ≤ 5 条、expectation_gaps ≤ 5 条、opportunity_ranking ≤ 10 条、deep_dives ≤ 3 条、watchlist_30d ≤ 5 条、cross_sectional_patterns ≤ 3 条、logic_tracker.still_active ≤ 10 条。每个字段一句话以内。总输出控制在 4000 tokens 以内，绝不超过 6000 tokens。
 
 ---
 
@@ -1391,19 +1393,19 @@ AI_FAILURE_REASON = ""  # call_deepseek 失败原因，降级卡展示用（2026
 
 def call_deepseek(user_content: str) -> Optional[Dict]:
     global AI_FAILURE_REASON
-    if not DEEPSEEK_API_KEY:
-        AI_FAILURE_REASON = "DEEPSEEK_API_KEY 未设置"
-        log("❌ DEEPSEEK_API_KEY 未设置"); return None
-    payload = {"model": DEEPSEEK_MODEL, "messages": [
+    if not AI_API_KEY:
+        AI_FAILURE_REASON = "AI_API_KEY 未设置"
+        log("❌ AI_API_KEY 未设置"); return None
+    payload = {"model": AI_MODEL, "messages": [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_content}
-    ], "temperature": 0.3, "max_tokens": 8192, "response_format": {"type": "json_object"}}
-    log(f"\n🤖 调用 DeepSeek...")
+    ], "temperature": 0.3, "max_tokens": 16000, "response_format": {"type": "json_object"}}
+    log(f"\n🤖 调用 AI({AI_MODEL})...")
     for attempt in range(MAX_RETRIES + 1):
         try:
-            resp = requests.post("https://api.deepseek.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
-                json=payload, timeout=120)
+            resp = requests.post(f"{AI_BASE_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {AI_API_KEY}", "Content-Type": "application/json"},
+                json=payload, timeout=180)
             if resp.status_code == 200:
                 data = resp.json()
                 choice = data["choices"][0]
@@ -1431,18 +1433,18 @@ def call_deepseek(user_content: str) -> Optional[Dict]:
                     return None
                 return result
             elif resp.status_code == 429:
-                AI_FAILURE_REASON = "DeepSeek API 限流(HTTP 429)"
+                AI_FAILURE_REASON = "AI API 限流(HTTP 429)"
                 time.sleep((attempt+1)*10); continue
             elif resp.status_code >= 500:
-                AI_FAILURE_REASON = f"DeepSeek API 服务端错误(HTTP {resp.status_code})"
+                AI_FAILURE_REASON = f"AI API 服务端错误(HTTP {resp.status_code})"
                 time.sleep((attempt+1)*5); continue
             else:
-                AI_FAILURE_REASON = f"DeepSeek API 请求失败(HTTP {resp.status_code})"
+                AI_FAILURE_REASON = f"AI API 请求失败(HTTP {resp.status_code})"
                 log(f"   ❌ HTTP {resp.status_code}"); return None
         except Exception as e:
-            AI_FAILURE_REASON = f"DeepSeek 调用异常: {e}"
+            AI_FAILURE_REASON = f"AI 调用异常: {e}"
             log(f"   ⚠️ {e}"); time.sleep(2); continue
-    AI_FAILURE_REASON = AI_FAILURE_REASON or f"DeepSeek 重试 {MAX_RETRIES} 次仍失败"
+    AI_FAILURE_REASON = AI_FAILURE_REASON or f"AI 重试 {MAX_RETRIES} 次仍失败"
     return None
 
 
@@ -1716,7 +1718,7 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
     # 尾部
     md.append("\n━━━━━━━━━━━━━━━━━━━")
     md.append(f"📊 市场机会发现系统 · 每日 {d.strftime('%H:%M')} 自动生成")
-    md.append(f"AI: DeepSeek · {stats['ok_sources']}源成功 · 本报告不构成投资建议")
+    md.append(f"AI: {AI_MODEL} · {stats['ok_sources']}源成功 · 本报告不构成投资建议")
 
     # 系统校准
     cal = stats.get("calibration", {})
