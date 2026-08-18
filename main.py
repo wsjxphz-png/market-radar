@@ -439,7 +439,7 @@ def fetch_akshare_data(ak_config: Dict) -> str:
         _SOURCE_STATS["akshare"]["ok"] += 1
         # O3-2：部分采样（有失败/超时截断）时如实标注，不再输出貌似完整的假计数
         sample_note = a_stats.get("sample_note", "")
-        parts.append(f"A股概况({a_stats['day']}): 全市场{a_stats['total']}只 | "
+        parts.append(f"A股概况({a_stats['day']}): 沪深A股{a_stats['total']}只 | "
                      f"沪深300+中证500样本{a_stats['sample_total']}只{sample_note}: "
                      f"上涨{a_stats['up']}只, 下跌{a_stats['down']}只")
     else:
@@ -830,6 +830,7 @@ SYSTEM_PROMPT = """你是世界顶级买方基金研究员、产业分析师和�
 2. 不要为了凑数而降低标准。一个真信号胜过十个填充物。
 3. 如果你不能写出一条具体的、可检验的失效条件，这个判断就不够成熟。要么继续完善它，要么丢弃它。
 4. 信号强度评定必须诚实。"中"或"弱"不丢人。把"弱"标成"强"才是对读者的欺骗。
+5. 输出长度硬上限（防止超长截断，2026-08-18 事故修复）：key_changes ≤ 5 条、expectation_gaps ≤ 5 条、opportunity_ranking ≤ 8 条、deep_dives ≤ 3 条、watchlist_30d ≤ 5 条、cross_sectional_patterns ≤ 3 条、logic_tracker.still_active ≤ 10 条。每个字段一句话以内。总输出控制在 4000 tokens 以内，绝不超过 6000 tokens。
 
 ---
 
@@ -1385,13 +1386,18 @@ def validate_ai_result(result) -> Optional[Dict]:
     return result
 
 
+AI_FAILURE_REASON = ""  # call_deepseek 失败原因，降级卡展示用（2026-08-18 事故后加）
+
+
 def call_deepseek(user_content: str) -> Optional[Dict]:
+    global AI_FAILURE_REASON
     if not DEEPSEEK_API_KEY:
+        AI_FAILURE_REASON = "DEEPSEEK_API_KEY 未设置"
         log("❌ DEEPSEEK_API_KEY 未设置"); return None
     payload = {"model": DEEPSEEK_MODEL, "messages": [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_content}
-    ], "temperature": 0.3, "max_tokens": 8000, "response_format": {"type": "json_object"}}
+    ], "temperature": 0.3, "max_tokens": 8192, "response_format": {"type": "json_object"}}
     log(f"\n🤖 调用 DeepSeek...")
     for attempt in range(MAX_RETRIES + 1):
         try:
@@ -1400,19 +1406,43 @@ def call_deepseek(user_content: str) -> Optional[Dict]:
                 json=payload, timeout=120)
             if resp.status_code == 200:
                 data = resp.json()
-                content = data["choices"][0]["message"]["content"].strip()
+                choice = data["choices"][0]
+                content = choice["message"]["content"].strip()
+                finish_reason = choice.get("finish_reason")
+                usage = data.get("usage", {})
                 if content.startswith("```"): content = content.split("\n", 1)[1] if "\n" in content else content; content = content[:-3].strip() if content.endswith("```") else content; content = content[4:].strip() if content.startswith("json") else content
-                result = json.loads(content)
-                log(f"   ✅ Tokens: {data.get('usage',{}).get('total_tokens','?')}")
+                try:
+                    result = json.loads(content)
+                except json.JSONDecodeError as e:
+                    # 输出截断诊断（2026-08-18 事故：输出超 max_tokens 被截断，同 payload 重试必然失败）
+                    AI_FAILURE_REASON = (f"AI 输出异常(finish_reason={finish_reason}, completion="
+                                         f"{usage.get('completion_tokens')}tokens, {len(content)}字符): {e}")
+                    log(f"   ⚠️ {AI_FAILURE_REASON}")
+                    if finish_reason == "length":
+                        log("   ⚠️ 输出超长被截断 → 压缩指令重试")
+                        payload["messages"][1]["content"] = (user_content +
+                            "\n\n⚠️ 上次输出因超过长度上限被截断。请压缩输出：每个列表的条目数减半，每个字段一句话以内，总输出控制在 3000 tokens 以内。")
+                    time.sleep(2); continue
+                log(f"   ✅ Tokens: {usage.get('total_tokens','?')} (finish_reason={finish_reason})")
                 result = validate_ai_result(result)
                 if result is None:
-                    log("❌ AI 输出未通过后置校验，走模板卡降级路径")
+                    AI_FAILURE_REASON = "AI 输出未通过后置校验(缺字段/含禁用词)"
+                    log(f"❌ {AI_FAILURE_REASON}，走模板卡降级路径")
                     return None
                 return result
-            elif resp.status_code == 429: time.sleep((attempt+1)*10); continue
-            elif resp.status_code >= 500: time.sleep((attempt+1)*5); continue
-            else: log(f"   ❌ HTTP {resp.status_code}"); return None
-        except Exception as e: log(f"   ⚠️ {e}"); time.sleep(2); continue
+            elif resp.status_code == 429:
+                AI_FAILURE_REASON = "DeepSeek API 限流(HTTP 429)"
+                time.sleep((attempt+1)*10); continue
+            elif resp.status_code >= 500:
+                AI_FAILURE_REASON = f"DeepSeek API 服务端错误(HTTP {resp.status_code})"
+                time.sleep((attempt+1)*5); continue
+            else:
+                AI_FAILURE_REASON = f"DeepSeek API 请求失败(HTTP {resp.status_code})"
+                log(f"   ❌ HTTP {resp.status_code}"); return None
+        except Exception as e:
+            AI_FAILURE_REASON = f"DeepSeek 调用异常: {e}"
+            log(f"   ⚠️ {e}"); time.sleep(2); continue
+    AI_FAILURE_REASON = AI_FAILURE_REASON or f"DeepSeek 重试 {MAX_RETRIES} 次仍失败"
     return None
 
 
@@ -1805,7 +1835,8 @@ def main():
     if ai_result is None:
         fail = render_source_failure_block()
         content_md = (f"📊 市场机会发现系统 · {datetime.now().strftime('%Y.%m.%d')}\n\n"
-                      f"⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n请检查 DeepSeek API。\n\n"
+                      f"⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n"
+                      f"失败原因: {AI_FAILURE_REASON}\n\n"
                       + (fail or ""))
         card = build_alert_card("⚠️ 市场机会发现 · AI 暂不可用", content_md)
         send_feishu_card(card)
