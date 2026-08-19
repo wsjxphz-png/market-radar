@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -88,9 +88,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "金价突破4400美元，美国7月零售销售走弱，加息预期降温，美元走弱，央行购金持续"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "金价4361-4449美元震荡上行，UAE-伊朗断交升级地缘风险，WTI油价维持高位推高通胀预期，30Y美债收益率5.31%进一步强化黄金对冲属性"
         }
       ],
-      "next_checkpoint": "2026-08-28 PCE数据"
+      "next_checkpoint": "2026年9月Jackson Hole后美债收益率走势"
     },
     {
       "id": "81f7586b00c1",
@@ -270,9 +275,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "Anthropic拟60亿美元收购Decart AI，组建内部芯片团队，叠加OpenAI、谷歌自研芯片，ASIC需求有望加速增长"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "不变",
+          "evidence": "英伟达CPO交换机量产落地（英伟达Spectrum-X以太网硅光子交换机），但ASIC赛道未见新重大催化剂，Anthropic收购Decart AI逻辑仍在"
         }
       ],
-      "next_checkpoint": "2026-09-01 科技巨头财报"
+      "next_checkpoint": "2026年Q4 ASIC芯片出货数据"
     },
     {
       "id": "6bfed27dede5",
@@ -361,100 +371,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "8家硅料巨头签署反内卷倡议书，占产能超90%，承诺不低于成本价销售，行业自律性拐点出现"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "不变",
+          "evidence": "多晶硅反内卷倡议签署逻辑未变，但今日数据未提供新催化，需跟踪减产执行力度"
         }
       ],
-      "next_checkpoint": "2026-09-01 硅料价格"
-    },
-    {
-      "id": "381e4ae80419",
-      "name": "SpaceX解禁后的做空机会",
-      "category": "D反转",
-      "signal_strength": "中",
-      "core_logic": "SpaceX 8月6日迎来史上最大解禁，约9.1亿股、市值1160亿美元，叠加AI支出超预期、估值争议，股价面临巨大抛售压力。",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "解禁后股价不跌反涨，或公司发布超预期利好",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-06",
-          "event": "SpaceX解禁日",
-          "what_to_watch": "成交量及股价反应"
-        },
-        {
-          "date": "2026-08-15",
-          "event": "解禁后持仓变化",
-          "what_to_watch": "内部人是否减持"
-        }
-      ],
-      "created_date": "2026-08-05",
-      "expiry_date": "2026-11-03",
-      "history": [
-        {
-          "date": "2026-08-05",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定，公司营收主要来自X和AI计算而非太空业务"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定，公司营收主要来自X和AI计算而非太空业务"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定，公司营收主要来自X和AI计算而非太空业务"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "SpaceX股价已跌破IPO价19%，解禁规模达1000亿美元，4.5亿股因价格条款继续锁定"
-        },
-        {
-          "date": "2026-08-07",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，Argus上调评级至买入"
-        },
-        {
-          "date": "2026-08-10",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，Argus上调评级至买入"
-        },
-        {
-          "date": "2026-08-11",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，大摩上调目标价至300美元"
-        },
-        {
-          "date": "2026-08-12",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，挪威主权基金首次披露SpaceX持仓，市场情绪偏多"
-        },
-        {
-          "date": "2026-08-13",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，反弹超40%，空头回补，挪威主权基金首次披露持仓，市场情绪偏多"
-        },
-        {
-          "date": "2026-08-14",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，反弹超40%，空头回补，挪威主权基金首次披露持仓，市场情绪偏多"
-        },
-        {
-          "date": "2026-08-17",
-          "status": "削弱",
-          "evidence": "解禁后股价未跌反涨，反弹超40%，空头回补，挪威主权基金首次披露持仓，市场情绪偏多"
-        }
-      ],
-      "next_checkpoint": "2026-09-01 股价走势"
+      "next_checkpoint": "2026年9月多晶硅价格和产能利用率数据"
     },
     {
       "id": "977d2846e811",
@@ -725,9 +649,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "日韩大厂涨价30%，三星电机签署5亿美元AI服务器MLCC合同，国产厂商迎来量价齐升窗口"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "三星上调代工价15%传导至上游MLCC供应链，AI服务器MLCC需求持续旺盛，日韩产能转向高端规格"
         }
       ],
-      "next_checkpoint": "2026-09-01 MLCC价格"
+      "next_checkpoint": "2026年Q3 MLCC价格数据和国产厂商订单"
     },
     {
       "id": "19b4fdd693fd",
@@ -806,90 +735,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "北京、杭州已开始执行20%征税，国家税务总局确认政策"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "不变",
+          "evidence": "北京、杭州执行20%征税逻辑未变，但无新增政策进展"
         }
       ],
-      "next_checkpoint": "2026-09-01 香港保险销售数据"
-    },
-    {
-      "id": "5b6333c526d9",
-      "name": "全球长端利率见顶后的长久期资产",
-      "category": "B周期",
-      "signal_strength": "中",
-      "core_logic": "全球主要发达经济体长期国债收益率在技术图表上呈现高度一致的见顶信号，若见顶回落，利好长久期资产和成长股估值",
-      "time_horizon": "3-6个月",
-      "falsification_condition": "通胀数据持续超预期，美联储加息落地，长端利率突破前高",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-10",
-          "event": "美国7月CPI数据",
-          "what_to_watch": "通胀是否超预期"
-        },
-        {
-          "date": "2026-09-16",
-          "event": "美联储9月FOMC会议",
-          "what_to_watch": "加息落地后长端利率反应"
-        }
-      ],
-      "created_date": "2026-08-06",
-      "expiry_date": "2027-02-02",
-      "history": [
-        {
-          "date": "2026-08-06",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，全球长端利率见顶信号增强"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，全球长端利率见顶信号增强"
-        },
-        {
-          "date": "2026-08-06",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，全球长端利率见顶信号增强"
-        },
-        {
-          "date": "2026-08-07",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
-        },
-        {
-          "date": "2026-08-10",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
-        },
-        {
-          "date": "2026-08-11",
-          "status": "加强",
-          "evidence": "美债10年期MACD顶背离，英债头肩顶形态完成，Wellington Funds转向德国债券"
-        },
-        {
-          "date": "2026-08-12",
-          "status": "加强",
-          "evidence": "非农转负、薪资降温，高盛预计全年维持利率不变，长端利率技术面见顶"
-        },
-        {
-          "date": "2026-08-13",
-          "status": "加强",
-          "evidence": "非农转负、薪资降温，高盛预计全年维持利率不变，长端利率技术面见顶"
-        },
-        {
-          "date": "2026-08-14",
-          "status": "加强",
-          "evidence": "非农转负、薪资降温，高盛预计全年维持利率不变，长端利率技术面见顶"
-        },
-        {
-          "date": "2026-08-17",
-          "status": "加强",
-          "evidence": "非农转负、薪资降温，高盛预计全年维持利率不变，长端利率技术面见顶"
-        }
-      ],
-      "next_checkpoint": "2026-08-28 PCE数据"
+      "next_checkpoint": "2026年Q4全国推广进度"
     },
     {
       "id": "641705bbf5a9",
@@ -1040,9 +893,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "CoreWeave、Nebius财报超预期，RPO达1290亿美元，Anthropic营收超预期，英伟达联合华尔街融资5000亿美元"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "英伟达联合华尔街融资5000亿美元持续推进，腾讯H1 Capex +82%至847亿元，CoreWeave/Nebius财报持续超预期，但需注意三星涨价15%可能挤压下游利润"
         }
       ],
-      "next_checkpoint": "2026-09-01 CoreWeave财报"
+      "next_checkpoint": "2026年9月英伟达财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -1086,9 +944,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，特朗普威胁轰炸阿曼，油价获强支撑"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "UAE宣布切断与伊朗全部经济关系+伊朗革命卫队顾问称'转守为攻'+三艘中国超轮在霍尔木兹U-turn，地缘风险从'谈判僵局'升级为'准战争状态'。沙特已向欧洲炼厂全额分配原油以应对风险"
         }
       ],
-      "next_checkpoint": "2026-08-20 美伊谈判进展"
+      "next_checkpoint": "实时跟踪霍尔木兹通行数据"
     },
     {
       "id": "5c71a6db80bf",
@@ -1127,9 +990,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "长鑫科技市值登顶，存储芯片国产替代加速，带动上游设备、材料需求；味之素削减ABF膜供货量30%，国产替代加速"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "中微公司H1净利润+300.22%、沪硅产业营收+36.51%、味之素削减ABF膜30%供应，国产替代逻辑持续强化"
         }
       ],
-      "next_checkpoint": "2026-09-01 长鑫存储扩产进展"
+      "next_checkpoint": "2026年Q3晶圆厂资本开支数据"
     },
     {
       "id": "676c2dd989c8",
@@ -1163,9 +1031,189 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "AI需求爆发，存储芯片供不应求，SK海力士、三星加大投资，价格持续上涨，存储芯片股普涨"
+        },
+        {
+          "date": "2026-08-19",
+          "status": "加强",
+          "evidence": "三星上调代工价15%+SK海力士宣布40万亿韩元回购+50%+FCF股东回报承诺，供给纪律重建+资本回报革命双重确认"
         }
       ],
-      "next_checkpoint": "2026-09-01 存储芯片月度合约价"
+      "next_checkpoint": "2026年9月SK海力士Q3财报"
+    },
+    {
+      "id": "102c5f435338",
+      "name": "存储芯片超级周期×股价错杀",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "三星上调代工价最高15%+SK海力士承诺50%+FCF回购=供给端纪律重建+资本回报革命。但韩国存储股今日暴跌7%+，股价反应与基本面拐点方向完全背离。若存储价格在Q3继续上行（已有明确数据支撑），当前下跌构成周期底部布局窗口",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若存储芯片价格在Q3出现拐点回落，或AI大模型厂商大幅削减资本开支，则周期逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09中旬",
+          "event": "SK海力士Q3财报电话会",
+          "what_to_watch": "存储价格指引、产能利用率、AI HBM订单可见度"
+        },
+        {
+          "date": "2026-09下旬",
+          "event": "英伟达财报",
+          "what_to_watch": "Blackwell交付节奏、数据中心GPU需求是否放缓"
+        },
+        {
+          "date": "2026-Q3末",
+          "event": "DRAMeXchange存储价格数据",
+          "what_to_watch": "DDR5/HBM价格是否继续上涨"
+        }
+      ],
+      "created_date": "2026-08-19",
+      "expiry_date": "2027-02-15",
+      "history": [
+        {
+          "date": "2026-08-19",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "370db81b02d3",
+      "name": "中东地缘升级×原油供给侧风险",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "阿联酋与伊朗全面断交+伊朗革命卫队顾问称'或对敌转守为攻'+三艘中国超轮在霍尔木兹U-turn。WTI仍维持在$84-85，但布伦特裂解价差与现货价差分化显著。若海峡通行受阻持续，油价有额外上行空间。同时沙特已向至少三家欧洲炼厂全额分配原油，说明供应端已开始应对风险",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在数周内达成协议重新开放海峡，或伊朗实际军事行动范围限于局部且不影响霍尔木兹通行，油价将快速回落",
+      "verification_checkpoints": [
+        {
+          "date": "实时跟踪",
+          "event": "霍尔木兹海峡船舶AIS追踪",
+          "what_to_watch": "通过海峡油轮数量、中国超轮U-turn频率"
+        },
+        {
+          "date": "2026-09",
+          "event": "IEA月度石油市场报告",
+          "what_to_watch": "供应缺口预测是否继续上调"
+        },
+        {
+          "date": "持续",
+          "event": "布伦特/WTI裂解价差",
+          "what_to_watch": "若布伦特持续大幅高于WTI，说明大西洋盆地供应紧张在加剧"
+        }
+      ],
+      "created_date": "2026-08-19",
+      "expiry_date": "2026-11-17",
+      "history": [
+        {
+          "date": "2026-08-19",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "46de7bb09a40",
+      "name": "美国长债抛售×长久期资产低估",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "30年期美债收益率5.31%为19年新高，但Fed仍在按兵不动（7月FOMC维持利率），9月加息概率>降息概率。若非农数据（今日初请失业金+9000）持续恶化或通胀得到控制，长端利率存在技术性回调可能。当前收益率曲线陡峭化（10Y-2Y利差收窄但30Y飙升）意味着短端和长端逻辑分化，长久期国债可能被错误定价",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CPI持续超预期回升或财政赤字进一步扩张推高通胀预期，长端利率将突破前高，此判断失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月中旬",
+          "event": "Jackson Hole FOMC会议纪要+9月议息会议",
+          "what_to_watch": "美联储对劳动力市场和通胀的最新评估"
+        },
+        {
+          "date": "每月",
+          "event": "CPI/PCE数据",
+          "what_to_watch": "核心通胀是否得到控制"
+        },
+        {
+          "date": "持续",
+          "event": "10Y-30Y利差",
+          "what_to_watch": "若利差从正值转为负值，说明市场开始定价衰退"
+        }
+      ],
+      "created_date": "2026-08-19",
+      "expiry_date": "2027-02-15",
+      "history": [
+        {
+          "date": "2026-08-19",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "9237486a33bd",
+      "name": "中国人形机器人商业化元年",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "宇树科技科创板IPO首日涨460%+，成为中国首家上市人形机器人公司。摩根大通明确定义这是估值逻辑的系统性重置：从稀缺性溢价转向商业化验证。但AI驱动算力需求持续爆发（腾讯H1 capex +82%），人形机器人作为AI物理载体，长期增长空间巨大",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若宇树上市后6个月内商业化订单/收入远低于市场预期，或估值从稀缺性溢价转向盈利质疑导致板块系统性回调",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "宇树科技首份季度财报",
+          "what_to_watch": "营收规模、客户类型、订单可见度"
+        },
+        {
+          "date": "持续",
+          "event": "国内外人形机器人量产公告",
+          "what_to_watch": "特斯拉Optimus、Figure AI、Agibot等量产时间表"
+        },
+        {
+          "date": "2026年底",
+          "event": "第二届世界人形机器人运动会成果",
+          "what_to_watch": "商业化应用案例"
+        }
+      ],
+      "created_date": "2026-08-19",
+      "expiry_date": "2027-08-14",
+      "history": [
+        {
+          "date": "2026-08-19",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "daf487cac257",
+      "name": "Moderna mRNA癌症疫苗突破性进展",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Moderna与默沙东联合研发的mRNA个性化癌症疫苗在晚期黑色素瘤三期试验中达到关键终点，显著延长无复发生存期并降低扩散风险。Moderna盘前涨50%+。这标志着mRNA肿瘤疫苗从概念走向临床验证的关键里程碑",
+      "time_horizon": "6-18个月",
+      "falsification_condition": "若FDA在审评过程中要求补充数据或拒绝上市申请，或三期试验长期随访数据出现安全问题",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "FDA优先审评/PDUFA日期",
+          "what_to_watch": "FDA是否启动优先审评程序"
+        },
+        {
+          "date": "持续",
+          "event": "其他肿瘤适应症三期数据读出",
+          "what_to_watch": "肺癌、胰腺癌等其他癌种数据"
+        },
+        {
+          "date": "2027年",
+          "event": "商业化上市和医保覆盖谈判",
+          "what_to_watch": "首批患者用药量和定价"
+        }
+      ],
+      "created_date": "2026-08-19",
+      "expiry_date": "2028-02-10",
+      "history": [
+        {
+          "date": "2026-08-19",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
     }
   ]
 }
