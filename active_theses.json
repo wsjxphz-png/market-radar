@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-21",
+  "updated": "2026-08-24",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -103,9 +103,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "黄金连涨三周至$4,543+BTC同步涨20%+美元走弱印证debasement trade"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "金价突破$4,607/oz三月高位，BTC同步涨20%印证debasement trade，贝森特回购被解读为美元信用稀释"
         }
       ],
-      "next_checkpoint": "2026-09-17 FOMC"
+      "next_checkpoint": "2026-09-17 Jackson Hole沃什演讲"
     },
     {
       "id": "f9a4a0ce363c",
@@ -209,9 +214,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "Marvell谷歌$12.2B协议持续推进+Nvidia向Poolside支付$6B+Anthropic芯片团队持续组建"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "英伟达拟投Perplexity估值$30B+扩展至软件层，Anthropic芯片团队持续组建，Marvell谷歌$12.2B协议推进"
         }
       ],
-      "next_checkpoint": "2026-09 Q3 AI芯片订单数据"
+      "next_checkpoint": "2026-09 NVDA财报"
     },
     {
       "id": "6bfed27dede5",
@@ -305,9 +315,14 @@
           "date": "2026-08-19",
           "status": "不变",
           "evidence": "多晶硅反内卷倡议签署逻辑未变，但今日数据未提供新催化，需跟踪减产执行力度"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "不变",
+          "evidence": "多晶硅反内卷倡议签署逻辑未变，但今日数据未提供新催化"
         }
       ],
-      "next_checkpoint": "2026年9月多晶硅价格和产能利用率数据"
+      "next_checkpoint": "2026-09 多晶硅价格数据"
     },
     {
       "id": "977d2846e811",
@@ -396,9 +411,14 @@
           "date": "2026-08-17",
           "status": "加强",
           "evidence": "金价突破4400美元，非农转负，央行连续增持，瑞银看多，财政赤字扩张"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "金价$4,543三连涨+白银$68.95同步大涨+$5T贵金属增值，央行7月继续大幅增持"
         }
       ],
-      "next_checkpoint": "2026-08-28 PCE数据"
+      "next_checkpoint": "2026-09-06 美国CPI数据"
     },
     {
       "id": "55fb9d69157b",
@@ -492,9 +512,14 @@
           "date": "2026-08-19",
           "status": "加强",
           "evidence": "三星上调代工价15%传导至上游MLCC供应链，AI服务器MLCC需求持续旺盛，日韩产能转向高端规格"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "三星上调代工价15%传导至上游MLCC供应链，长江存储IPO受理带动国产MLCC需求"
         }
       ],
-      "next_checkpoint": "2026年Q3 MLCC价格数据和国产厂商订单"
+      "next_checkpoint": "2026-09 MLCC交期数据"
     },
     {
       "id": "19b4fdd693fd",
@@ -634,9 +659,14 @@
           "date": "2026-08-17",
           "status": "削弱",
           "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "削弱",
+          "evidence": "UAE-伊朗断交升级为全面经济战争，Bessent即将公布经济孤立计划，IEA上调供应缺口至180万桶/日"
         }
       ],
-      "next_checkpoint": "2026-08-20 美伊谈判进展"
+      "next_checkpoint": "2026-08-25 贝森特新闻发布会"
     },
     {
       "id": "f343b645371c",
@@ -741,9 +771,14 @@
           "date": "2026-08-21",
           "status": "不变",
           "evidence": "CoreWeave RPO $129B+腾讯H1 Capex +82%持续，但AI债务过载风险升温（博通$1T表外债）"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "不变",
+          "evidence": "CoreWeave RPO $129B持续，腾讯H1 Capex +82%，但博通$1T表外债暴露AI债务过载风险"
         }
       ],
-      "next_checkpoint": "2026-09-17 FOMC"
+      "next_checkpoint": "2026-09 NVDA财报+Q3云厂商Capex"
     },
     {
       "id": "da1fbe5ad249",
@@ -792,9 +827,14 @@
           "date": "2026-08-19",
           "status": "加强",
           "evidence": "UAE宣布切断与伊朗全部经济关系+伊朗革命卫队顾问称'转守为攻'+三艘中国超轮在霍尔木兹U-turn，地缘风险从'谈判僵局'升级为'准战争状态'。沙特已向欧洲炼厂全额分配原油以应对风险"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "UAE宣布切断与伊朗全部经济关系+Bessent经济孤立计划+IEA上调缺口至180万桶/日+Citi70天库存红线"
         }
       ],
-      "next_checkpoint": "实时跟踪霍尔木兹通行数据"
+      "next_checkpoint": "2026-08-25 贝森特发布会+API库存"
     },
     {
       "id": "5c71a6db80bf",
@@ -843,9 +883,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%+味之素削减ABF膜30%"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%+味之素削减ABF膜30%+北京亦庄AI4Chip专项政策"
         }
       ],
-      "next_checkpoint": "2026-10 半导体设备订单数据"
+      "next_checkpoint": "2026-09 国产半导体设备招标数据"
     },
     {
       "id": "676c2dd989c8",
@@ -894,9 +939,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "三星90-110万亿韩元股东回报+SK海力士50% FCF承诺，供给纪律重建信号强化"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "三星90-110万亿韩元股东回报+SK海力士50% FCF承诺，供给纪律重建信号强化"
         }
       ],
-      "next_checkpoint": "2026-10 Q3存储价格数据"
+      "next_checkpoint": "2026-09 Q3存储价格数据"
     },
     {
       "id": "102c5f435338",
@@ -935,9 +985,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "三星涨15%+SK海力士大股东回报+股价暴跌7%+背离加剧，错杀窗口扩大"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "三星涨15%+SK海力士大股东回报+股价暴跌7%+背离加剧，错杀窗口扩大"
         }
       ],
-      "next_checkpoint": "2026-10 Q3存储价格"
+      "next_checkpoint": "2026-09-30 Q3存储价格"
     },
     {
       "id": "370db81b02d3",
@@ -981,9 +1036,14 @@
           "date": "2026-08-21",
           "status": "加强",
           "evidence": "IMO否认海峡开放+霍尔木兹年底前恢复正常概率下降+Citi警示70天库存红线"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "UAE-伊朗断交升级+IEA上调缺口至180万桶/日+Bessent经济孤立计划+商业追踪vs官方数据分歧"
         }
       ],
-      "next_checkpoint": "2026-08-24财政部制裁细则"
+      "next_checkpoint": "2026-08-25 贝森特发布会"
     },
     {
       "id": "46de7bb09a40",
@@ -1063,9 +1123,14 @@
           "date": "2026-08-20",
           "status": "不变",
           "evidence": "宇树上市当日+460%后次日-18%，商业化验证期刚刚开始，无新增实质性数据"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "工信部发布国家人形机器人产业标准体系建设指南(2026版)+小鹏机器人$6.3B估值+宇树商业化验证期"
         }
       ],
-      "next_checkpoint": "2026-09-30 Q2订单数据"
+      "next_checkpoint": "2026-09 宇树Q3订单数据"
     },
     {
       "id": "daf487cac257",
@@ -1099,8 +1164,14 @@
           "date": "2026-08-19",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "不变",
+          "evidence": "III期INTerpath-001达主要终点，联合K药显著改善黑色素瘤RFS/DMFS，但FDA审评尚需时间"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09 FDA BLA受理进展"
     },
     {
       "id": "0ead76700ed0",
@@ -1189,8 +1260,14 @@
           "date": "2026-08-20",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "削弱",
+          "evidence": "30Y收益率5.31%后Bessent回购翻倍仅短暂压制，Pimco预期期限溢价维持高位，AI企业债发行量YoY+38%持续挤占主权需求"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09-17 Jackson Hole"
     },
     {
       "id": "3baae76513a7",
@@ -1249,8 +1326,14 @@
           "date": "2026-08-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB+国常会政策背书"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09 各公司Q3订单指引"
     },
     {
       "id": "e03ab72740fd",
@@ -1274,8 +1357,14 @@
           "date": "2026-08-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "金价$4,607/oz+白银$68.95+黄金+白银$5T增值，debasement trade持续，央行7月继续增持"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09-06 CPI"
     },
     {
       "id": "81e2a6badff7",
@@ -1299,8 +1388,14 @@
           "date": "2026-08-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-08-24",
+          "status": "加强",
+          "evidence": "三星涨15%+SK海力士90-110万亿股东回报+股价暴跌7%+背离加剧，韩国杠杆ETF去杠杆已完成（530亿→250亿）"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-09-30 Q3存储价格"
     },
     {
       "id": "8c697ee2819c",
