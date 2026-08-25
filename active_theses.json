@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-24",
+  "updated": "2026-08-25",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -108,9 +108,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "金价突破$4,607/oz三月高位，BTC同步涨20%印证debasement trade，贝森特回购被解读为美元信用稀释"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "BTC突破$80,000印证debasement trade从黄金扩展至加密资产谱系，金价维持$4,600上方"
         }
       ],
-      "next_checkpoint": "2026-09-17 Jackson Hole沃什演讲"
+      "next_checkpoint": "2026-09-09 Treasury回购启动效果"
     },
     {
       "id": "f9a4a0ce363c",
@@ -219,9 +224,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "英伟达拟投Perplexity估值$30B+扩展至软件层，Anthropic芯片团队持续组建，Marvell谷歌$12.2B协议推进"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "OpenAI冲刺$1T+ IPO+Anthropic芯片团队组建+Marvell谷歌$12.2B协议推进"
         }
       ],
-      "next_checkpoint": "2026-09 NVDA财报"
+      "next_checkpoint": "OpenAI IPO定价+芯片出货数据"
     },
     {
       "id": "6bfed27dede5",
@@ -416,9 +426,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "金价$4,543三连涨+白银$68.95同步大涨+$5T贵金属增值，央行7月继续大幅增持"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "白银$68.95月涨15%+、BTC回吐三个月跌幅，资金扩散印证debasement trade持续深化"
         }
       ],
-      "next_checkpoint": "2026-09-06 美国CPI数据"
+      "next_checkpoint": "Jackson Hole Warsh讲话"
     },
     {
       "id": "55fb9d69157b",
@@ -517,9 +532,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "三星上调代工价15%传导至上游MLCC供应链，长江存储IPO受理带动国产MLCC需求"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "不变",
+          "evidence": "三星上调代工价15%传导至上游MLCC供应链，长江存储IPO受理带动国产MLCC需求"
         }
       ],
-      "next_checkpoint": "2026-09 MLCC交期数据"
+      "next_checkpoint": "Q3 MLCC涨价落地情况"
     },
     {
       "id": "19b4fdd693fd",
@@ -664,9 +684,14 @@
           "date": "2026-08-24",
           "status": "削弱",
           "evidence": "UAE-伊朗断交升级为全面经济战争，Bessent即将公布经济孤立计划，IEA上调供应缺口至180万桶/日"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "削弱",
+          "evidence": "UAE-伊朗断交升级为全面经济战争+Bessent经济孤立计划+IEA上调缺口至180万桶/日，缓和概率降低"
         }
       ],
-      "next_checkpoint": "2026-08-25 贝森特新闻发布会"
+      "next_checkpoint": "美伊谈判进展/海峡通行数据"
     },
     {
       "id": "f343b645371c",
@@ -776,9 +801,14 @@
           "date": "2026-08-24",
           "status": "不变",
           "evidence": "CoreWeave RPO $129B持续，腾讯H1 Capex +82%，但博通$1T表外债暴露AI债务过载风险"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "不变",
+          "evidence": "CoreWeave RPO $129B持续+腾讯H1 Capex +82%，但博通$1T表外债暴露债务过载风险"
         }
       ],
-      "next_checkpoint": "2026-09 NVDA财报+Q3云厂商Capex"
+      "next_checkpoint": "NVIDIA财报+CoreWeave Q2"
     },
     {
       "id": "da1fbe5ad249",
@@ -944,9 +974,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "三星90-110万亿韩元股东回报+SK海力士50% FCF承诺，供给纪律重建信号强化"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "三星90-110万亿韩元股东回报计划确认供给纪律，HBM供需缺口持续扩大"
         }
       ],
-      "next_checkpoint": "2026-09 Q3存储价格数据"
+      "next_checkpoint": "2026-09月Q3定价会"
     },
     {
       "id": "102c5f435338",
@@ -990,9 +1025,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "三星涨15%+SK海力士大股东回报+股价暴跌7%+背离加剧，错杀窗口扩大"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭+背离最大化"
         }
       ],
-      "next_checkpoint": "2026-09-30 Q3存储价格"
+      "next_checkpoint": "Q3存储价格数据"
     },
     {
       "id": "370db81b02d3",
@@ -1041,9 +1081,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "UAE-伊朗断交升级+IEA上调缺口至180万桶/日+Bessent经济孤立计划+商业追踪vs官方数据分歧"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "沙特已向欧洲炼厂全额分配原油(供应端已应对)+印度Hormuz航运成本飙升，供给侧风险持续"
         }
       ],
-      "next_checkpoint": "2026-08-25 贝森特发布会"
+      "next_checkpoint": "API库存/霍尔木兹通行数据"
     },
     {
       "id": "46de7bb09a40",
@@ -1270,36 +1315,6 @@
       "next_checkpoint": "2026-09-17 Jackson Hole"
     },
     {
-      "id": "3baae76513a7",
-      "name": "中东地缘溢价×原油供给侧重构",
-      "category": "B周期",
-      "signal_strength": "强",
-      "core_logic": "UAE-伊朗断交升级+IEA上调供应缺口至180万桶/日+Citi警示OECD库存70天红线。WTI维持$86+但布伦特裂解价差分化显著。沙特已向欧洲炼厂全额分配原油说明供应端已应对。若海峡通行受阻持续，油价有额外上行空间",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "若美伊在数周内达成协议重新开放霍尔木兹海峡，或伊朗实际军事行动限于局部且不影响海峡通行，油价将快速回落",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-24",
-          "event": "财政部公布对伊朗'史上最严厉制裁'细节",
-          "what_to_watch": "制裁是否针对中国购买伊朗石油；若针对则供应缺口扩大"
-        },
-        {
-          "date": "2026-08-29",
-          "event": "IEA月度石油市场报告",
-          "what_to_watch": "霍尔木兹通行量数据；实际供应中断规模"
-        }
-      ],
-      "created_date": "2026-08-21",
-      "expiry_date": "2026-11-19",
-      "history": [
-        {
-          "date": "2026-08-21",
-          "status": "新识别",
-          "evidence": "信号强度:强"
-        }
-      ]
-    },
-    {
       "id": "94584d02c8f0",
       "name": "中国光通信全产业链景气爆发",
       "category": "A成长",
@@ -1331,9 +1346,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB+国常会政策背书"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB+国常会政策背书"
         }
       ],
-      "next_checkpoint": "2026-09 各公司Q3订单指引"
+      "next_checkpoint": "Q3光通信订单能见度"
     },
     {
       "id": "e03ab72740fd",
@@ -1393,9 +1413,14 @@
           "date": "2026-08-24",
           "status": "加强",
           "evidence": "三星涨15%+SK海力士90-110万亿股东回报+股价暴跌7%+背离加剧，韩国杠杆ETF去杠杆已完成（530亿→250亿）"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "供给纪律重建信号最明确(三星股东回报+SK海力士FCF承诺)，股价反应与基本面背离最大"
         }
       ],
-      "next_checkpoint": "2026-09-30 Q3存储价格"
+      "next_checkpoint": "SK海力士/三星财报"
     },
     {
       "id": "8c697ee2819c",
@@ -1442,6 +1467,222 @@
       "history": [
         {
           "date": "2026-08-21",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-08-25",
+          "status": "加强",
+          "evidence": "零售销售7月意外下滑+密歇根信心骤降至51.0+Walmart同店增长创6年最低，消费疲软确认"
+        }
+      ],
+      "next_checkpoint": "9月非农+CPI"
+    },
+    {
+      "id": "dcb0dafb757d",
+      "name": "黄金+白银组合（debasement trade升级版）",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "金价$4,607+白银$68.95+BTC $80,000三资产共振，核心催化从'降息预期'切换为'财政脆弱信号'——Bessent回购被解读为美元信用稀释。央行7月继续大幅增持+投机空头回补形成供需共振。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,300",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-29",
+          "event": "CPI数据",
+          "what_to_watch": "若Core CPI回落则强化降息路径，利好黄金"
+        },
+        {
+          "date": "2026-09-09",
+          "event": "Treasury回购正式启动",
+          "what_to_watch": "回购规模与效果，若有效压制长端利率则美元承压、黄金受益"
+        },
+        {
+          "date": "2026-09-12",
+          "event": "Jackson Hole Warsh讲话",
+          "what_to_watch": "货币政策沟通框架变化"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2027-02-21",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "8cad7fbbec03",
+      "name": "韩国存储股错杀修复",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报=供给纪律重建明确。但韩国存储股暴跌7%+，股价反应与基本面拐点方向完全背离。Q3价格已有数据支撑上行。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "Q3存储芯片价格出现拐点回落，或AI大模型厂商大幅削减资本开支",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月初",
+          "event": "Q3存储价格季度定价会",
+          "what_to_watch": "DRAM价格是否延续上行趋势"
+        },
+        {
+          "date": "2026-09-10",
+          "event": "SK海力士/三星财报电话会细节",
+          "what_to_watch": "CAPEX guidance与产能利用率指引"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2027-02-21",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "5b83bd670c10",
+      "name": "A股红利资产系统性机会（险资新规驱动）",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "《保险公司资产负债管理办法》落地，人身险净投资收益覆盖率100%硬性监管要求。在长端利率下行、存量高收益资产持续到期的背景下，高股息资产的监管价值被重新定价。37万亿险资潜在增配规模为数千亿至万亿级。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "监管细则未落地或100%红线被弱化执行，或长端利率快速上行降低股息吸引力",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月",
+          "event": "险资配置数据公布",
+          "what_to_watch": "保险资金对高股息ETF/股票的增配规模"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "寿险公司偿付能力报告",
+          "what_to_watch": "净投资收益覆盖率达标压力测试"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2027-08-20",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "fba120dae419",
+      "name": "AI算力基础设施债务过载风险",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "博通寻求$1T表外SPV债务+AI相关投资级企业债发行量YoY+38%+全年有望达$2.1T。科技巨头债务涌入长债市场挤压主权融资空间。若市场接受回购干预，长久期国债存在技术性回调机会。同时CoreWeave单季利息$640M引发类2008担忧。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "AI云厂商持续超预期增长证明债务可持续，或Fed/财政部联合干预成功压制信用利差",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月",
+          "event": "AI云厂商季报",
+          "what_to_watch": "Capex增速是否放缓、RPO是否开始下降"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "科技巨头企业债发行",
+          "what_to_watch": "利差是否开始走阔"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2027-02-21",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "9c89ae1d49fa",
+      "name": "原油供给侧风险×需求侧疲软悖论",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "IEA上调供应缺口至180万桶/日+Bessent经济孤立计划+霍尔木兹通行受阻持续，但WTI已回调至$84-86区间，市场正在discount地缘风险。印度Hormuz航运成本飙升印证供给侧真实压力。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊数周内达成协议重新开放霍尔木兹，或伊朗实际军事行动限于局部不影响海峡通行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-28",
+          "event": "API原油库存报告",
+          "what_to_watch": "商业库存vs官方数据分歧是否扩大"
+        },
+        {
+          "date": "2026-09月初",
+          "event": "霍尔木兹通行实际数据",
+          "what_to_watch": "油轮过境数量是否恢复"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2026-11-23",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "ce8cbebfb674",
+      "name": "NVIDIA财报前的波动套利",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "NVIDIA已连续7天下跌(2022年以来最长连跌)，股价落后费城半导体指数50%。但Rubin架构发布+Groq $20B采购确认+AI推理需求扩散构成基本面支撑。市场对AI硬件增速放缓的担忧过度定价。",
+      "time_horizon": "1-2周",
+      "falsification_condition": "NVIDIA财报显示数据中心收入增速大幅低于预期或指引保守",
+      "verification_checkpoints": [
+        {
+          "date": "2026-08-26",
+          "event": "NVIDIA Q2 FY2027财报",
+          "what_to_watch": "Datacenter收入增速+Blackwell/Rubin出货节奏"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2026-09-24",
+      "history": [
+        {
+          "date": "2026-08-25",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "54fb635c9268",
+      "name": "中国人形机器人商业化验证",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "宇树科技科创板IPO首日涨460%+小鹏机器人$6.3B估值+工信部发布国家人形机器人产业标准体系指南。摩根大通定义估值逻辑系统性重置：从稀缺性溢价转向商业化验证。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "宇树上市后6个月内商业化订单/收入远低于市场预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "宇树科技首份季报",
+          "what_to_watch": "收入确认+客户结构+毛利率"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "小鹏机器人融资交割",
+          "what_to_watch": "估值是否与业务进展匹配"
+        }
+      ],
+      "created_date": "2026-08-25",
+      "expiry_date": "2027-08-20",
+      "history": [
+        {
+          "date": "2026-08-25",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
