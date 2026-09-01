@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-26",
+  "updated": "2026-09-01",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -118,9 +118,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "金价$4,607+白银$68.95+BTC联动，央行7月继续增持，财政脆弱叙事强化"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "削弱",
+          "evidence": "金价从$4,607回调，加息预期升温压制"
         }
       ],
-      "next_checkpoint": "2026-08-29杰克逊霍尔年会"
+      "next_checkpoint": "2026-09-05初请失业金数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -239,9 +244,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "OpenAI Jalapeño芯片9个月流片+性能超GB300，Anthropic芯片团队组建"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "加强",
+          "evidence": "英伟达35亿美元锁定联发科+Anthropic $35B云合同+Rubin CPX重启"
         }
       ],
-      "next_checkpoint": "2026-Q4英伟达财报及竞争格局变化"
+      "next_checkpoint": "2026-10-30 NVIDIA Q3财报"
     },
     {
       "id": "6bfed27dede5",
@@ -345,9 +355,14 @@
           "date": "2026-08-26",
           "status": "不变",
           "evidence": "多晶硅交易暂停逻辑未变，但今日无新催化"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "加强",
+          "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来"
         }
       ],
-      "next_checkpoint": "2026-Q3价格数据验证减产效果"
+      "next_checkpoint": "2026-09-15多晶硅价格数据"
     },
     {
       "id": "977d2846e811",
@@ -451,9 +466,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "debasement trade深化(BTC+$80K印证)，财政脆弱信号强化"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "削弱",
+          "evidence": "加息预期升温压制金价，但央行购金未减"
         }
       ],
-      "next_checkpoint": "2026-08-29杰克逊霍尔年会"
+      "next_checkpoint": "2026-09-16 FOMC会议"
     },
     {
       "id": "55fb9d69157b",
@@ -562,9 +582,14 @@
           "date": "2026-08-26",
           "status": "不变",
           "evidence": "三星上调代工价15%传导至上游，长江存储IPO受理带动需求"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "不变",
+          "evidence": "三星上调代工价15%传导至上游，长江存储IPO受理带动需求"
         }
       ],
-      "next_checkpoint": "2026-Q3国产MLCC认证进展"
+      "next_checkpoint": "2026-09-30 Q3价格数据"
     },
     {
       "id": "19b4fdd693fd",
@@ -658,77 +683,6 @@
       "next_checkpoint": "2026-Q4政策推广进展"
     },
     {
-      "id": "641705bbf5a9",
-      "name": "霍尔木兹海峡缓和后的油价下行交易",
-      "category": "B周期",
-      "signal_strength": "中",
-      "core_logic": "伊朗与阿曼谈判仍在进行，但伊朗强硬立场增加不确定性。若协议达成，油价将大幅回落；若破裂，油价上行。当前油价波动加大，方向性交易风险高。",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "美伊谈判破裂，海峡局势再度升级，油价突破前高",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-10",
-          "event": "伊朗-阿曼谈判进展",
-          "what_to_watch": "若达成协议，油价可能快速下跌；若破裂，油价可能飙升"
-        }
-      ],
-      "created_date": "2026-08-07",
-      "expiry_date": "2026-11-05",
-      "history": [
-        {
-          "date": "2026-08-07",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        },
-        {
-          "date": "2026-08-10",
-          "status": "削弱",
-          "evidence": "伊朗强硬立场，谈判前景不明，油价反弹"
-        },
-        {
-          "date": "2026-08-11",
-          "status": "削弱",
-          "evidence": "特朗普提出赔偿新要求，谈判僵局，油价反弹"
-        },
-        {
-          "date": "2026-08-12",
-          "status": "削弱",
-          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
-        },
-        {
-          "date": "2026-08-13",
-          "status": "削弱",
-          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
-        },
-        {
-          "date": "2026-08-14",
-          "status": "削弱",
-          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
-        },
-        {
-          "date": "2026-08-17",
-          "status": "削弱",
-          "evidence": "伊朗态度强硬，IEA上调供应缺口，油价反弹"
-        },
-        {
-          "date": "2026-08-24",
-          "status": "削弱",
-          "evidence": "UAE-伊朗断交升级为全面经济战争，Bessent即将公布经济孤立计划，IEA上调供应缺口至180万桶/日"
-        },
-        {
-          "date": "2026-08-25",
-          "status": "削弱",
-          "evidence": "UAE-伊朗断交升级为全面经济战争+Bessent经济孤立计划+IEA上调缺口至180万桶/日，缓和概率降低"
-        },
-        {
-          "date": "2026-08-26",
-          "status": "削弱",
-          "evidence": "UAE-伊朗断交升级为全面经济战争+Bessent经济孤立计划+IEA上调缺口至180万桶/日，缓和概率降低"
-        }
-      ],
-      "next_checkpoint": "2026-09伊朗-阿曼谈判结果"
-    },
-    {
       "id": "f343b645371c",
       "name": "欧洲股市相对美股的超额收益",
       "category": "C价值",
@@ -780,9 +734,14 @@
           "date": "2026-08-26",
           "status": "不变",
           "evidence": "高盛上调STOXX 600 EPS增速预测至15%，估值折价，但缺乏新的催化剂"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "不变",
+          "evidence": "高盛上调STOXX 600 EPS增速预测至15%，但缺乏新催化"
         }
       ],
-      "next_checkpoint": "2026-Q3欧洲财报季"
+      "next_checkpoint": "2026-09-16 ECB会议"
     },
     {
       "id": "a6e90cb91cda",
@@ -851,9 +810,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "CoreWeave RPO $129B持续+腾讯H1 Capex +82%，但博通$1T表外债暴露债务过载风险"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "加强",
+          "evidence": "英伟达35亿美元锁定联发科+Rubin CPX重启+AI推理需求扩散"
         }
       ],
-      "next_checkpoint": "2026-08-27英伟达财报"
+      "next_checkpoint": "2026-10-30 CoreWeave财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -912,9 +876,14 @@
           "date": "2026-08-26",
           "status": "削弱",
           "evidence": "美伊谈判取得进展(讨论临时联合航运通道)，WTI已回落至$84-86"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "加强",
+          "evidence": "两艘油轮遭袭+布伦特突破92美元+柴油裂解价差破百"
         }
       ],
-      "next_checkpoint": "2026-09伊朗-阿曼谈判结果"
+      "next_checkpoint": "2026-09-08 IEA月度报告"
     },
     {
       "id": "5c71a6db80bf",
@@ -973,9 +942,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%+味之素削减ABF膜30%+北京亦庄AI4Chip专项政策"
+        },
+        {
+          "date": "2026-09-01",
+          "status": "加强",
+          "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%"
         }
       ],
-      "next_checkpoint": "2026-Q3设备厂商订单数据"
+      "next_checkpoint": "2026-09-30 Q3财报"
     },
     {
       "id": "676c2dd989c8",
@@ -2003,6 +1977,96 @@
       "history": [
         {
           "date": "2026-08-26",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "54f57ee34d2a",
+      "name": "原油供给侧风险×柴油挤压",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "布伦特突破92美元+柴油裂解价差破百，高盛称'柴油处于供应挤压中心'。霍尔木兹两艘油轮遇袭后，市场仅短暂反应，但供给端风险持续累积。沙特已向欧洲炼厂全额分配原油，说明供应端已开始应对。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊数周内达成协议重新开放霍尔木兹，或伊朗实际军事行动限于局部不影响海峡通行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-08",
+          "event": "IEA月度石油市场报告",
+          "what_to_watch": "供应缺口修正"
+        },
+        {
+          "date": "2026-09-16",
+          "event": "OPEC+会议",
+          "what_to_watch": "产量政策"
+        }
+      ],
+      "created_date": "2026-09-01",
+      "expiry_date": "2026-11-30",
+      "history": [
+        {
+          "date": "2026-09-01",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "c0dad145a180",
+      "name": "AI ASIC生态控制战",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "英伟达35亿美元投资联发科可转债，转股价溢价115%，将NVLink Fusion/NVHBM/Spectrum-X全面开放。这不仅是财务投资，而是从GPU供应商升级为生态控制者。Anthropic $35B云合同+组建内部芯片团队，ASIC需求从OpenAI扩散至整个行业。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若ASIC芯片性能不及预期，或英伟达GPU持续主导市场",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-01",
+          "event": "郭明錤产业链调查",
+          "what_to_watch": "Rubin CPX重启确认"
+        },
+        {
+          "date": "2026-10-30",
+          "event": "NVIDIA Q3财报",
+          "what_to_watch": "数据中心收入增速+AI推理占比"
+        }
+      ],
+      "created_date": "2026-09-01",
+      "expiry_date": "2027-08-27",
+      "history": [
+        {
+          "date": "2026-09-01",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "48126606f42d",
+      "name": "黄金回调×Debasement Trade延续",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "金价从$4,607回调是因加息预期升温，但央行7月继续大幅增持+BTC $80K印证debasement trade逻辑未变。若非农数据（今日初请失业金+9000）持续恶化或通胀得到控制，长端利率存在技术性回调可能，黄金将获得支撑。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,300",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-05",
+          "event": "美国初请失业金数据",
+          "what_to_watch": "趋势是否持续恶化"
+        },
+        {
+          "date": "2026-09-16",
+          "event": "FOMC会议",
+          "what_to_watch": "点阵图变化"
+        }
+      ],
+      "created_date": "2026-09-01",
+      "expiry_date": "2027-02-28",
+      "history": [
+        {
+          "date": "2026-09-01",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
