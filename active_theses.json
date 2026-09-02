@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-01",
+  "updated": "2026-09-02",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -123,9 +123,14 @@
           "date": "2026-09-01",
           "status": "削弱",
           "evidence": "金价从$4,607回调，加息预期升温压制"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "削弱",
+          "evidence": "金价从$4,607回调，加息预期升温压制，但央行7月继续增持+BTC $80K印证debasement trade"
         }
       ],
-      "next_checkpoint": "2026-09-05初请失业金数据"
+      "next_checkpoint": "2026-09-11 CPI数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -249,9 +254,14 @@
           "date": "2026-09-01",
           "status": "加强",
           "evidence": "英伟达35亿美元锁定联发科+Anthropic $35B云合同+Rubin CPX重启"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "加强",
+          "evidence": "英伟达35亿美元锁定联发科+Anthropic $35B云合同+Rubin CPX重启，生态控制战开启"
         }
       ],
-      "next_checkpoint": "2026-10-30 NVIDIA Q3财报"
+      "next_checkpoint": "2026-10联发科财报"
     },
     {
       "id": "6bfed27dede5",
@@ -360,9 +370,14 @@
           "date": "2026-09-01",
           "status": "加强",
           "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "加强",
+          "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来"
         }
       ],
-      "next_checkpoint": "2026-09-15多晶硅价格数据"
+      "next_checkpoint": "2026-09多晶硅价格数据"
     },
     {
       "id": "977d2846e811",
@@ -471,9 +486,14 @@
           "date": "2026-09-01",
           "status": "削弱",
           "evidence": "加息预期升温压制金价，但央行购金未减"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "削弱",
+          "evidence": "加息预期升温压制金价，但央行购金+debasement trade逻辑未变"
         }
       ],
-      "next_checkpoint": "2026-09-16 FOMC会议"
+      "next_checkpoint": "2026-09-11 CPI数据"
     },
     {
       "id": "55fb9d69157b",
@@ -587,9 +607,14 @@
           "date": "2026-09-01",
           "status": "不变",
           "evidence": "三星上调代工价15%传导至上游，长江存储IPO受理带动需求"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "不变",
+          "evidence": "三星上调代工价15%传导至上游，长江存储IPO受理带动需求"
         }
       ],
-      "next_checkpoint": "2026-09-30 Q3价格数据"
+      "next_checkpoint": "2026-10MLCC价格数据"
     },
     {
       "id": "19b4fdd693fd",
@@ -739,9 +764,14 @@
           "date": "2026-09-01",
           "status": "不变",
           "evidence": "高盛上调STOXX 600 EPS增速预测至15%，但缺乏新催化"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "不变",
+          "evidence": "高盛上调STOXX 600 EPS增速预测至15%，但缺乏新催化"
         }
       ],
-      "next_checkpoint": "2026-09-16 ECB会议"
+      "next_checkpoint": "2026-09欧洲经济数据"
     },
     {
       "id": "a6e90cb91cda",
@@ -815,9 +845,14 @@
           "date": "2026-09-01",
           "status": "加强",
           "evidence": "英伟达35亿美元锁定联发科+Rubin CPX重启+AI推理需求扩散"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "加强",
+          "evidence": "英伟达35亿美元锁定联发科+Rubin CPX重启+AI推理需求扩散"
         }
       ],
-      "next_checkpoint": "2026-10-30 CoreWeave财报"
+      "next_checkpoint": "2026-10 CoreWeave财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -881,9 +916,14 @@
           "date": "2026-09-01",
           "status": "加强",
           "evidence": "两艘油轮遭袭+布伦特突破92美元+柴油裂解价差破百"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "削弱",
+          "evidence": "美伊谈判进展，WTI已回落至$84-86，但布伦特裂解价差分化"
         }
       ],
-      "next_checkpoint": "2026-09-08 IEA月度报告"
+      "next_checkpoint": "2026-09-07 OPEC+会议"
     },
     {
       "id": "5c71a6db80bf",
@@ -947,9 +987,14 @@
           "date": "2026-09-01",
           "status": "加强",
           "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "加强",
+          "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%"
         }
       ],
-      "next_checkpoint": "2026-09-30 Q3财报"
+      "next_checkpoint": "2026-10半导体设备订单"
     },
     {
       "id": "676c2dd989c8",
@@ -1013,9 +1058,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "三星90-110万亿韩元股东回报计划确认供给纪律，HBM供需缺口持续扩大"
+        },
+        {
+          "date": "2026-09-02",
+          "status": "加强",
+          "evidence": "三星90-110万亿韩元股东回报计划确认供给纪律，HBM供需缺口持续扩大"
         }
       ],
-      "next_checkpoint": "2026-Q3存储价格数据"
+      "next_checkpoint": "2026-10 Q3存储价格数据"
     },
     {
       "id": "102c5f435338",
@@ -2067,6 +2117,96 @@
       "history": [
         {
           "date": "2026-09-01",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "c6a50a5fc3e0",
+      "name": "美股9月流动性危机对冲",
+      "category": "E防御",
+      "signal_strength": "强",
+      "core_logic": "美银测算系统性策略买盘仅剩90亿美元，下跌时抛售规模达1630亿（1:18比例）。企业回购静默期9月扩展，CTA和波动率控制策略将在下跌时触发强制抛售。这是结构性流动性枯竭风险。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美联储意外降息或财政部推出流动性支持工具，流动性危机叙事失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-16",
+          "event": "FOMC会议",
+          "what_to_watch": "是否释放流动性支持信号"
+        },
+        {
+          "date": "2026-09-30",
+          "event": "月末流动性压力",
+          "what_to_watch": "信用利差是否急剧走阔"
+        }
+      ],
+      "created_date": "2026-09-02",
+      "expiry_date": "2026-12-01",
+      "history": [
+        {
+          "date": "2026-09-02",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "9462eebdc40f",
+      "name": "黄金回调后的再配置机会",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "金价从$4,607回调是因加息预期升温，但央行7月继续大幅增持+BTC $80K印证debasement trade逻辑未变。若非农数据持续恶化或通胀得到控制，长端利率存在技术性回调可能，黄金将获得支撑。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,300",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-11",
+          "event": "CPI数据",
+          "what_to_watch": "核心CPI是否回落"
+        },
+        {
+          "date": "2026-09-06",
+          "event": "初请失业金趋势",
+          "what_to_watch": "是否持续恶化至20万以下"
+        }
+      ],
+      "created_date": "2026-09-02",
+      "expiry_date": "2027-03-01",
+      "history": [
+        {
+          "date": "2026-09-02",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "16472510df00",
+      "name": "全球债市抛售×长久期资产低估",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "10Y美债收益率突破4.8%创3年新高，日本10Y国债30年首破3%，欧洲国债收益率15年高位。但Bessent回购翻倍仅短暂压制，30Y收益率5.23%后反弹。若非农数据持续恶化或通胀得到控制，长端利率存在技术性回调可能。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "CPI持续超预期回升或财政赤字进一步扩张推高通胀预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-11",
+          "event": "CPI数据",
+          "what_to_watch": "核心CPI趋势"
+        },
+        {
+          "date": "2026-09-30",
+          "event": "财政部回购操作",
+          "what_to_watch": "是否加大长期债购买"
+        }
+      ],
+      "created_date": "2026-09-02",
+      "expiry_date": "2027-03-01",
+      "history": [
+        {
+          "date": "2026-09-02",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
