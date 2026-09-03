@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-02",
+  "updated": "2026-09-03",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -128,9 +128,14 @@
           "date": "2026-09-02",
           "status": "削弱",
           "evidence": "金价从$4,607回调，加息预期升温压制，但央行7月继续增持+BTC $80K印证debasement trade"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "金价从$4,607回调是技术性整理，BTC重回$80K+白银$68.95共振，荷兰央行转移黄金储备至伦敦（crisis preparedness），央行7月继续增持。Debasement trade从'降息预期'切换为'财政脆弱信号'逻辑更强。"
         }
       ],
-      "next_checkpoint": "2026-09-11 CPI数据"
+      "next_checkpoint": "2026-09-10美国8月CPI数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -259,9 +264,14 @@
           "date": "2026-09-02",
           "status": "加强",
           "evidence": "英伟达35亿美元锁定联发科+Anthropic $35B云合同+Rubin CPX重启，生态控制战开启"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "Nvidia $12.9B收购Hugging Face是生态控制战略的延伸，不仅是GPU供应商而是AI推理平台控制者。Broadcom预测AI芯片未来两年boom。Anthropic组建内部芯片团队+ $35B云合同。Rubin架构发布+CPX重启。"
         }
       ],
-      "next_checkpoint": "2026-10联发科财报"
+      "next_checkpoint": "2026-11 GTC大会"
     },
     {
       "id": "6bfed27dede5",
@@ -850,9 +860,14 @@
           "date": "2026-09-02",
           "status": "加强",
           "evidence": "英伟达35亿美元锁定联发科+Rubin CPX重启+AI推理需求扩散"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "台积电设备采购需求+90%验证算力基建加速；Nvidia收购Hugging Face强化生态控制；Snowflake Q2 +35%超预期验证AI软件端商业化加速。"
         }
       ],
-      "next_checkpoint": "2026-10 CoreWeave财报"
+      "next_checkpoint": "2026-11 GTC大会"
     },
     {
       "id": "da1fbe5ad249",
@@ -992,9 +1007,14 @@
           "date": "2026-09-02",
           "status": "加强",
           "evidence": "长鑫市值登顶+中微H1净利+300%+沪硅营收+36.5%"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "台积电设备需求+90%叠加长鑫科技市值登顶+中微H1净利+300%+沪硅营收+36.5%。AI算力需求向产业链上游传导。"
         }
       ],
-      "next_checkpoint": "2026-10半导体设备订单"
+      "next_checkpoint": "2026-Q3设备厂财报"
     },
     {
       "id": "676c2dd989c8",
@@ -1063,9 +1083,14 @@
           "date": "2026-09-02",
           "status": "加强",
           "evidence": "三星90-110万亿韩元股东回报计划确认供给纪律，HBM供需缺口持续扩大"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+90-110万亿韩元股东回报确认供给纪律重建。SK海力士FCF 50%承诺。Q3价格数据已有明确上行支撑。"
         }
       ],
-      "next_checkpoint": "2026-10 Q3存储价格数据"
+      "next_checkpoint": "2026-10 TrendForce Q3数据"
     },
     {
       "id": "102c5f435338",
@@ -1119,9 +1144,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭+背离最大化"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化。"
         }
       ],
-      "next_checkpoint": "2026-Q3存储价格数据"
+      "next_checkpoint": "2026-10 Q3存储价格数据"
     },
     {
       "id": "370db81b02d3",
@@ -1180,9 +1210,14 @@
           "date": "2026-08-26",
           "status": "削弱",
           "evidence": "美伊谈判取得进展(讨论临时联合航运通道)，WTI已回落至$84-86"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": ""
         }
       ],
-      "next_checkpoint": "2026-09伊朗-阿曼谈判结果"
+      "next_checkpoint": "2026-09-16 EIA周报"
     },
     {
       "id": "46de7bb09a40",
@@ -1226,9 +1261,14 @@
           "date": "2026-08-26",
           "status": "削弱",
           "evidence": "Bessent回购翻倍仅短暂压制，30Y收益率5.31%后反弹至5.23%，结构压力未缓解"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "10Y收益率突破4.8%后Waller鸽派言论引发债券反弹（收益率回落）。但博通$1T SPV债务+AI企业债YoY+38%的结构性压力未缓解。Pimco期限溢价维持高位。"
         }
       ],
-      "next_checkpoint": "2026-09-09回购机制生效"
+      "next_checkpoint": "2026-10 AI企业债发行Q3数据"
     },
     {
       "id": "9237486a33bd",
@@ -1482,9 +1522,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB+国常会政策背书"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB投资。AI算力需求从数据中心向骨干网传导。"
         }
       ],
-      "next_checkpoint": "2026-Q3光模块订单数据"
+      "next_checkpoint": "2026-Q3光通信厂商财报"
     },
     {
       "id": "e03ab72740fd",
@@ -1590,9 +1635,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "博通$1T表外SPV债务+AI企业债发行YoY+38%+CoreWeave单季利息$640M"
+        },
+        {
+          "date": "2026-09-03",
+          "status": "加强",
+          "evidence": "博通$1T表外SPV债务+AI企业债发行YoY+38%+全年有望达$2.1T。CoreWeave单季利息$640M。AI资本开支泡沫化正在转化为债市结构性压力。"
         }
       ],
-      "next_checkpoint": "2026-08-27英伟达财报"
+      "next_checkpoint": "2026-10 AI企业债发行数据"
     },
     {
       "id": "4c0cf7624234",
@@ -2207,6 +2257,211 @@
       "history": [
         {
           "date": "2026-09-02",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "3d70e897e86a",
+      "name": "Nvidia×Hugging Face：AI生态控制战开启",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Nvidia以$12.9B收购Hugging Face完成从GPU供应商到AI生态控制者的身份跃迁。Hugging Face拥有300万+模型和1800万+开发者，是AI推理和部署的底层平台。收购实质是占领AI从训练到推理全链路的入口。在ASIC定制化趋势下，Nvidia通过平台锁定开发者，构建硬件+软件+生态的三重护城河。黄仁勋称'每一分钱都值得'。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Hugging Face核心开发者在收购后大规模流失至AMD/Xilinx生态，或收购后12个月内未产生可验证的平台级收入增长",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11",
+          "event": "Nvidia GTC秋季大会",
+          "what_to_watch": "Hugging Face集成NVLink/NVHBM的演示，开发者迁移数据"
+        },
+        {
+          "date": "2026-12",
+          "event": "Nvidia FY2027 Q3财报",
+          "what_to_watch": "软件+平台收入占比是否提升，Hugging Face贡献披露"
+        },
+        {
+          "date": "2026-10-15",
+          "event": "AMD Xilinx MI400生态发布",
+          "what_to_watch": "能否提供Hugging Face级别的开发者入口竞争"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2027-08-29",
+      "history": [
+        {
+          "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "545347d61b98",
+      "name": "韩国存储股错杀修复（三星/SK海力士）",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报计划+承诺50%FCF用于回购=供给纪律重建信号史上最强。但韩国存储股当日暴跌7%+，韩国杠杆ETF去杠杆已接近尾声（530亿→250亿韩元），卖压接近枯竭。Q3存储价格数据已有明确上行支撑。Q2亏损+Q3盈利预期的周期反转逻辑仍在，但股价已提前反映过剩担忧。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若Q3存储芯片价格出现拐点回落，或AI大模型厂商大幅削减资本开支",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月中旬",
+          "event": "Q3存储价格季度数据（TrendForce）",
+          "what_to_watch": "DRAM合约价环比变化方向"
+        },
+        {
+          "date": "2026-10月底",
+          "event": "三星/SK海力士Q3财报",
+          "what_to_watch": "毛利率是否由负转正，指引是否上调"
+        },
+        {
+          "date": "2026-09-15",
+          "event": "韩国存储杠杆ETF持仓变化",
+          "what_to_watch": "剩余卖压是否已枯竭"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2027-03-02",
+      "history": [
+        {
+          "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "5e227b1385d4",
+      "name": "柴油挤压×油价结构性上行",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "布伦特维持$95-96，WTI已从$95回落至$91附近，柴油价格创四年新高。高盛称'柴油处于供应挤压中心'。霍尔木兹两艘油轮遇袭后市场短暂反应，但供给端风险持续累积。沙特已向欧洲炼厂全额分配原油说明供应端已在应对风险。Trump称军事打击将'短期'但未否认冲突持续。通胀传导已从原油向终端消费蔓延（加州柴油$7/加仑）。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在数周内达成协议重新开放霍尔木兹，或伊朗实际军事行动限于局部不影响海峡通行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-16",
+          "event": "美国EIA周报（原油+柴油库存）",
+          "what_to_watch": "柴油库存变化及裂解价差方向"
+        },
+        {
+          "date": "每日",
+          "event": "霍尔木兹海峡通行数据",
+          "what_to_watch": "油轮通行量及袭击事件频率"
+        },
+        {
+          "date": "2026-09月底",
+          "event": "OPEC+紧急会议",
+          "what_to_watch": "产量政策是否因供给风险调整"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2026-12-02",
+      "history": [
+        {
+          "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "335d467643c3",
+      "name": "AI算力基建债务过载风险→美债结构性压力",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "博通寻求$1T表外SPV债务+AI相关投资级企业债发行量YoY+38%+全年有望达$2.1T。CoreWeave单季利息$640M。科技巨头债务涌入长债市场挤压主权融资空间。30Y美债收益率被迫维持在5.23%高位。若非农数据持续恶化或通胀得到控制，长端利率存在技术性回调可能。同时Fed可能被迫启动缩表以缓解流动性压力。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "AI云厂商持续超预期增长证明债务可持续，或Fed/财政部联合干预成功压制信用利差",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月",
+          "event": "AI企业债发行Q3数据",
+          "what_to_watch": "AI相关投资级企业债累计发行规模是否超过$500B"
+        },
+        {
+          "date": "2026-10月",
+          "event": "CoreWeave偿债能力披露",
+          "what_to_watch": "利息覆盖率是否跌破警戒线"
+        },
+        {
+          "date": "2026-09月底",
+          "event": "Fed资产负债表变化",
+          "what_to_watch": "缩表是否加速或暂停"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2027-03-02",
+      "history": [
+        {
+          "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "24482c91f155",
+      "name": "日本央行加息×套利交易逆转",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "BOJ倾向于9月加息25bp，日元兑美元单日急涨1.5%至156.36。美日联合干预信号明确（Bessent+片山皐月双表态）。付鹏分析指出日本已走出通缩，应尽快调整通胀思维。若加息节奏加速，日元套利交易（carry trade）逆转将冲击全球风险资产定价。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若日本通胀数据意外转弱或经济增长再度下滑，BOJ推迟加息节奏",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月中旬",
+          "event": "BOJ利率决策会议",
+          "what_to_watch": "加息幅度及前瞻性指引措辞"
+        },
+        {
+          "date": "2026-09月",
+          "event": "日本8月CPI终值",
+          "what_to_watch": "核心CPI是否持续高于2.5%"
+        },
+        {
+          "date": "2026-09月",
+          "event": "AXI日本央行账户数据",
+          "what_to_watch": "干预规模及频率"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2027-03-02",
+      "history": [
+        {
+          "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "dd621a23a159",
+      "name": "黄金回调后debasement trade延续",
+      "category": "E防御",
+      "signal_strength": "中",
+      "core_logic": "金价从$4,607回调，但BTC重回$80K+白银$68.95三资产共振。央行7月继续大幅增持。荷兰央行将黄金储备从美加转移至伦敦（crisis preparedness）。美债信用承压+财政脆弱信号是核心驱动，不是传统降息叙事。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,300",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-10",
+          "event": "美国8月CPI数据",
+          "what_to_watch": "核心CPI是否继续降温"
+        },
+        {
+          "date": "每日",
+          "event": "黄金/白银/BTC三资产相关性",
+          "what_to_watch": "是否维持六年来高位共振"
+        }
+      ],
+      "created_date": "2026-09-03",
+      "expiry_date": "2027-03-02",
+      "history": [
+        {
+          "date": "2026-09-03",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
