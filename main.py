@@ -103,16 +103,21 @@ def build_rss_urls(config: Dict) -> List[Dict]:
 
     # Reddit（限流感知：无认证 RSS 每 IP 每窗口仅放行 1-2 个请求，实测 429；
     # 按日期轮换抓取顺序 → 每天优先的 subreddit 不同，N 天轮遍全部，零额外请求）
+    # ⚠ 2026-09-04 修复：原实现每天试全部 10 个 → 配额外 6 个必然 429 静默失败，
+    # 卡片恒定显示"6 失败"（限流被当故障展示）+ 每个失败源烧 30s 无谓重试。
+    # 实测单日配额 ≈ 4 源 → 只构建轮换后的前 REDDIT_DAILY_LIMIT 个任务（余下不试，
+    # 每天轮换覆盖不同子版），并标 optional（限流波动时也不进失败源清单，只算可选跳过）。
     reddit_list = sources.get("reddit", [])
+    REDDIT_DAILY_LIMIT = min(4, len(reddit_list))
     shift = datetime.now(ZoneInfo("Asia/Shanghai")).toordinal() % max(len(reddit_list), 1)
     reddit_rotated = reddit_list[shift:] + reddit_list[:shift]
-    for rd in reddit_rotated:
+    for rd in reddit_rotated[:REDDIT_DAILY_LIMIT]:
         sub = rd.get("subreddit", "")
         if sub:
             tasks.append({"url": f"https://www.reddit.com/r/{sub}/.rss",
                           "platform": "reddit", "source_name": f"r/{sub}",
                           "category": rd.get("category", "other"), "note": rd.get("note", ""),
-                          "extra_headers": {"User-Agent": "MarketRadar/1.0"}})
+                          "optional": True})  # UA 用全局 contact 邮箱格式（fetch_rss 已含）
 
     # 中国 RSS 源（通过 RSSHub，多实例自动降级）
     rsshub_instances = sources.get("rsshub_instances", ["https://rsshub.app"])
@@ -190,7 +195,10 @@ def fetch_rss(task: Dict) -> Optional[feedparser.FeedParserDict]:
                         return feed
                     return None  # 200 但无条目：源自身问题，不计实例故障
                 elif resp.status_code == 429:
-                    time.sleep((attempt + 1) * 5); continue  # 限流：短暂等待后重试
+                    # 限流：不重试（无认证配额是分钟级固定窗口，重试纯烧时间——
+                    # 2026-09-04 实测每个 429 源白烧 30s 仍失败），记一行诊断后放弃
+                    log(f"   ❌ {task['source_name']}: HTTP 429 限流（配额窗口未过，跳过重试）")
+                    break
                 else:
                     log(f"   ❌ {task['source_name']}: HTTP {resp.status_code}")  # 失败原因可见（2026-08-06）
                     break  # 403/404/5xx：本实例本次失败，快速换下一实例
@@ -257,7 +265,9 @@ def fetch_all(tasks: List[Dict]) -> List[Dict]:
                 fb_host = task["_used_fallback"].split("/")[2] if "://" in task["_used_fallback"] else task["_used_fallback"]
                 fb_tag = f" [↪{fb_host}]"
             log(f"   [{i+1}/{len(tasks)}] {task['platform']}:{task['source_name']} ✅ {added}{fb_tag}")
-        time.sleep(REQUEST_DELAY)
+        # Reddit 无认证限流窗口 ~1 请求/分钟（2026-09-04 实测：连续请求第 3 个起必 429）。
+        # 每个 reddit 源后让出窗口，4 个源共 ~3min，换稳定全成功，不再赌配额
+        time.sleep(60 if task.get("platform") == "reddit" else REQUEST_DELAY)
     log(f"\n📊 {st['ok']}成功 {st['fail']}失败 {st['opt_fail']}可选跳过 → {len(all_items)}条")
     return all_items
 
