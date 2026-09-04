@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-03",
+  "updated": "2026-09-04",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -133,9 +133,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "金价从$4,607回调是技术性整理，BTC重回$80K+白银$68.95共振，荷兰央行转移黄金储备至伦敦（crisis preparedness），央行7月继续增持。Debasement trade从'降息预期'切换为'财政脆弱信号'逻辑更强。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "挪威主权基金减持美债+荷兰央行转移黄金储备+法兴重启多头+德银'骑兵已至'+央行持续购金，debasement trade逻辑从边缘走向主流"
         }
       ],
-      "next_checkpoint": "2026-09-10美国8月CPI数据"
+      "next_checkpoint": "2026-09-11 CPI数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -269,9 +274,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "Nvidia $12.9B收购Hugging Face是生态控制战略的延伸，不仅是GPU供应商而是AI推理平台控制者。Broadcom预测AI芯片未来两年boom。Anthropic组建内部芯片团队+ $35B云合同。Rubin架构发布+CPX重启。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "Nvidia $12.9B收购Hugging Face是生态控制延伸，Anthropic $35B云合同+组建内部芯片团队，Rubin架构发布"
         }
       ],
-      "next_checkpoint": "2026-11 GTC大会"
+      "next_checkpoint": "2026-Q4 Rubin架构量产进展"
     },
     {
       "id": "6bfed27dede5",
@@ -385,9 +395,14 @@
           "date": "2026-09-02",
           "status": "加强",
           "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "不变",
+          "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来，无新增催化"
         }
       ],
-      "next_checkpoint": "2026-09多晶硅价格数据"
+      "next_checkpoint": "2026-Q4光伏价格数据"
     },
     {
       "id": "977d2846e811",
@@ -501,6 +516,11 @@
           "date": "2026-09-02",
           "status": "削弱",
           "evidence": "加息预期升温压制金价，但央行购金+debasement trade逻辑未变"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "削弱",
+          "evidence": "非农超预期推高加息预期压制金价，但央行购金+debasement trade逻辑未变，属于短期扰动"
         }
       ],
       "next_checkpoint": "2026-09-11 CPI数据"
@@ -865,9 +885,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "台积电设备采购需求+90%验证算力基建加速；Nvidia收购Hugging Face强化生态控制；Snowflake Q2 +35%超预期验证AI软件端商业化加速。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "DeepSeek部署16万华为加速卡+Crusoe $30B估值+$13B Jane Street合同+台积电设备需求+90%"
         }
       ],
-      "next_checkpoint": "2026-11 GTC大会"
+      "next_checkpoint": "2026-Q4 AI云厂商财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -936,9 +961,14 @@
           "date": "2026-09-02",
           "status": "削弱",
           "evidence": "美伊谈判进展，WTI已回落至$84-86，但布伦特裂解价差分化"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "削弱",
+          "evidence": "WTI从$95回落至$91，市场正在discount地缘风险，但柴油挤压和中东航运成本飙升显示供给侧风险持续"
         }
       ],
-      "next_checkpoint": "2026-09-07 OPEC+会议"
+      "next_checkpoint": "霍尔木兹航运恢复进展"
     },
     {
       "id": "5c71a6db80bf",
@@ -1012,9 +1042,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "台积电设备需求+90%叠加长鑫科技市值登顶+中微H1净利+300%+沪硅营收+36.5%。AI算力需求向产业链上游传导。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "台积电设备需求+90%叠加长鑫科技市值登顶+中微H1净利+300%+沪硅营收+36.5%"
         }
       ],
-      "next_checkpoint": "2026-Q3设备厂财报"
+      "next_checkpoint": "2026-Q3半导体设备订单数据"
     },
     {
       "id": "676c2dd989c8",
@@ -1088,9 +1123,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+90-110万亿韩元股东回报确认供给纪律重建。SK海力士FCF 50%承诺。Q3价格数据已有明确上行支撑。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报确认供给纪律重建。Q3价格数据已有明确上行支撑。"
         }
       ],
-      "next_checkpoint": "2026-10 TrendForce Q3数据"
+      "next_checkpoint": "2026-09-20前 Q3存储价格数据"
     },
     {
       "id": "102c5f435338",
@@ -1149,9 +1189,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化。"
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化。"
         }
       ],
-      "next_checkpoint": "2026-10 Q3存储价格数据"
+      "next_checkpoint": "韩国存储股是否企稳"
     },
     {
       "id": "370db81b02d3",
@@ -1215,9 +1260,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": ""
+        },
+        {
+          "date": "2026-09-04",
+          "status": "加强",
+          "evidence": "商船三井：霍尔木兹年内难恢复+柴油创四年新高+美国零售柴油历史新高+中东航线运价+50%"
         }
       ],
-      "next_checkpoint": "2026-09-16 EIA周报"
+      "next_checkpoint": "美伊谈判进展"
     },
     {
       "id": "46de7bb09a40",
@@ -2462,6 +2512,206 @@
       "history": [
         {
           "date": "2026-09-03",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "9fd20faf254b",
+      "name": "Nvidia生态控制战（Hugging Face收购+AI投资矩阵）",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Nvidia以$12.9B收购Hugging Face完成从GPU供应商到AI生态控制者的身份跃迁。同时披露$99B AI股权投资组合（CoreWeave、Nebius等）。在ASIC定制化趋势下，Nvidia通过平台锁定300万+开发者/1800万+模型，构建硬件+软件+生态三重护城河。黄仁勋称'每一分钱都值得'。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Hugging Face核心开发者在收购后大规模流失至AMD/Xilinx生态，或收购后12个月内未产生可验证的平台级收入增长",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-15前",
+          "event": "Hugging Face收购整合进展",
+          "what_to_watch": "核心开发者留存率+平台活跃度"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "Rubin架构量产进展",
+          "what_to_watch": "交付时间线和客户采用率"
+        },
+        {
+          "date": "2026-11月",
+          "event": "Nvidia下一季度财报",
+          "what_to_watch": "数据中心收入增速+AI软件/平台收入占比"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2027-08-30",
+      "history": [
+        {
+          "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "99a23fa740dd",
+      "name": "中东航运成本飙升×柴油挤压",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "布伦特维持$95附近但WTI回落至$91，裂解价差分化。柴油价格创四年新高，美国零售柴油创历史新高。中东航线运价从$6,600跳涨至$10,000+/TEU（+50%），一舱难求。商船三井警告霍尔木兹年内难恢复。意大利延长柴油税减至9月10日。沙特已向欧洲炼厂全额分配原油。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在数周内达成协议重新开放霍尔木兹，或伊朗实际军事行动限于局部不影响海峡通行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-10前",
+          "event": "意大利柴油税减到期",
+          "what_to_watch": "是否续期或引发政治成本"
+        },
+        {
+          "date": "持续跟踪",
+          "event": "霍尔木兹航运恢复进展",
+          "what_to_watch": "商船三井等运营商返航声明"
+        },
+        {
+          "date": "2026-09-11",
+          "event": "美国CPI",
+          "what_to_watch": "能源分项是否继续推高整体CPI"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2026-12-03",
+      "history": [
+        {
+          "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "c973d76afa40",
+      "name": "挪威主权基金减持美债×美元信用对冲",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "挪威政府养老金全球基金（$2T，世界最大主权基金）宣布计划大幅削减美债持仓。同期荷兰央行将86吨黄金储备从北美转移至伦敦（crisis preparedness）。法兴重启黄金多头、德银称'骑兵已至'、Amundi/Pictet/Robeco/Fidelity加速建仓。央行购金+投机空头回补+主权基金去美债，三者形成美元信用对冲的共振。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,300",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-11",
+          "event": "美国CPI数据",
+          "what_to_watch": "若CPI降温，黄金获支撑；若加息预期强化，短期承压但长期逻辑不变"
+        },
+        {
+          "date": "持续跟踪",
+          "event": "挪威基金持仓披露",
+          "what_to_watch": "美债减持规模和节奏"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "各国央行购金数据",
+          "what_to_watch": "是否延续7月增持趋势"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2027-03-03",
+      "history": [
+        {
+          "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "26da188ad5e0",
+      "name": "中国液冷/AI散热供应链景气",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "七部门印发《促进数字化绿色化协同转型发展实施方案》，探索算力设施800V高压直流供电架构+推动超百千瓦单机柜部署+支持液冷散热。中石科技部分散热产品已量产交付。英伟达GB300单芯片TDP达1400W、Rubin达1800-2300W，风冷遭遇物理天花板。液冷从可选变为必选。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若AI资本开支增速放缓导致液冷订单能见度下降，或国产厂商价格战重启侵蚀毛利率",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "头部云厂商液冷招标",
+          "what_to_watch": "液冷渗透率是否从10%向30%+跃升"
+        },
+        {
+          "date": "持续跟踪",
+          "event": "中石科技/头部液冷厂商订单",
+          "what_to_watch": "量产交付节奏和客户结构"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2027-08-30",
+      "history": [
+        {
+          "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "33be5d4294d5",
+      "name": "人形机器人商业化验证期（宇树科技IPO）",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "宇树科技科创板IPO首日涨460%，成为中国首家上市人形机器人公司。工信部发布国家人形机器人产业标准体系建设指南(2026版)。小鹏机器人$6.3B估值。摩根大通定义估值逻辑系统性重置：从稀缺性溢价转向商业化验证。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若宇树上市后6个月内商业化订单/收入远低于市场预期，或估值从稀缺性溢价转向盈利质疑导致板块系统性回调",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-15前",
+          "event": "宇树科技上市后首份经营数据",
+          "what_to_watch": "商业化订单数量和收入规模"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "工信部标准体系落地进展",
+          "what_to_watch": "国家标准对产业规范的催化效应"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2027-08-30",
+      "history": [
+        {
+          "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "46195c76038d",
+      "name": "日本BOJ加息×套利交易逆转风险",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "BOJ倾向于9月加息25bp，日元兑美元单日急涨1.5%至156.36。美日联合干预信号明确（Bessent+片山皐月双表态）。付鹏分析指出日本已走出通缩，应尽快调整通胀思维。若加息节奏加速，日元套利交易（carry trade）逆转将冲击全球风险资产定价。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若日本通胀数据意外转弱或经济增长再度下滑，BOJ推迟加息节奏",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09月BOJ会议",
+          "event": "加息决议",
+          "what_to_watch": "是否按预期加息25bp+前瞻指引措辞"
+        },
+        {
+          "date": "持续跟踪",
+          "event": "日元汇率",
+          "what_to_watch": "是否继续升值至150关口"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "日本通胀数据",
+          "what_to_watch": "核心CPI是否维持在2%+目标之上"
+        }
+      ],
+      "created_date": "2026-09-04",
+      "expiry_date": "2027-03-03",
+      "history": [
+        {
+          "date": "2026-09-04",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
