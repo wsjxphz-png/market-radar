@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-04",
+  "updated": "2026-09-08",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -138,9 +138,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "挪威主权基金减持美债+荷兰央行转移黄金储备+法兴重启多头+德银'骑兵已至'+央行持续购金，debasement trade逻辑从边缘走向主流"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "削弱",
+          "evidence": "金价从$4,607回调至~$4,400，非农超预期推高加息预期压制金价。但央行购金+debasement trade逻辑未变，属于短期技术性回调而非趋势逆转"
         }
       ],
-      "next_checkpoint": "2026-09-11 CPI数据"
+      "next_checkpoint": "2026-09-11 PCE数据 + 金价是否守住$4,300支撑"
     },
     {
       "id": "f9a4a0ce363c",
@@ -279,9 +284,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "Nvidia $12.9B收购Hugging Face是生态控制延伸，Anthropic $35B云合同+组建内部芯片团队，Rubin架构发布"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "谷歌TPU v7 Ironwood第三方测试领先B200达50%/美元，高通×亚马逊$25亿认股权证合作，三条独立证据交叉验证ASIC生态控制战加速"
         }
       ],
-      "next_checkpoint": "2026-Q4 Rubin架构量产进展"
+      "next_checkpoint": "Google TPU外部收入披露 + Nvidia Hugging Face整合进展"
     },
     {
       "id": "6bfed27dede5",
@@ -400,9 +410,14 @@
           "date": "2026-09-04",
           "status": "不变",
           "evidence": "光伏装机历史性超越煤电(12.86亿kW vs 12.85亿kW)，供给侧改革窗口期到来，无新增催化"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "不变",
+          "evidence": "无新增催化，光伏装机历史性超越煤电但供给侧改革执行进度未明"
         }
       ],
-      "next_checkpoint": "2026-Q4光伏价格数据"
+      "next_checkpoint": "多晶硅价格数据 + 头部企业产能退出公告"
     },
     {
       "id": "977d2846e811",
@@ -521,9 +536,14 @@
           "date": "2026-09-04",
           "status": "削弱",
           "evidence": "非农超预期推高加息预期压制金价，但央行购金+debasement trade逻辑未变，属于短期扰动"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "削弱",
+          "evidence": "金价从$4,607回调，非农超预期+加息预期升温压制。但荷兰央行转移黄金储备至伦敦(crasis preparedness)仍印证底层逻辑"
         }
       ],
-      "next_checkpoint": "2026-09-11 CPI数据"
+      "next_checkpoint": "金价能否在$4,300支撑位企稳 + 10Y盈亏平衡通胀数据"
     },
     {
       "id": "55fb9d69157b",
@@ -890,9 +910,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "DeepSeek部署16万华为加速卡+Crusoe $30B估值+$13B Jane Street合同+台积电设备需求+90%"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "CoreWeave $30B估值+$13B Jane Street合同，DeepSeek部署16万华为加速卡，台积电设备需求+90%，RPO达1290亿美元。AI算力需求从训练向推理扩散逻辑持续验证"
         }
       ],
-      "next_checkpoint": "2026-Q4 AI云厂商财报"
+      "next_checkpoint": "CoreWeave/Nebius后续财报 + AI推理收入增速"
     },
     {
       "id": "da1fbe5ad249",
@@ -1128,9 +1153,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报确认供给纪律重建。Q3价格数据已有明确上行支撑。"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报确认供给纪律重建。Q3价格数据已有明确上行支撑"
         }
       ],
-      "next_checkpoint": "2026-09-20前 Q3存储价格数据"
+      "next_checkpoint": "2026-10月底Q3财报验证"
     },
     {
       "id": "102c5f435338",
@@ -1265,9 +1295,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "商船三井：霍尔木兹年内难恢复+柴油创四年新高+美国零售柴油历史新高+中东航线运价+50%"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "沙特能源设施遭胡塞袭击→布伦特逼近$100，Vitol称霍尔木兹通行量仅战前50%，商船三井警告年内难恢复，高盛目标$120"
         }
       ],
-      "next_checkpoint": "美伊谈判进展"
+      "next_checkpoint": "2026-09-11 EIA库存 + 霍尔木兹通行量跟踪数据"
     },
     {
       "id": "46de7bb09a40",
@@ -1316,9 +1351,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "10Y收益率突破4.8%后Waller鸽派言论引发债券反弹（收益率回落）。但博通$1T SPV债务+AI企业债YoY+38%的结构性压力未缓解。Pimco期限溢价维持高位。"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "不变",
+          "evidence": "10Y收益率4.77%已较9月初4.8%高位小幅回落，但AI企业债发行YoY+38%的结构性压力未缓解。Waller鸽派言论提供短暂支撑但不足以逆转趋势"
         }
       ],
-      "next_checkpoint": "2026-10 AI企业债发行Q3数据"
+      "next_checkpoint": "2026-09-11 PCE数据 + 财政部回购规模实际执行"
     },
     {
       "id": "9237486a33bd",
@@ -1577,9 +1617,14 @@
           "date": "2026-09-03",
           "status": "加强",
           "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块+景旺电子43.88亿AI服务器PCB投资。AI算力需求从数据中心向骨干网传导。"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "长飞光纤H1净利+889%+东山精密追加至17亿美元光模块扩产+景旺电子43.88亿AI服务器PCB投资+康宁×威瑞森数十亿美元光纤协议。AI算力需求从数据中心向骨干网传导逻辑持续强化"
         }
       ],
-      "next_checkpoint": "2026-Q3光通信厂商财报"
+      "next_checkpoint": "Q3光纤/PCB订单能见度数据"
     },
     {
       "id": "e03ab72740fd",
@@ -1654,9 +1699,14 @@
           "date": "2026-08-26",
           "status": "加强",
           "evidence": "供给纪律重建信号最明确(三星股东回报+SK海力士FCF承诺)，股价反应与基本面背离最大"
+        },
+        {
+          "date": "2026-09-08",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确，股价反应与基本面背离最大化"
         }
       ],
-      "next_checkpoint": "2026-Q3存储价格数据"
+      "next_checkpoint": "2026-10月底Q3存储价格数据"
     },
     {
       "id": "8c697ee2819c",
@@ -2712,6 +2762,201 @@
       "history": [
         {
           "date": "2026-09-04",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "1c1a1e62c769",
+      "name": "中东油价供给侧风险×柴油挤压交易",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量降至战前50%→沙特能源设施遭袭→OPEC 8月产量骤降→柴油裂解价差破百创四年新高。高盛目标布伦特$120。沙特已向欧洲炼厂全额分配原油说明供给端已在应对。卡塔尔季度赤字创十年最大印证财政冲击已开始传导。WTI从$95回落至$91说明市场仍在discount风险，但柴油挤压是结构性供给侧问题而非短期事件溢价。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在4周内达成协议重新开放霍尔木兹海峡，或伊朗军事行动限于局部不影响海峡通行，油价将快速回落至$80以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-11",
+          "event": "EIA原油库存报告",
+          "what_to_watch": "商业原油库存是否继续下降（供给侧约束验证）"
+        },
+        {
+          "date": "2026-09-16",
+          "event": "OPEC月度报告",
+          "what_to_watch": "沙特8月实际产量数据 vs 市场预期"
+        },
+        {
+          "date": "2026-10月中旬",
+          "event": "霍尔木兹通行量跟踪数据",
+          "what_to_watch": "Vitol/Lloyd's List航运数据是否确认通行量维持低位"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2026-12-07",
+      "history": [
+        {
+          "date": "2026-09-08",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "0b58677b976e",
+      "name": "日本央行加速加息×套利交易逆转",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "BOJ明确倾向9月加息25bp后提速至「每季度一次」节奏。Natixis称日元升值空间「还有很大余地」。GPIF可能大幅削减海外资产回流。日美联合干预信号明确(Bessent+片山皐月)。日元已从160急跌至153。若加息节奏加速，日元套利交易(carry trade)逆转将冲击全球风险资产定价。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若日本通胀数据意外转弱或经济增长再度下滑，BOJ推迟加息节奏至年底或更晚，此判断失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-17/18",
+          "event": "BOJ议息会议",
+          "what_to_watch": "加息幅度是否为25bp+未来路径暗示（是否提及「每季度」）"
+        },
+        {
+          "date": "2026-10月",
+          "event": "GPIF季度投资组合报告",
+          "what_to_watch": "海外资产持仓是否出现大幅减持"
+        },
+        {
+          "date": "2026-10月",
+          "event": "日本CPI数据",
+          "what_to_watch": "核心CPI是否维持高位支撑加息理由"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2027-03-07",
+      "history": [
+        {
+          "date": "2026-09-08",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "2f0b1addc7a2",
+      "name": "AI ASIC生态控制战×谷歌TPU性能验证",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "谷歌TPU v7 Ironwood第三方测试显示每美元性能领先Nvidia B200达50%，标志着ASIC从OpenAI/Anthropic实验性选择升级为Google大规模生产级方案。叠加高通×亚马逊$25亿认股权证合作、英伟达$12.9B收购Hugging Face防御性动作，AI芯片正从GPU单极走向ASIC+GPU双轨竞争。英伟达市值$5.5T对这一结构性变化的定价仍不充分。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Google TPU外部客户收入持续低于预期，或ASIC芯片能效优势在下一代表现下降，或Nvidia Rubin架构大幅缩小性能差距",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "Google云TPU外部收入披露",
+          "what_to_watch": "TPU对外租赁收入增速和规模"
+        },
+        {
+          "date": "2026-10月",
+          "event": "Nvidia Rubin架构详细规格",
+          "what_to_watch": "性能/能效是否大幅缩小与TPU Ironwood差距"
+        },
+        {
+          "date": "2026-Q4",
+          "event": "高通×亚马逊定制芯片首秀数据",
+          "what_to_watch": "功耗表现和AWS采用规模"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2027-09-03",
+      "history": [
+        {
+          "date": "2026-09-08",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "1fb53f452a25",
+      "name": "韩国存储股错杀修复×供给纪律重建",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "三星上调代工价最高15%+SK海力士承诺90-110万亿韩元股东回报+50% FCF用于回购=供给端纪律重建信号史上最强。Q3存储价格数据已有明确上行支撑。但韩国杠杆ETF去杠杆已完成大半(530亿→250亿韩元)，卖压接近枯竭。当前股价反应与基本面拐点方向完全背离。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若Q3存储芯片价格在10月数据显示拐点回落，或AI大模型厂商大幅削减资本开支导致需求预期下修",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月底",
+          "event": "Q3存储芯片价格数据",
+          "what_to_watch": "DRAM/HBM价格是否延续上行趋势"
+        },
+        {
+          "date": "2026-11月",
+          "event": "三星/SK海力士Q3财报",
+          "what_to_watch": "毛利率改善幅度是否验证周期反转"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2027-03-07",
+      "history": [
+        {
+          "date": "2026-09-08",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "0352f9908da6",
+      "name": "铜关税套利×全球供应链重构",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "美国精炼铜关税审查到期未决(建议2027年起征15%)，纽约-伦敦套利价差持续将超百万吨铜从全球流向美国。LME铜价破$14,700创历史新高。这不是需求驱动的上涨，而是关税政策不确定性驱动的库存区域错配。若关税最终落地，将进一步加速铜流和美国库存积累。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美国商务部最终决定不对精炼铜征收关税，或关税税率显著低于15%，套利空间收窄，LME库存压力缓解",
+      "verification_checkpoints": [
+        {
+          "date": "2026-Q4",
+          "event": "美国商务部精炼铜关税审查最终决定",
+          "what_to_watch": "税率水平和生效时间表"
+        },
+        {
+          "date": "每月",
+          "event": "LME铜库存变化",
+          "what_to_watch": "是否继续下降印证供给紧张持续"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2027-03-07",
+      "history": [
+        {
+          "date": "2026-09-08",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "ea1027d83a58",
+      "name": "美国消费动能衰减×防御切换",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "Walmart同店增长创6年最低+CFO直言消费者持续承压+初请失业金20.6万趋势不明朗+新屋开工骤降12.44%。AI资本开支狂飙与终端消费疲软形成剪刀差。若非农数据后续走弱印证消费疲软叙事，资金将从科技成长向防御板块系统性迁移。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若后续非农持续强劲或CPI显著回落，消费疲软叙事被证伪；或AI投资溢出效应开始带动零售消费数据改善",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-11",
+          "event": "美国CPI数据",
+          "what_to_watch": "核心CPI是否回落印证消费降温"
+        },
+        {
+          "date": "2026-10月",
+          "event": "Walmart/Q4指引",
+          "what_to_watch": "同店销售趋势和消费者行为变化"
+        }
+      ],
+      "created_date": "2026-09-08",
+      "expiry_date": "2027-03-07",
+      "history": [
+        {
+          "date": "2026-09-08",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
