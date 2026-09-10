@@ -1,0 +1,42 @@
+{
+  "id": "4c0cf7624234",
+  "name": "美国消费动能衰减×防御配置",
+  "category": "D反转",
+  "signal_strength": "中",
+  "core_logic": "Walmart Q2同店增长创6年最低，CFO直言'消费者持续承压'；初请失业金20.6万虽低于预期但趋势不明朗；新屋开工骤降12.44%。AI资本开支狂飙与终端消费疲软形成剪刀差",
+  "time_horizon": "3-6个月",
+  "falsification_condition": "若后续非农持续强劲或CPI显著回落，消费疲软叙事被证伪",
+  "verification_checkpoints": [
+    {
+      "date": "2026-09-04",
+      "event": "美国8月非农报告",
+      "what_to_watch": "就业增量及失业率变化"
+    }
+  ],
+  "created_date": "2026-08-21",
+  "expiry_date": "2027-02-17",
+  "history": [
+    {
+      "date": "2026-08-21",
+      "status": "新识别",
+      "evidence": "信号强度:中"
+    },
+    {
+      "date": "2026-08-25",
+      "status": "加强",
+      "evidence": "零售销售7月意外下滑+密歇根信心骤降至51.0+Walmart同店增长创6年最低，消费疲软确认"
+    },
+    {
+      "date": "2026-08-26",
+      "status": "加强",
+      "evidence": "Walmart同店增长创6年最低+零售销售7月意外下滑+密歇根信心骤降至51.0，消费疲软确认"
+    },
+    {
+      "date": "2026-09-10",
+      "status": "证伪",
+      "evidence": ""
+    }
+  ],
+  "next_checkpoint": "2026-09非农就业数据",
+  "falsified_date": "2026-09-10"
+}
