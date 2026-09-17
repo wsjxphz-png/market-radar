@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-16",
+  "updated": "2026-09-17",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -168,9 +168,14 @@
           "date": "2026-09-16",
           "status": "加强",
           "evidence": "挪威主权基金削减美债+荷兰央行转移黄金储备+波兰央行增至648吨+中国央行8月购金创纪录，debasement trade从降息预期切换为财政脆弱信号"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "波兰央行增至648吨+中国央行8月购金创纪录+荷兰央行转移储备至伦敦+挪威主权基金削减美债"
         }
       ],
-      "next_checkpoint": "2026-10月CME美联储观察数据"
+      "next_checkpoint": "2026-10-10 世界黄金协会Q3央行购金报告"
     },
     {
       "id": "f9a4a0ce363c",
@@ -334,9 +339,14 @@
           "date": "2026-09-15",
           "status": "不变",
           "evidence": "谷歌TPU v7性能领先B200达50%+Meta 2027H1自研芯片部署+高通×亚马逊$25亿认股权证。ASIC从实验性选择升级为大规模生产级方案"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "谷歌TPU v7性能领先B200达50%+高通×亚马逊$25亿认股权证合作+英伟达$12.9B收购Hugging Face防御性动作"
         }
       ],
-      "next_checkpoint": "10月谷歌Q3财报+TPU外部客户收入"
+      "next_checkpoint": "2026-10-01 谷歌I/O大会后续+TPU外部客户签约情况"
     },
     {
       "id": "6bfed27dede5",
@@ -596,9 +606,14 @@
           "date": "2026-09-15",
           "status": "不变",
           "evidence": "油价$105+WTI $91裂解+10Y破5%印证debasement trade逻辑。央行购金+BTC共振"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "柴油$6/加仑创四年新高+霍尔木兹通行量50%+沙特产量1990年低点。IEA否认年内重开海峡。debasement trade逻辑强化"
         }
       ],
-      "next_checkpoint": "10月CPI数据+金价支撑位$4,000"
+      "next_checkpoint": "2026-10-15 美国CPI数据"
     },
     {
       "id": "55fb9d69157b",
@@ -985,9 +1000,14 @@
           "date": "2026-09-15",
           "status": "不变",
           "evidence": "CoreWeave RPO $129B持续+Oracle OCI +121%。AI云需求扩散至推理端"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "不变",
+          "evidence": "CoreWeave RPO $129B持续+Oracle OCI +121%。AI云需求扩散至推理端"
         }
       ],
-      "next_checkpoint": "10-11月云厂商Q3财报"
+      "next_checkpoint": "2026-10-30 CoreWeave Q3财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -1243,9 +1263,14 @@
           "date": "2026-09-11",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿股东回报+50%FCF回购确认供给纪律重建，Susquehanna:存储占半导体收入50%"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报+50%FCF回购确认供给纪律重建"
         }
       ],
-      "next_checkpoint": "2026-10-15 三星Q3财报"
+      "next_checkpoint": "2026-10-15 Q3存储价格数据"
     },
     {
       "id": "102c5f435338",
@@ -1309,9 +1334,14 @@
           "date": "2026-09-04",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化。"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化"
         }
       ],
-      "next_checkpoint": "韩国存储股是否企稳"
+      "next_checkpoint": "2026-10-30 三星/SK海力士Q3财报"
     },
     {
       "id": "370db81b02d3",
@@ -1400,9 +1430,14 @@
           "date": "2026-09-11",
           "status": "加强",
           "evidence": "布伦特突破$105+霍尔木兹通行量降至战前50%+柴油裂解价差破百+沙特产量1990年低点，供给端风险从地缘溢价升级为结构性短缺"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "布伦特突破$105+霍尔木兹通行量降至战前50%+柴油裂解价差破百+沙特产量1990年低点。供给端风险从地缘溢价升级为结构性短缺"
         }
       ],
-      "next_checkpoint": "2026-09-25 OPEC月度报告"
+      "next_checkpoint": "2026-09-24 IEA月度报告"
     },
     {
       "id": "46de7bb09a40",
@@ -1599,9 +1634,14 @@
           "date": "2026-09-11",
           "status": "削弱",
           "evidence": "WTI已从$95回落至$91，市场正在discount地缘风险，但布伦特裂解价差分化显示结构性短缺仍在"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "削弱",
+          "evidence": "WTI已从$95回落至$91，市场正在discount地缘风险。但布伦特裂解价差分化显示结构性短缺仍在"
         }
       ],
-      "next_checkpoint": "2026-10月霍尔木兹通航数据"
+      "next_checkpoint": "2026-10-01 EIA短期能源展望"
     },
     {
       "id": "5576965802e0",
@@ -1742,9 +1782,14 @@
           "date": "2026-09-10",
           "status": "不变",
           "evidence": "长飞光纤H1净利+889%验证光纤需求爆发但今日光纤预制棒扩产打压板块(-3.26%)。中期价格不确定性需市场验证"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "不变",
+          "evidence": "长飞光纤H1净利+889%验证光纤需求爆发但今日光纤预制棒扩产打压板块(-3.26%)。中期价格不确定性需市场验证"
         }
       ],
-      "next_checkpoint": "2027年光纤预制棒新增产能落地"
+      "next_checkpoint": "2026-10-15 光纤价格指数"
     },
     {
       "id": "e03ab72740fd",
@@ -3188,9 +3233,14 @@
           "date": "2026-09-16",
           "status": "加强",
           "evidence": "柴油$6/加仑创四年新高+霍尔木兹通行量50%+沙特产量1990年低点。IEA否认年内重开海峡"
+        },
+        {
+          "date": "2026-09-17",
+          "status": "加强",
+          "evidence": "柴油$6/加仑创四年新高+霍尔木兹通行量50%+沙特产量1990年低点。IEA否认年内重开海峡"
         }
       ],
-      "next_checkpoint": "2026-10月IEA MOMR"
+      "next_checkpoint": "2026-10-10 世界黄金协会Q3央行购金报告"
     },
     {
       "id": "62fe9357a60d",
@@ -3818,6 +3868,156 @@
       "history": [
         {
           "date": "2026-09-16",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "599e3a6885fd",
+      "name": "黄金白银组合(debasement trade延续)",
+      "category": "E防御",
+      "signal_strength": "强",
+      "core_logic": "金价$4,395回调但波兰央行增至648吨向700吨目标推进+中国央行8月购金创纪录+荷兰央行转移黄金储备至伦敦。挪威主权基金宣布大幅削减美债持仓。BTC $80K+白银$66三资产共振印证debasement trade逻辑未变。核心催化从'降息预期'切换为'财政脆弱信号'。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "美联储超预期加息25bp+美元指数突破105+金价跌破$4,000",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-10",
+          "event": "世界黄金协会Q3央行购金报告",
+          "what_to_watch": "波兰+中国央行购金数据"
+        },
+        {
+          "date": "2026-10-15",
+          "event": "美国CPI数据",
+          "what_to_watch": "核心CPI走势"
+        }
+      ],
+      "created_date": "2026-09-17",
+      "expiry_date": "2027-03-16",
+      "history": [
+        {
+          "date": "2026-09-17",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "f592893d918d",
+      "name": "油运供给侧交易",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "VLCC-TCE指数创纪录46万美元/天(+66%周环比)，波斯湾—中国TD3C航线76万美元/天(+142%)。反常识：中东原油出口量减少36%但运价暴涨。霍尔木兹暗航穿梭+红海绕行苏伊士+战争险费率从0.25%升至7.5-12.5%，三重损耗把有效运力大幅压缩。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，运价将快速回落",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-24",
+          "event": "克拉克森VLCC TCE数据",
+          "what_to_watch": "波斯湾—中国航线运价"
+        },
+        {
+          "date": "2026-10-01",
+          "event": " tanker调度数据",
+          "what_to_watch": "霍尔木兹通行量"
+        }
+      ],
+      "created_date": "2026-09-17",
+      "expiry_date": "2026-12-16",
+      "history": [
+        {
+          "date": "2026-09-17",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "a832018ec789",
+      "name": "铜关税套利×供应链重构",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "美国精炼铜关税审查到期未决(建议2027年起征15%)，纽约-伦敦套利价差持续将超百万吨铜从全球流向美国。LME铜价破$14,700创历史新高。这不是需求驱动的上涨，而是关税政策不确定性驱动的库存区域错配。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美国商务部最终决定不对精炼铜征收关税，或关税税率显著低于15%",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-15",
+          "event": "美国商务部关税审查结果",
+          "what_to_watch": "最终税率决定"
+        },
+        {
+          "date": "2026-10-30",
+          "event": "LME铜库存数据",
+          "what_to_watch": "纽约+伦敦库存变化"
+        }
+      ],
+      "created_date": "2026-09-17",
+      "expiry_date": "2027-03-16",
+      "history": [
+        {
+          "date": "2026-09-17",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "acd46ae07b90",
+      "name": "英伟达生态控制战(Hugging Face收购)",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "英伟达以$12.9B收购Hugging Face完成从GPU供应商到AI生态控制者的身份跃迁。Hugging Face拥有300万+模型和1800万+开发者，是AI推理和部署的底层平台。收购实质是占领AI从训练到推理全链路的入口。在ASIC定制化趋势下，英伟达通过平台锁定开发者，构建硬件+软件+生态的三重护城河。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Hugging Face核心开发者在收购后大规模流失至AMD/Xilinx生态，或收购后12个月内未产生可验证的平台级收入增长",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-01",
+          "event": "Hugging Face平台活跃度数据",
+          "what_to_watch": "开发者留存率+模型下载量"
+        },
+        {
+          "date": "2027-03-01",
+          "event": "英伟达Q4财报",
+          "what_to_watch": "Hugging Face收入贡献"
+        }
+      ],
+      "created_date": "2026-09-17",
+      "expiry_date": "2027-09-12",
+      "history": [
+        {
+          "date": "2026-09-17",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "e1da79d9f0f9",
+      "name": "A股红利资产系统性机会(险资新规驱动)",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "《保险公司资产负债管理办法》落地，人身险净投资收益覆盖率100%硬性监管要求。在长端利率下行、存量高收益资产持续到期的背景下，高股息资产的监管价值被重新定价。37万亿险资潜在增配规模为数千亿至万亿级。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "监管细则未落地或100%红线被弱化执行，或长端利率快速上行降低股息吸引力",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-15",
+          "event": "险资配置数据",
+          "what_to_watch": "保险资金权益类投资占比"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "险资年报",
+          "what_to_watch": "高股息资产持仓变化"
+        }
+      ],
+      "created_date": "2026-09-17",
+      "expiry_date": "2027-09-12",
+      "history": [
+        {
+          "date": "2026-09-17",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
