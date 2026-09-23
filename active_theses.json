@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-22",
+  "updated": "2026-09-23",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -4192,6 +4192,176 @@
           "date": "2026-09-22",
           "status": "新识别",
           "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "8af01fdfc595",
+      "name": "中国光纤全产业链估值修复",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "瑞银首次覆盖明确看多：需求引擎已从三大运营商CAPEX切换为全球数据中心建设。供给端扩产受制于预制棒设备交期延长+人才紧缺+客户认证周期，实际落地显著晚于市场预期。长飞H1净利+889%已验证需求爆发，板块自高点回调37%形成错误定价",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若2027年H1光纤产能如期放量且价格战重启，或AI资本开支增速放缓导致光纤订单能见度下降",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月",
+          "event": "长飞光纤Q3财报",
+          "what_to_watch": "毛利率及产能利用率"
+        },
+        {
+          "date": "2026-11月",
+          "event": "光纤预制棒价格走势",
+          "what_to_watch": "是否出现价格战信号"
+        },
+        {
+          "date": "2026-12月",
+          "event": "华为/中兴光纤招标规模",
+          "what_to_watch": "AI数据中心配套需求数据"
+        }
+      ],
+      "created_date": "2026-09-23",
+      "expiry_date": "2027-09-18",
+      "history": [
+        {
+          "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "4601aec7b9d7",
+      "name": "AI Agent应用爆发×半导体需求扩散",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse登顶App Store免费榜第一，连续三天占据榜首，单日推升Meta股价11.4%（+$1923亿市值）。Agent将用户意图转化为持续执行任务，新增算力需求从GPU推理延伸至CPU执行、调度和安全隔离。ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse用户留存率显著低于预期，或Agent应用未能规模化渗透至消费端",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月",
+          "event": "Meta Connect后续数据",
+          "what_to_watch": "Muse DAU/MAU留存率"
+        },
+        {
+          "date": "2026-10月",
+          "event": "ARM数据中心版税数据",
+          "what_to_watch": "Agent驱动的执行层需求增长"
+        },
+        {
+          "date": "2026-11月",
+          "event": "深南电路/兴森科技订单能见度",
+          "what_to_watch": "载板需求增量确认"
+        }
+      ],
+      "created_date": "2026-09-23",
+      "expiry_date": "2027-09-18",
+      "history": [
+        {
+          "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "3fe1c25ee398",
+      "name": "美债结构性压力×长久期国债低吸",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "30Y美债收益率5.367%为20年新高，AI企业债YoY+38%挤压主权融资空间，CoreWeave单季利息$640M。但Bessent回购干预+财政部缩短发债期限可能缓解部分压力。若后续非农恶化或通胀得到控制，长端利率存在技术性回调空间",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "CPI持续超预期回升或财政赤字进一步扩张推高通胀预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月",
+          "event": "美国10月非农数据",
+          "what_to_watch": "就业市场降温信号"
+        },
+        {
+          "date": "2026-10月",
+          "event": "财政部回购操作规模",
+          "what_to_watch": "是否超预期扩大干预"
+        },
+        {
+          "date": "2026-11月",
+          "event": "30Y美债收益率",
+          "what_to_watch": "是否出现技术性回调"
+        }
+      ],
+      "created_date": "2026-09-23",
+      "expiry_date": "2027-03-22",
+      "history": [
+        {
+          "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "3fce5abe9463",
+      "name": "中东油价供给侧风险×柴油挤压",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量降至战前50%+沙特延布港停产+柴油裂解价差创四年新高。WTI已从$107回落至$91被市场discount地缘风险，但布伦特$97仍处高位。汽油库存意外增加296万桶（预期减少64万桶）印证需求疲软，但供给侧约束不可逆",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "美伊4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月初",
+          "event": "美伊下一轮谈判",
+          "what_to_watch": "是否取得实质性突破"
+        },
+        {
+          "date": "2026-10月",
+          "event": "霍尔木兹通行量数据",
+          "what_to_watch": "是否回升至70%以上"
+        },
+        {
+          "date": "2026-10月",
+          "event": "柴油裂解价差",
+          "what_to_watch": "是否突破$100/桶"
+        }
+      ],
+      "created_date": "2026-09-23",
+      "expiry_date": "2026-12-22",
+      "history": [
+        {
+          "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "34f780c1463f",
+      "name": "中美元首会晤×贸易关系拐点",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "习近平9月23日起对美国进行国事访问，与特朗普会晤。关注点：AI安全对话、关税与制裁、大豆/飞机/稀土承诺执行。中国自给自足能力提升改变博弈格局",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "会晤未能达成实质性协议，或稀土/大豆承诺执行不及预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-25",
+          "event": "习特会成果声明",
+          "what_to_watch": "关税暂停/AI安全对话机制"
+        },
+        {
+          "date": "2026-10月",
+          "event": "大豆/稀土出口数据",
+          "what_to_watch": "承诺执行进度"
+        }
+      ],
+      "created_date": "2026-09-23",
+      "expiry_date": "2026-12-22",
+      "history": [
+        {
+          "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:中"
         }
       ]
     }
