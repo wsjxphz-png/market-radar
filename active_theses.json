@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-23",
+  "updated": "2026-09-24",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -178,9 +178,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "波兰央行增至648吨+中国央行8月购金创纪录+荷兰央行转移黄金储备至伦敦+挪威主权基金削减美债持仓。BTC $80K印证debasement trade逻辑未变。核心催化从'降息预期'切换为'财政脆弱信号'"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "中国央行8月购金创纪录+波兰央行增至648吨+挪威主权基金首次公开削减美债持仓。BTC $80K印证debasement trade逻辑"
         }
       ],
-      "next_checkpoint": "2026-10-05 IMF秋季会议央行购金数据"
+      "next_checkpoint": "2026-10-01全球央行购金月度数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -354,9 +359,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "谷歌TPU v7性能领先B200达50%+高通×亚马逊$25亿认股权证合作+英伟达$12.9B收购Hugging Face防御性动作。ASIC从OpenAI/Anthropic实验性选择升级为Google大规模生产级方案"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "不变",
+          "evidence": "谷歌TPU v7性能领先B200达50%+高通×亚马逊$25亿认股权证合作+英伟达$12.9B收购Hugging Face防御性动作"
         }
       ],
-      "next_checkpoint": "2026-10-15 谷歌TPU外部客户订单"
+      "next_checkpoint": "2026-11月Google TPU外部客户收入披露"
     },
     {
       "id": "6bfed27dede5",
@@ -3182,9 +3192,14 @@
           "date": "2026-09-22",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报+50%FCF回购=供给纪律重建信号史上最强。摩根大通首次覆盖SK海力士ADR给超配目标价$245"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+SK海力士90-110万亿股东回报+50%FCF回购=供给纪律重建信号史上最强。摩根大通首次覆盖给超配目标价$245"
         }
       ],
-      "next_checkpoint": "2026-10月中旬Q3存储价格数据"
+      "next_checkpoint": "2026-10-15SK海力士Q3存储价格数据"
     },
     {
       "id": "0352f9908da6",
@@ -3283,9 +3298,14 @@
           "date": "2026-09-17",
           "status": "加强",
           "evidence": "柴油$6/加仑创四年新高+霍尔木兹通行量50%+沙特产量1990年低点。IEA否认年内重开海峡"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "金价$4,395+白银$63+BTC $76,000三资产共振。核心催化从'降息预期'切换为'财政脆弱信号'。挪威主权基金削减美债持仓印证底层逻辑"
         }
       ],
-      "next_checkpoint": "2026-10-10 世界黄金协会Q3央行购金报告"
+      "next_checkpoint": "2026-10-01全球央行购金月度数据"
     },
     {
       "id": "62fe9357a60d",
@@ -3370,9 +3390,14 @@
           "date": "2026-09-22",
           "status": "加强",
           "evidence": "博通$1T表外SPV+AI企业债YoY+38%+高盛2027年预测$3.4T。美银FMS将'债券收益率无序上升'列为最大尾部风险(33%)"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "博通$1T表外SPV+AI企业债YoY+38%+高盛2027年预测$3.4T。美银FMS将'债券收益率无序上升'列为最大尾部风险(33%)"
         }
       ],
-      "next_checkpoint": "2026-10月CoreWeave财报利息覆盖比率"
+      "next_checkpoint": "2026-11月CoreWeave债务披露"
     },
     {
       "id": "80668827b969",
@@ -3522,36 +3547,6 @@
       "next_checkpoint": "2026-10月波兰央行购金数据是否接近700吨目标"
     },
     {
-      "id": "09b004af9821",
-      "name": "美联储9月加息→结构性滞胀交易",
-      "category": "B周期",
-      "signal_strength": "中",
-      "core_logic": "PPI 5.4%超预期+核心CPI 2.4%高于预期+消费者信心47.8骤降+柴油$6/加仑=通胀回归信号强化。道明证券已将9月预期从'维持不变'改为'加息'。但油价下跌提供短暂喘息，市场在'风险管控式加息'和'预防性降息'之间摇摆。若加息落地后经济数据继续恶化，9-10月可能出现'滞胀交易'——资金从高估值成长股流向能源/大宗商品/价值股。",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "若后续CPI/PPI数据快速回落，或非农就业持续超预期，则滞胀叙事被证伪；或Fed在加息后释放鸽派前瞻指引稳定市场",
-      "verification_checkpoints": [
-        {
-          "date": "2026-09-17",
-          "event": "FOMC利率决议",
-          "what_to_watch": "点阵图变化及鲍威尔 press conference措辞"
-        },
-        {
-          "date": "2026-10月中旬",
-          "event": "10月CPI数据",
-          "what_to_watch": "核心CPI是否开始回落"
-        }
-      ],
-      "created_date": "2026-09-11",
-      "expiry_date": "2026-12-10",
-      "history": [
-        {
-          "date": "2026-09-11",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        }
-      ]
-    },
-    {
       "id": "26442fd1518a",
       "name": "中国算力补贴试点×光模块/PCB产业链",
       "category": "A成长",
@@ -3623,9 +3618,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "布伦特$105突破+WTI $91裂解+第三架美军无人机在霍尔木兹被击落+沙特延布港停产+IEA否认年内重开海峡。供给端风险从概率事件变为现实冲击"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭→有效运力大幅收缩。柴油裂解价差创四年新高印证下游真实成本传导"
         }
       ],
-      "next_checkpoint": "2026-09-25 IEA月度石油市场报告"
+      "next_checkpoint": "2026-10-15EIA库存报告"
     },
     {
       "id": "0ec3c8fe84ef",
@@ -4227,8 +4227,14 @@
           "date": "2026-09-23",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "瑞银首次覆盖明确看多，需求引擎从三大运营商CAPEX切换为全球数据中心建设。长飞H1净利+889%已验证需求爆发"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10月光纤预制棒价格走势"
     },
     {
       "id": "4601aec7b9d7",
@@ -4262,8 +4268,14 @@
           "date": "2026-09-23",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "Meta Muse登顶App Store免费榜第一，单日推升股价+11.4%。ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10-30Meta Q3财报"
     },
     {
       "id": "3fe1c25ee398",
@@ -4297,8 +4309,14 @@
           "date": "2026-09-23",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "削弱",
+          "evidence": "10Y破5.1%触发全球资产重定价，Bessent回购干预仅短暂压制。但Pimco预期期限溢价维持高位，AI企业债发行量YoY+38%持续挤占主权需求"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10-04非农数据"
     },
     {
       "id": "3fce5abe9463",
@@ -4332,8 +4350,14 @@
           "date": "2026-09-23",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-09-24",
+          "status": "加强",
+          "evidence": "布伦特突破$105+WTI $91裂解+第三架美军无人机在霍尔木兹被击落+沙特延布港停产。IEA否认年内重开海峡"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10-01IEA月度油市报告"
     },
     {
       "id": "34f780c1463f",
@@ -4360,6 +4384,101 @@
       "history": [
         {
           "date": "2026-09-23",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "e10dfe473501",
+      "name": "中东油价供给侧结构性短缺×柴油挤压交易",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=有效运力结构性收缩。柴油裂解价差创四年新高印证下游真实成本传导。WTI被市场discount地缘风险（$91 vs Brent $95-105），但高盛目标$120。布伦特裂解价差分化显示市场定价不充分",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，油价快速回落至$80以下；同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-01",
+          "event": "IEA月度油市报告",
+          "what_to_watch": "海峡通行量数据和供需缺口预测"
+        },
+        {
+          "date": "2026-10-10",
+          "event": "OPEC+会议",
+          "what_to_watch": "沙特产量政策表态"
+        },
+        {
+          "date": "2026-10-15",
+          "event": "EIA库存报告",
+          "what_to_watch": "柴油/汽油库存变化"
+        }
+      ],
+      "created_date": "2026-09-24",
+      "expiry_date": "2026-12-23",
+      "history": [
+        {
+          "date": "2026-09-24",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "35355d567908",
+      "name": "AI Agent商业化×Meta Muse产业链",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Meta Muse登顶App Store免费榜第一，单日推升股价+11.4%（+$1923亿市值）。扎克伯格确认Agent交易抽成变现模式。JPM上调目标价至$920。ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益。Agent将用户意图转化为持续执行任务，新增算力需求从GPU推理延伸至CPU执行",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse用户留存率显著低于预期，或Agent应用未能规模化渗透至消费端",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-30",
+          "event": "Meta Q3财报",
+          "what_to_watch": "Muse DAU/MAU和广告收入变化"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "Google Gemini 4发布",
+          "what_to_watch": "竞争格局演变"
+        }
+      ],
+      "created_date": "2026-09-24",
+      "expiry_date": "2027-09-19",
+      "history": [
+        {
+          "date": "2026-09-24",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "caffcb096fdd",
+      "name": "美债结构性压力×长久期国债低吸机会",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "10Y美债收益率突破5.16%创17年新高，30Y达5.37%创2004年来最高。但Bessent回购干预+财政部缩短发债期限可能缓解部分压力。若后续非农恶化或通胀得到控制，长端利率存在技术性回调空间。AI企业债YoY+38%+全年有望达$2.1T构成结构性供给压力",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "CPI持续超预期回升或财政赤字进一步扩张推高通胀预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-04",
+          "event": "9月非农数据",
+          "what_to_watch": "就业市场是否转弱"
+        },
+        {
+          "date": "2026-10-11",
+          "event": "9月CPI数据",
+          "what_to_watch": "核心CPI是否回落"
+        }
+      ],
+      "created_date": "2026-09-24",
+      "expiry_date": "2027-03-23",
+      "history": [
+        {
+          "date": "2026-09-24",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
