@@ -1,0 +1,31 @@
+{
+  "id": "ce8cbebfb674",
+  "name": "NVIDIA财报前的波动套利",
+  "category": "A成长",
+  "signal_strength": "中",
+  "core_logic": "NVIDIA已连续7天下跌(2022年以来最长连跌)，股价落后费城半导体指数50%。但Rubin架构发布+Groq $20B采购确认+AI推理需求扩散构成基本面支撑。市场对AI硬件增速放缓的担忧过度定价。",
+  "time_horizon": "1-2周",
+  "falsification_condition": "NVIDIA财报显示数据中心收入增速大幅低于预期或指引保守",
+  "verification_checkpoints": [
+    {
+      "date": "2026-08-26",
+      "event": "NVIDIA Q2 FY2027财报",
+      "what_to_watch": "Datacenter收入增速+Blackwell/Rubin出货节奏"
+    }
+  ],
+  "created_date": "2026-08-25",
+  "expiry_date": "2026-09-24",
+  "history": [
+    {
+      "date": "2026-08-25",
+      "status": "新识别",
+      "evidence": "信号强度:中"
+    },
+    {
+      "date": "2026-08-26",
+      "status": "加强",
+      "evidence": "连续7天下跌(2022年以来最长)+Rubin架构发布+Groq $20B采购确认+AI推理需求扩散"
+    }
+  ],
+  "next_checkpoint": "2026-08-27英伟达财报"
+}

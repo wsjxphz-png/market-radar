@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-24",
+  "updated": "2026-09-25",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -183,9 +183,14 @@
           "date": "2026-09-24",
           "status": "加强",
           "evidence": "中国央行8月购金创纪录+波兰央行增至648吨+挪威主权基金首次公开削减美债持仓。BTC $80K印证debasement trade逻辑"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "削弱",
+          "evidence": "Fed 12-0加息25bp至3.75-4%，美元指数走强压制金价从$4,607回调至$4,395。但央行购金（波兰648吨+中国8月创纪录）和BTC $76K仍印证debasement trade底层逻辑"
         }
       ],
-      "next_checkpoint": "2026-10-01全球央行购金月度数据"
+      "next_checkpoint": "10月底IMF央行购金数据+美国10月CPI"
     },
     {
       "id": "f9a4a0ce363c",
@@ -364,9 +369,14 @@
           "date": "2026-09-24",
           "status": "不变",
           "evidence": "谷歌TPU v7性能领先B200达50%+高通×亚马逊$25亿认股权证合作+英伟达$12.9B收购Hugging Face防御性动作"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "不变",
+          "evidence": "AMD市值突破$1T（OpenAI合作+Oracle订单）印证ASIC/GPU双轨竞争格局。高通×亚马逊$25亿认股权证合作持续"
         }
       ],
-      "next_checkpoint": "2026-11月Google TPU外部客户收入披露"
+      "next_checkpoint": "Nvidia Rubin架构发布+Google TPU v7外部客户收入数据"
     },
     {
       "id": "6bfed27dede5",
@@ -636,9 +646,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "柴油$6/加仑创四年新高+霍尔木兹通行量50%+沙特产量1990年低点。IEA否认年内重开海峡。debasement trade逻辑强化，金价从$4,607回调至$4,395但央行购金持续"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "削弱",
+          "evidence": "Fed加息直接压制金价，但挪威主权基金减持美债+荷兰央行转移黄金储备至伦敦+波兰央行增至648吨，结构性买盘仍在"
         }
       ],
-      "next_checkpoint": "2026-10-31 中国央行9月购金数据"
+      "next_checkpoint": "10月底央行购金数据+金价能否守住$4,300"
     },
     {
       "id": "55fb9d69157b",
@@ -1035,9 +1050,14 @@
           "date": "2026-09-18",
           "status": "不变",
           "evidence": "CoreWeave RPO $129B持续+Oracle OCI +121%。AI云需求扩散至推理端，但债务过载风险累积(CoreWeave单季利息$640M)"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "加强",
+          "evidence": "Meta Muse登顶App Store验证Agent商业化起点，ARM数据中心版税翻倍增长。CoreWeave RPO $129B持续。但债务过载风险(CoreWeave单季利息$640M)仍需跟踪"
         }
       ],
-      "next_checkpoint": "2026-10-31 CoreWeave Q3财报"
+      "next_checkpoint": "Meta Q3财报(Muse DAU/留存率)+ARM Q3业绩"
     },
     {
       "id": "da1fbe5ad249",
@@ -1111,9 +1131,14 @@
           "date": "2026-09-04",
           "status": "削弱",
           "evidence": "WTI从$95回落至$91，市场正在discount地缘风险，但柴油挤压和中东航运成本飙升显示供给侧风险持续"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "削弱",
+          "evidence": "美伊探索分阶段协议，伊朗总统称7天内可重开霍尔木兹。WTI已从$95回落至$91。但柴油$6/加仑和沙特延布港停产显示供给侧风险未消除"
         }
       ],
-      "next_checkpoint": "霍尔木兹航运恢复进展"
+      "next_checkpoint": "9/28美国公布贸易协议细节+伊朗谈判进展"
     },
     {
       "id": "5c71a6db80bf",
@@ -1197,9 +1222,14 @@
           "date": "2026-09-09",
           "status": "不变",
           "evidence": "台积电设备需求+90%叠加长鑫科技市值登顶+ 中微H1净利+300%+ 沪硅营收+36.5%"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "不变",
+          "evidence": "台积电设备需求+90%叠加长鑫科技市值登顶+中微H1净利+300%。无新增变化"
         }
       ],
-      "next_checkpoint": "2026-10-30 半导体设备订单数据"
+      "next_checkpoint": "长鑫科技IPO进展+设备订单能见度"
     },
     {
       "id": "676c2dd989c8",
@@ -1303,9 +1333,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报+50%FCF回购确认供给纪律重建。Q3价格已有明确上行支撑"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "加强",
+          "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报+50%FCF承诺=供给纪律重建信号史上最强。摩根大通首次覆盖给超配$245目标价"
         }
       ],
-      "next_checkpoint": "2026-10-31 SK海力士Q3财报"
+      "next_checkpoint": "三星/SK海力士Q3财报(10月中)"
     },
     {
       "id": "102c5f435338",
@@ -1379,9 +1414,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确(三星上调代工价15%+SK海力士90-110万亿韩元股东回报)。股价反应与基本面背离最大化"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "加强",
+          "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化"
         }
       ],
-      "next_checkpoint": "2026-10-15 Q3存储价格数据"
+      "next_checkpoint": "TrendForce Q3存储价格报告+三星Q3财报"
     },
     {
       "id": "370db81b02d3",
@@ -1480,9 +1520,14 @@
           "date": "2026-09-18",
           "status": "加强",
           "evidence": "布伦特突破$105+霍尔木兹通行量降至战前50%+柴油裂解价差破百+沙特产量1990年低点。IEA否认年内重开海峡。供给端风险从地缘溢价升级为结构性短缺"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "削弱",
+          "evidence": "美伊探索分阶段协议使短期风险溢价消退，WTI从$95回落至$91。但沙特延布港停产+东西管道遇袭属结构性损坏，IEA否认年内重开海峡"
         }
       ],
-      "next_checkpoint": "2026-10-05 霍尔木兹通行量数据"
+      "next_checkpoint": "9/28美国公布中美元首贸易协议细节"
     },
     {
       "id": "46de7bb09a40",
@@ -1541,9 +1586,14 @@
           "date": "2026-09-11",
           "status": "不变",
           "evidence": "10Y收益率4.83%已较9月初4.8%高位小幅回落，但AI企业债发行YoY+38%的结构性压力未缓解"
+        },
+        {
+          "date": "2026-09-25",
+          "status": "削弱",
+          "evidence": "10Y收益率从4.83%升至5.22%创2007年来新高，30Y突破5.5%。Bessent回购干预仅短暂压制。但瑞银认为Fed不太可能连续加息，若10月非农恶化则存在技术性回调窗口"
         }
       ],
-      "next_checkpoint": "2026-10月FOMC会议"
+      "next_checkpoint": "10月非农+CPI数据+10月FOMC会议"
     },
     {
       "id": "9237486a33bd",
@@ -2138,37 +2188,6 @@
         }
       ],
       "next_checkpoint": "2026-09伊朗-阿曼谈判结果"
-    },
-    {
-      "id": "ce8cbebfb674",
-      "name": "NVIDIA财报前的波动套利",
-      "category": "A成长",
-      "signal_strength": "中",
-      "core_logic": "NVIDIA已连续7天下跌(2022年以来最长连跌)，股价落后费城半导体指数50%。但Rubin架构发布+Groq $20B采购确认+AI推理需求扩散构成基本面支撑。市场对AI硬件增速放缓的担忧过度定价。",
-      "time_horizon": "1-2周",
-      "falsification_condition": "NVIDIA财报显示数据中心收入增速大幅低于预期或指引保守",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-26",
-          "event": "NVIDIA Q2 FY2027财报",
-          "what_to_watch": "Datacenter收入增速+Blackwell/Rubin出货节奏"
-        }
-      ],
-      "created_date": "2026-08-25",
-      "expiry_date": "2026-09-24",
-      "history": [
-        {
-          "date": "2026-08-25",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        },
-        {
-          "date": "2026-08-26",
-          "status": "加强",
-          "evidence": "连续7天下跌(2022年以来最长)+Rubin架构发布+Groq $20B采购确认+AI推理需求扩散"
-        }
-      ],
-      "next_checkpoint": "2026-08-27英伟达财报"
     },
     {
       "id": "54fb635c9268",
@@ -4479,6 +4498,126 @@
       "history": [
         {
           "date": "2026-09-24",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "294a64fece33",
+      "name": "Meta Muse×AI Agent基础设施产业链",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse登顶App Store免费榜第一，单日推升股价+11.4%（+$1923亿市值）。Agent从GPU推理延伸至CPU执行/调度/安全隔离，新增算力需求。ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益。这是AI从'模型层'向'应用层'扩散的标志性时刻",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse用户留存率显著低于预期，或Agent应用未能规模化渗透至消费端，则产业链逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-15",
+          "event": "Meta Q3财报",
+          "what_to_watch": "Muse DAU/留存率数据+AI Capex指引；若Capex继续+80%则基础设施链受益确认"
+        },
+        {
+          "date": "2026-10-30",
+          "event": "ARM季度业绩",
+          "what_to_watch": "数据中心版税增速；若持续翻倍以上则验证Agent算力扩散逻辑"
+        }
+      ],
+      "created_date": "2026-09-25",
+      "expiry_date": "2027-09-20",
+      "history": [
+        {
+          "date": "2026-09-25",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "8b9d63a861db",
+      "name": "中东柴油挤压×油价二元博弈",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=结构性供给收缩。柴油裂解价差创四年新高。WTI$91 vs Brent$95-105裂解显示市场定价不充分。但美伊探索分阶段协议带来上行风险对冲",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，油价快速回落至$80以下；同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-09-28",
+          "event": "美国公布中美元首贸易协议细节",
+          "what_to_watch": "若协议仅涉及非敏感商品，霍尔木兹谈判不受影响"
+        },
+        {
+          "date": "2026-10-01",
+          "event": "IEA石油市场报告",
+          "what_to_watch": "Supply gap revision；若维持180万桶/日以上则供给侧风险持续"
+        }
+      ],
+      "created_date": "2026-09-25",
+      "expiry_date": "2026-12-24",
+      "history": [
+        {
+          "date": "2026-09-25",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "32c79fdac1a3",
+      "name": "日本BOJ加息×套利交易逆转",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "BOJ提速至每季度加息+日元160→153+高盛12个月目标从165上调至150。Natixis称日元升值空间'还有很大余地'。GPIF可能大幅削减海外资产回流。日元套利交易(carry trade)逆转将冲击全球风险资产定价",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若日本通胀数据意外转弱或经济增长再度下滑，BOJ推迟加息节奏至年底或更晚，此判断失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-??",
+          "event": "日本央行10月议息会议",
+          "what_to_watch": "加息节奏指引；若暗示12月再加息25bp则日元升值加速"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "日本Q3 GDP及通胀数据",
+          "what_to_watch": "实际工资增长是否持续为正；若实际工资转正则加息逻辑强化"
+        }
+      ],
+      "created_date": "2026-09-25",
+      "expiry_date": "2027-03-24",
+      "history": [
+        {
+          "date": "2026-09-25",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "6f59c3eb2626",
+      "name": "AI Agent商业化×深南电路/兴森科技",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Meta Muse登顶App Store免费榜第一+微软推出Copilot超级App，AI Agent从概念走向规模化消费产品。Agent将用户意图转化为持续执行任务，新增算力需求从GPU推理延伸至CPU执行、调度和安全隔离。ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse用户留存率显著低于预期，或Agent应用未能规模化渗透至消费端",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-15",
+          "event": "Meta Q3财报",
+          "what_to_watch": "Muse DAU和留存率"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "ARM季度业绩",
+          "what_to_watch": "数据中心版税增速是否持续"
+        }
+      ],
+      "created_date": "2026-09-25",
+      "expiry_date": "2027-09-20",
+      "history": [
+        {
+          "date": "2026-09-25",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
