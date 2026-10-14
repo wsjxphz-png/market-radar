@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-25",
+  "updated": "2026-10-14",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -188,9 +188,14 @@
           "date": "2026-09-25",
           "status": "削弱",
           "evidence": "Fed 12-0加息25bp至3.75-4%，美元指数走强压制金价从$4,607回调至$4,395。但央行购金（波兰648吨+中国8月创纪录）和BTC $76K仍印证debasement trade底层逻辑"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "削弱",
+          "evidence": "金价从$4,395回落至$4,128，白银暴跌5.34%。加息预期升温压制贵金属。但波兰央行648吨+中国央行8月购金+荷兰央行转移储备至伦敦的底层逻辑未变"
         }
       ],
-      "next_checkpoint": "10月底IMF央行购金数据+美国10月CPI"
+      "next_checkpoint": "2026-10-28 FOMC会议"
     },
     {
       "id": "f9a4a0ce363c",
@@ -651,9 +656,14 @@
           "date": "2026-09-25",
           "status": "削弱",
           "evidence": "Fed加息直接压制金价，但挪威主权基金减持美债+荷兰央行转移黄金储备至伦敦+波兰央行增至648吨，结构性买盘仍在"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "削弱",
+          "evidence": "金价$4,128较$4,607高点回撤约10%。但央行购金（波兰648吨、中国8月创纪录）和BTC $76K仍印证debasement trade底层逻辑"
         }
       ],
-      "next_checkpoint": "10月底央行购金数据+金价能否守住$4,300"
+      "next_checkpoint": "2026-10-28 FOMC"
     },
     {
       "id": "55fb9d69157b",
@@ -1055,9 +1065,14 @@
           "date": "2026-09-25",
           "status": "加强",
           "evidence": "Meta Muse登顶App Store验证Agent商业化起点，ARM数据中心版税翻倍增长。CoreWeave RPO $129B持续。但债务过载风险(CoreWeave单季利息$640M)仍需跟踪"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "削弱",
+          "evidence": "CoreWeave债券跌入distress区间（收益率逼近15%），JPM/GS首次拒绝持有AI基建承销债。RPO $129B仍在但偿债压力开始显现"
         }
       ],
-      "next_checkpoint": "Meta Q3财报(Muse DAU/留存率)+ARM Q3业绩"
+      "next_checkpoint": "2026-10月下旬 CoreWeave Q3财报"
     },
     {
       "id": "da1fbe5ad249",
@@ -1338,9 +1353,14 @@
           "date": "2026-09-25",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿韩元股东回报+50%FCF承诺=供给纪律重建信号史上最强。摩根大通首次覆盖给超配$245目标价"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "加强",
+          "evidence": "三星$9.15B芯片投资确认产能扩张；SK海力士股东回报承诺不变。Q3价格上行数据已确认"
         }
       ],
-      "next_checkpoint": "三星/SK海力士Q3财报(10月中)"
+      "next_checkpoint": "2026-11月 存储芯片价格月度数据"
     },
     {
       "id": "102c5f435338",
@@ -1525,9 +1545,14 @@
           "date": "2026-09-25",
           "status": "削弱",
           "evidence": "美伊探索分阶段协议使短期风险溢价消退，WTI从$95回落至$91。但沙特延布港停产+东西管道遇袭属结构性损坏，IEA否认年内重开海峡"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "削弱",
+          "evidence": "WTI从$95回落至$91，市场正在discount地缘风险。但布伦特裂解价差分化+柴油$6/加仑显示结构性短缺仍在"
         }
       ],
-      "next_checkpoint": "9/28美国公布中美元首贸易协议细节"
+      "next_checkpoint": "2026-10月 VLCC-TCE指数"
     },
     {
       "id": "46de7bb09a40",
@@ -1591,9 +1616,14 @@
           "date": "2026-09-25",
           "status": "削弱",
           "evidence": "10Y收益率从4.83%升至5.22%创2007年来新高，30Y突破5.5%。Bessent回购干预仅短暂压制。但瑞银认为Fed不太可能连续加息，若10月非农恶化则存在技术性回调窗口"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "削弱",
+          "evidence": "10Y从5.22%升至5.27%，30Y突破5.5%。Bessent回购仅短暂压制。CPI超预期进一步强化加息预期"
         }
       ],
-      "next_checkpoint": "10月非农+CPI数据+10月FOMC会议"
+      "next_checkpoint": "2026-10-28 FOMC"
     },
     {
       "id": "9237486a33bd",
@@ -1882,9 +1912,14 @@
           "date": "2026-09-17",
           "status": "不变",
           "evidence": "长飞光纤H1净利+889%验证光纤需求爆发但今日光纤预制棒扩产打压板块(-3.26%)。中期价格不确定性需市场验证"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "不变",
+          "evidence": "长飞光纤H1净利+889%已验证，但光纤预制棒扩产打压板块(-3.26%)。9月出口+36.3%超预期短期支撑光模块/PCB"
         }
       ],
-      "next_checkpoint": "2026-10-15 光纤价格指数"
+      "next_checkpoint": "2026-11月中旬 10月出口数据"
     },
     {
       "id": "e03ab72740fd",
@@ -3592,8 +3627,14 @@
           "date": "2026-09-11",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "加强",
+          "evidence": "9月出口+36.3%超预期+成都'词元券'新政，光模块/PCB产业链短期动能最强"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11月中旬 10月出口数据"
     },
     {
       "id": "909d7fec0bc1",
@@ -4405,8 +4446,14 @@
           "date": "2026-09-23",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "不变",
+          "evidence": "9月出口+36.3%超预期含关税前置成分。会晤成果需观察后续执行"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11月 美国商务部关税最终裁定"
     },
     {
       "id": "e10dfe473501",
@@ -4440,8 +4487,14 @@
           "date": "2026-09-24",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-14",
+          "status": "加强",
+          "evidence": "沙特阿美总部遭袭击是继延布港停产+东西管道遇袭后的第三重供给侧打击。胡塞攻击范围升级意味着风险不再是短期事件"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10月下旬 美伊谈判进展"
     },
     {
       "id": "35355d567908",
@@ -4618,6 +4671,216 @@
       "history": [
         {
           "date": "2026-09-25",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "689a544590b0",
+      "name": "美国通胀超预期×加息重定价→金融股/能源股相对跑赢",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "CPI 3.7%超预期推高加息预期，10Y收益率5.27%创17年新高。银行股在加息环境中净息差改善（Morgan Stanley Q3 beat $909M），能源股受益于油价供给侧支撑。市场过度定价衰退预期而低估滞胀情景下的金融/能源弹性",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美联储明确鸽派转向（如鲍曼言论被解读为最后一次加息），或CPI后续月份快速回落至3%以下，此逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-28",
+          "event": "FOMC会议+点阵图",
+          "what_to_watch": "是否释放更多鹰派信号；经济预测摘要中CPI/GDP调整方向"
+        },
+        {
+          "date": "2026-11月初",
+          "event": "非农就业报告",
+          "what_to_watch": "失业率是否继续上升；薪资增速是否可控"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2027-01-12",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "9bce004e418c",
+      "name": "CoreWeave distress→AI基建信用风险扩散交易",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave债券跌入distress区间（收益率逼近15%），JPM/GS首次拒绝持有AI基建承销债券。这标志着AI债务链条从'增长叙事'进入'偿债检验'阶段。受益者是拥有资产负债表实力的云巨头（微软/Azure、谷歌/GCP），受损者是高杠杆AI云厂商和AI基础设施REITs",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若CoreWeave成功完成债务再融资（如获得投资级评级或保险资金大规模入场），或AI云厂商Q3财报显示RPO和现金流持续超预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月下旬",
+          "event": "CoreWeave Q3财报/债务公告",
+          "what_to_watch": "RPO变化、再融资计划、利息覆盖率"
+        },
+        {
+          "date": "2026-11月",
+          "event": "更多AI云厂商发债",
+          "what_to_watch": "利差是否走阔、投资者结构是否从保险转向高收益"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2027-01-12",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "785fa0845b0b",
+      "name": "中国出口超预期×关税前置→四季度出口断崖风险",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "9月出口+36.3%大幅超预期，但核心驱动是关税前置抢出口（进口+31%同步飙升印证）。若11-12月关税落地或海外需求放缓，出口可能断崖回落。当前市场将出口强增解读为'中国竞争力验证'，但忽略了季节性反转风险。策略：做多/持有出口链（光模块、PCB、锂电池）但设置严格止损",
+      "time_horizon": "1-2个月",
+      "falsification_condition": "若10-11月出口数据继续超预期（>+25%），或国内PPI在能源价格稳定后仍维持高位（证明内需复苏）",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11月中旬",
+          "event": "10月进出口数据",
+          "what_to_watch": "出口增速是否显著回落至15%以下；对美出口是否断崖"
+        },
+        {
+          "date": "2026-11月",
+          "event": "美国商务部对AI相关商品关税最终裁定",
+          "what_to_watch": "税率是否高于预期、实施时间线"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2026-12-13",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "b6f18e138fea",
+      "name": "黄金白银暴跌×央行购金延续→战术性买入机会",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "白银单日暴跌5.34%至$56、金价跌破$4,200是对加息预期的反应，但波兰央行增至648吨、中国央行8月购金创纪录、荷兰央行转移储备至伦敦的底层逻辑未变。当前是debasement trade的战术回撤而非趋势反转",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+波兰/中国央行停止购金",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11月",
+          "event": "IMF/世界银行年度会议",
+          "what_to_watch": "主要央行购金数据更新"
+        },
+        {
+          "date": "2026-10-28",
+          "event": "FOMC",
+          "what_to_watch": "点阵图是否暗示加息暂停"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2027-04-12",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "e72338ef1f47",
+      "name": "ASML订单爆满×半导体设备超级周期确认",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "ASML Q3收益大幅超预期，订单积压已超出2027-2028年产能上限，客户争抢2029-2030年交货窗口，公司研究将2028年产能扩张提速30%以上。这直接验证了AI资本开支不会减速的判断，且光刻机需求具有强刚性（无任何替代方案）",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若AI大模型厂商在Q4大幅削减资本开支，或ASML季度订单增速显著放缓",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11月",
+          "event": "台积电/三星Capex指引",
+          "what_to_watch": "2027年资本开支是否维持高位"
+        },
+        {
+          "date": "2027年Q1",
+          "event": "ASML Q4订单数据",
+          "what_to_watch": "订单增速是否开始放缓"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2027-10-09",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "868f0d7f2696",
+      "name": "油运供给侧交易×霍尔木兹结构性短缺",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "沙特阿美总部遭袭击（此前已有延布港停产+东西管道遇袭），霍尔木兹通行量降至50%，柴油裂解价差创四年新高。WTI被市场discount但布伦特维持$97+。ISG三季报显示油运需求韧性超预期。这是供给端结构性约束而非短期事件溢价",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10月下旬",
+          "event": "美伊谈判进展",
+          "what_to_watch": "是否达成阶段性协议"
+        },
+        {
+          "date": "2026-10月",
+          "event": "VLCC-TCE指数",
+          "what_to_watch": "是否继续维持$40万+/天高位"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2027-01-12",
+      "history": [
+        {
+          "date": "2026-10-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "85c92afe9f25",
+      "name": "中国极紫外光源国产化×半导体设备突破",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "朗道燧岩在工博会展示国产EUV光源样机，国产化率90%，技术路线与国际领先一致，用于7nm以下先进制程。这是中国大陆在EUV光源这一最卡脖子环节的首次公开突破。距离量产还需3-5年，但验证了国产替代路径可行性",
+      "time_horizon": "2-3年",
+      "falsification_condition": "若国产EUV光源在后续测试中遇到重大技术障碍，或ASML推出更先进光源技术巩固垄断",
+      "verification_checkpoints": [
+        {
+          "date": "2027年",
+          "event": "EUV光源工程样机测试",
+          "what_to_watch": "功率稳定性、波长纯度、连续运行时间"
+        },
+        {
+          "date": "2028-2029年",
+          "event": "量产验证",
+          "what_to_watch": "是否获得晶圆厂订单"
+        }
+      ],
+      "created_date": "2026-10-14",
+      "expiry_date": "2029-09-28",
+      "history": [
+        {
+          "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
