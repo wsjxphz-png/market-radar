@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-14",
+  "updated": "2026-10-15",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -193,9 +193,14 @@
           "date": "2026-10-14",
           "status": "削弱",
           "evidence": "金价从$4,395回落至$4,128，白银暴跌5.34%。加息预期升温压制贵金属。但波兰央行648吨+中国央行8月购金+荷兰央行转移储备至伦敦的底层逻辑未变"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "削弱",
+          "evidence": "金价从$4,607回调至$4,128，白银暴跌5.34%。但央行购金逻辑未变"
         }
       ],
-      "next_checkpoint": "2026-10-28 FOMC会议"
+      "next_checkpoint": "2026-11-15，追踪中国/波兰央行购金数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -1075,87 +1080,6 @@
       "next_checkpoint": "2026-10月下旬 CoreWeave Q3财报"
     },
     {
-      "id": "da1fbe5ad249",
-      "name": "油价上行交易（霍尔木兹风险溢价）",
-      "category": "B周期",
-      "signal_strength": "中",
-      "core_logic": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，油价获强支撑",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "美伊达成协议，海峡重新开放，油价大幅回落",
-      "verification_checkpoints": [
-        {
-          "date": "2026-08-15",
-          "event": "美伊谈判进展",
-          "what_to_watch": "若谈判取得突破，油价将回落；若破裂，油价上行"
-        },
-        {
-          "date": "2026-09-01",
-          "event": "OPEC+月度会议",
-          "what_to_watch": "OPEC+产量政策是否调整以应对供应缺口"
-        }
-      ],
-      "created_date": "2026-08-12",
-      "expiry_date": "2026-11-10",
-      "history": [
-        {
-          "date": "2026-08-12",
-          "status": "新识别",
-          "evidence": "信号强度:中"
-        },
-        {
-          "date": "2026-08-13",
-          "status": "加强",
-          "evidence": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，油价获强支撑"
-        },
-        {
-          "date": "2026-08-14",
-          "status": "加强",
-          "evidence": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，油价获强支撑"
-        },
-        {
-          "date": "2026-08-17",
-          "status": "加强",
-          "evidence": "IEA上调供应缺口至180万桶/日，伊朗态度强硬，海峡短期难开，特朗普威胁轰炸阿曼，油价获强支撑"
-        },
-        {
-          "date": "2026-08-19",
-          "status": "加强",
-          "evidence": "UAE宣布切断与伊朗全部经济关系+伊朗革命卫队顾问称'转守为攻'+三艘中国超轮在霍尔木兹U-turn，地缘风险从'谈判僵局'升级为'准战争状态'。沙特已向欧洲炼厂全额分配原油以应对风险"
-        },
-        {
-          "date": "2026-08-24",
-          "status": "加强",
-          "evidence": "UAE宣布切断与伊朗全部经济关系+Bessent经济孤立计划+IEA上调缺口至180万桶/日+Citi70天库存红线"
-        },
-        {
-          "date": "2026-08-26",
-          "status": "削弱",
-          "evidence": "美伊谈判取得进展(讨论临时联合航运通道)，WTI已回落至$84-86"
-        },
-        {
-          "date": "2026-09-01",
-          "status": "加强",
-          "evidence": "两艘油轮遭袭+布伦特突破92美元+柴油裂解价差破百"
-        },
-        {
-          "date": "2026-09-02",
-          "status": "削弱",
-          "evidence": "美伊谈判进展，WTI已回落至$84-86，但布伦特裂解价差分化"
-        },
-        {
-          "date": "2026-09-04",
-          "status": "削弱",
-          "evidence": "WTI从$95回落至$91，市场正在discount地缘风险，但柴油挤压和中东航运成本飙升显示供给侧风险持续"
-        },
-        {
-          "date": "2026-09-25",
-          "status": "削弱",
-          "evidence": "美伊探索分阶段协议，伊朗总统称7天内可重开霍尔木兹。WTI已从$95回落至$91。但柴油$6/加仑和沙特延布港停产显示供给侧风险未消除"
-        }
-      ],
-      "next_checkpoint": "9/28美国公布贸易协议细节+伊朗谈判进展"
-    },
-    {
       "id": "5c71a6db80bf",
       "name": "中国半导体设备/材料国产替代",
       "category": "A成长",
@@ -1358,9 +1282,14 @@
           "date": "2026-10-14",
           "status": "加强",
           "evidence": "三星$9.15B芯片投资确认产能扩张；SK海力士股东回报承诺不变。Q3价格上行数据已确认"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "加强",
+          "evidence": "三星$9.15B芯片投资确认+SK海力士股东回报承诺不变，Q3价格上行数据已确认"
         }
       ],
-      "next_checkpoint": "2026-11月 存储芯片价格月度数据"
+      "next_checkpoint": "2026-11-15，Q3价格最终确认"
     },
     {
       "id": "102c5f435338",
@@ -1439,9 +1368,14 @@
           "date": "2026-09-25",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确。股价反应与基本面背离最大化"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "加强",
+          "evidence": "杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。股价反应与基本面背离最大化"
         }
       ],
-      "next_checkpoint": "TrendForce Q3存储价格报告+三星Q3财报"
+      "next_checkpoint": "2026-11-01，存储价格数据"
     },
     {
       "id": "370db81b02d3",
@@ -3683,9 +3617,14 @@
           "date": "2026-09-24",
           "status": "加强",
           "evidence": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭→有效运力大幅收缩。柴油裂解价差创四年新高印证下游真实成本传导"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "加强",
+          "evidence": "沙特阿美总部遭袭是继延布港停产+东西管道遇袭后的第三重打击，供给侧风险升级"
         }
       ],
-      "next_checkpoint": "2026-10-15EIA库存报告"
+      "next_checkpoint": "2026-10-25，霍尔木兹谈判进展"
     },
     {
       "id": "0ec3c8fe84ef",
@@ -4703,8 +4642,14 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "加强",
+          "evidence": "PPI 6.3%+CPI 3.7%全面超预期，能源冲击持续传导，10月加息概率提升至50%"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10-31，FOMC会议"
     },
     {
       "id": "9bce004e418c",
@@ -4733,8 +4678,14 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-15",
+          "status": "加强",
+          "evidence": "债券收益率逼近15%，JPM/GS首次拒绝持有AI基建承销债，信用风险开始扩散"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-10-31，CoreWeave债券交易"
     },
     {
       "id": "785fa0845b0b",
@@ -4883,6 +4834,126 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "e3a5ed7027e4",
+      "name": "美债结构性低估×流动性危机对冲",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "股债同跌是历史罕见信号，JPM定义为'经典避险'。AI债务链条承压（CoreWeave 15%+收益率）+流动性紧张，美债被系统性低估",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CPI持续超预期回升或财政赤字扩张推高通胀预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-31",
+          "event": "FOMC会议+点阵图",
+          "what_to_watch": "12月加息概率变化"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "非农就业数据",
+          "what_to_watch": "就业市场恶化是否加速"
+        }
+      ],
+      "created_date": "2026-10-15",
+      "expiry_date": "2027-04-13",
+      "history": [
+        {
+          "date": "2026-10-15",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "6f44ce3d65d2",
+      "name": "柴油挤压×能源供给侧结构性短缺",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+柴油裂解价差创四年新高。WTI被discount但布伦特维持$97，裂解显示定价不充分",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-20",
+          "event": "霍尔木兹通行量数据",
+          "what_to_watch": "是否恢复至80%+"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "柴油裂解价差",
+          "what_to_watch": "是否维持$80+/桶"
+        }
+      ],
+      "created_date": "2026-10-15",
+      "expiry_date": "2027-01-13",
+      "history": [
+        {
+          "date": "2026-10-15",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "886d5354a105",
+      "name": "AI债务链条信用风险扩散→防御切换",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave债券收益率15%+，AI企业债发行YoY+38%挤压主权融资空间。这标志着AI基建从'增长叙事'进入'偿债检验'，资金将从AI成长向防御/质量因子迁移",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CoreWeave成功完成债务再融资（投资级评级或保险资金入场）",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-31",
+          "event": "CoreWeave债券交易",
+          "what_to_watch": "收益率是否突破18%"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "AI云厂商Q3财报",
+          "what_to_watch": "RPO和现金流是否超预期"
+        }
+      ],
+      "created_date": "2026-10-15",
+      "expiry_date": "2027-04-13",
+      "history": [
+        {
+          "date": "2026-10-15",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "cfd47b3c9531",
+      "name": "中东油运供给侧交易",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=有效运力结构性收缩。VLCC-TCE创纪录46万美元/天，反常识的是中东出口量减少36%但运价暴涨",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，运价将快速回落",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-25",
+          "event": "霍尔木兹谈判进展",
+          "what_to_watch": "是否有任何实质性突破"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "VLCC-TCE指数",
+          "what_to_watch": "是否维持$40万+/天"
+        }
+      ],
+      "created_date": "2026-10-15",
+      "expiry_date": "2027-01-13",
+      "history": [
+        {
+          "date": "2026-10-15",
+          "status": "新识别",
+          "evidence": "信号强度:强"
         }
       ]
     }
