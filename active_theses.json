@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-15",
+  "updated": "2026-10-16",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -198,9 +198,14 @@
           "date": "2026-10-15",
           "status": "削弱",
           "evidence": "金价从$4,607回调至$4,128，白银暴跌5.34%。但央行购金逻辑未变"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "削弱",
+          "evidence": "金价$4,128较$4,607回撤10%，白银暴跌5.34%。但德银称量化抛压接近耗尽，央行购金逻辑未变"
         }
       ],
-      "next_checkpoint": "2026-11-15，追踪中国/波兰央行购金数据"
+      "next_checkpoint": "10月27日FOMC"
     },
     {
       "id": "f9a4a0ce363c",
@@ -1075,9 +1080,14 @@
           "date": "2026-10-14",
           "status": "削弱",
           "evidence": "CoreWeave债券跌入distress区间（收益率逼近15%），JPM/GS首次拒绝持有AI基建承销债。RPO $129B仍在但偿债压力开始显现"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "削弱",
+          "evidence": "CoreWeave债券跌入distress(收益率15%)，JPM/GS首次拒绝承销AI基建债。RPO $129B仍在但偿债压力显现"
         }
       ],
-      "next_checkpoint": "2026-10月下旬 CoreWeave Q3财报"
+      "next_checkpoint": "10月31日CoreWeave Q3财报"
     },
     {
       "id": "5c71a6db80bf",
@@ -1287,9 +1297,14 @@
           "date": "2026-10-15",
           "status": "加强",
           "evidence": "三星$9.15B芯片投资确认+SK海力士股东回报承诺不变，Q3价格上行数据已确认"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "加强",
+          "evidence": "长鑫科技Q1-Q3预盈1310亿同比扭亏+三星代工价上调15%+SK海力士股东回报承诺，Q3价格上行数据确认"
         }
       ],
-      "next_checkpoint": "2026-11-15，Q3价格最终确认"
+      "next_checkpoint": "10月底三星/SK海力士Q3财报"
     },
     {
       "id": "102c5f435338",
@@ -4683,9 +4698,14 @@
           "date": "2026-10-15",
           "status": "加强",
           "evidence": "债券收益率逼近15%，JPM/GS首次拒绝持有AI基建承销债，信用风险开始扩散"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "加强",
+          "evidence": "三位创始人股价崩跌前套现33亿美元，JPM/GS首次拒绝持有AI基建承销债，信用风险开始扩散至OpenAI/Anthropic估值Spread"
         }
       ],
-      "next_checkpoint": "2026-10-31，CoreWeave债券交易"
+      "next_checkpoint": "10月31日CoreWeave财报"
     },
     {
       "id": "785fa0845b0b",
@@ -4714,8 +4734,14 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "不变",
+          "evidence": "9月出口+36.3%+进口+31%同步印证关税前置，但10-11月断崖风险待验证"
         }
-      ]
+      ],
+      "next_checkpoint": "10月31日出口数据"
     },
     {
       "id": "b6f18e138fea",
@@ -4774,8 +4800,14 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "不变",
+          "evidence": "ASML Q3订单积压超出2027-28年产能上限，客户争抢2029-30年交货窗口，2028年产能扩张提速30%+"
         }
-      ]
+      ],
+      "next_checkpoint": "2027年Q1 ASML订单数据"
     },
     {
       "id": "868f0d7f2696",
@@ -4864,8 +4896,14 @@
           "date": "2026-10-15",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "削弱",
+          "evidence": "10Y从5.30%回落至5.11%(2月以来最佳周表现)，避险资金回流。但AI企业债YoY+38%持续挤压主权需求"
         }
-      ]
+      ],
+      "next_checkpoint": "10月27日FOMC"
     },
     {
       "id": "6f44ce3d65d2",
@@ -4894,8 +4932,14 @@
           "date": "2026-10-15",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-16",
+          "status": "削弱",
+          "evidence": "美国宣布从SPR释放1700万桶+IEA拟释放柴油储备，短期压制油价。但霍尔木兹50%+柴油裂解价差四年新高显示结构性短缺仍在"
         }
-      ]
+      ],
+      "next_checkpoint": "11月初霍尔木兹通行数据"
     },
     {
       "id": "886d5354a105",
@@ -4954,6 +4998,156 @@
           "date": "2026-10-15",
           "status": "新识别",
           "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "255b9f7947b6",
+      "name": "中国出口链×关税前置窗口",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "9月出口+36.3%超预期，核心驱动是关税前置抢出口（进口+31%同步印证）。若11月关税落地前数据持续强劲，光模块/PCB/锂电池产业链仍有短期动能。但若10-11月出口断崖回落，则逻辑失效",
+      "time_horizon": "1-2个月",
+      "falsification_condition": "若10-11月出口数据继续超预期(>+25%)或国内PPI维持高位证明内需复苏",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-31",
+          "event": "中国10月出口数据",
+          "what_to_watch": "若继续>+20%则动能延续，若<-5%则信号反转"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "关税政策落地情况",
+          "what_to_watch": "是否如预期全面落地"
+        }
+      ],
+      "created_date": "2026-10-16",
+      "expiry_date": "2026-12-15",
+      "history": [
+        {
+          "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "f993fc785896",
+      "name": "AI基建信用分化→云巨头vs高杠杆neocloud",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave债券收益率逼近15%+JPM/GS拒绝承销AI基建债，标志着AI债务链条从增长叙事进入偿债检验。受益者：拥有资产负债表实力的云巨头(微软/Azure、谷歌/GCP)；受损者：高杠杆AI云厂商和AI基础设施REITs",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CoreWeave成功完成债务再融资(投资级评级或保险资金入场)，或AI云厂商Q3财报显示RPO和现金流持续超预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-31",
+          "event": "CoreWeave季度财报",
+          "what_to_watch": "现金余额+债务到期结构"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "AI云厂商资本开支指引",
+          "what_to_watch": "是否削减neocloud供应商合同"
+        }
+      ],
+      "created_date": "2026-10-16",
+      "expiry_date": "2027-04-14",
+      "history": [
+        {
+          "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "b2bb67cb1514",
+      "name": "黄金战术性买入×debasement trade延续",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "金价$4,128较$4,607回撤约10%，白银单日暴跌5.34%，是对加息预期的反应。但波兰央行增至648吨+中国央行8月购金创纪录+荷兰央行转移储备至伦敦的底层逻辑未变。德银称量化抛压接近'绝对耗尽'，CTA空头回补或点燃Q4反弹",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+波兰/中国央行停止购金",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "10月央行购金数据",
+          "what_to_watch": "是否延续增持趋势"
+        },
+        {
+          "date": "2026-10-27",
+          "event": "FOMC会议",
+          "what_to_watch": "表态是否偏鸽"
+        }
+      ],
+      "created_date": "2026-10-16",
+      "expiry_date": "2027-04-14",
+      "history": [
+        {
+          "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "cbc0ad9d5a36",
+      "name": "中东柴油挤压×结构性供给短缺",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=有效运力结构性收缩。柴油裂解价差创四年新高。WTI $97 vs Brent $105裂解显示市场定价不充分。IEA拟释放柴油储备=短期压制但结构性问题未解",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-25",
+          "event": "霍尔木兹通行数据",
+          "what_to_watch": "通行量是否回升"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "IEA柴油储备释放进展",
+          "what_to_watch": "释放规模vs实际需求"
+        }
+      ],
+      "created_date": "2026-10-16",
+      "expiry_date": "2027-01-14",
+      "history": [
+        {
+          "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "b7159d68996e",
+      "name": "A股红利资产×险资新规",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "《保险公司资产负债管理办法》落地，人身险净投资收益覆盖率100%硬性监管要求。37万亿险资潜在增配高股息资产，为数千亿至万亿级增量资金。在长端利率下行+存量高收益资产持续到期的背景下，高股息资产的监管价值被重新定价",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "监管细则未落地或100%红线被弱化执行，或长端利率快速上行降低股息吸引力",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-30",
+          "event": "险资配置数据",
+          "what_to_watch": "高股息资产增配规模"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "监管细则执行力度",
+          "what_to_watch": "100%红线是否被弱化"
+        }
+      ],
+      "created_date": "2026-10-16",
+      "expiry_date": "2027-10-11",
+      "history": [
+        {
+          "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:中"
         }
       ]
     }
