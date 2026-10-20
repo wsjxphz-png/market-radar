@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-16",
+  "updated": "2026-10-20",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -203,9 +203,14 @@
           "date": "2026-10-16",
           "status": "削弱",
           "evidence": "金价$4,128较$4,607回撤10%，白银暴跌5.34%。但德银称量化抛压接近耗尽，央行购金逻辑未变"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "削弱",
+          "evidence": "金价$4,128较$4,607回撤10%，美元指数反弹，Fed加息预期升温。但央行购金(波兰648吨/中国创纪录)和BTC $76K仍印证底层逻辑"
         }
       ],
-      "next_checkpoint": "10月27日FOMC"
+      "next_checkpoint": "2026-12-18 FOMC点阵图+2027年3月央行购金数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -389,9 +394,14 @@
           "date": "2026-09-25",
           "status": "不变",
           "evidence": "AMD市值突破$1T（OpenAI合作+Oracle订单）印证ASIC/GPU双轨竞争格局。高通×亚马逊$25亿认股权证合作持续"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "不变",
+          "evidence": "AMD市值突破$1T印证双轨竞争格局，高通×亚马逊$25亿合作持续，Google TPU v7性能领先B200达50%"
         }
       ],
-      "next_checkpoint": "Nvidia Rubin架构发布+Google TPU v7外部客户收入数据"
+      "next_checkpoint": "2026-11 AMD/Google TPU外部客户收入数据"
     },
     {
       "id": "6bfed27dede5",
@@ -1085,9 +1095,14 @@
           "date": "2026-10-16",
           "status": "削弱",
           "evidence": "CoreWeave债券跌入distress(收益率15%)，JPM/GS首次拒绝承销AI基建债。RPO $129B仍在但偿债压力显现"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "削弱→重新评估",
+          "evidence": "CoreWeave债券收益率15%+JPM/GS拒绝承销是重大负面信号。但RPO $129B仍在，微软/谷歌等云巨头Capex持续增长。AI基建从整体叙事进入分化阶段"
         }
       ],
-      "next_checkpoint": "10月31日CoreWeave Q3财报"
+      "next_checkpoint": "2026-11-15 CoreWeave Q3财报"
     },
     {
       "id": "5c71a6db80bf",
@@ -1302,9 +1317,14 @@
           "date": "2026-10-16",
           "status": "加强",
           "evidence": "长鑫科技Q1-Q3预盈1310亿同比扭亏+三星代工价上调15%+SK海力士股东回报承诺，Q3价格上行数据确认"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "加强",
+          "evidence": "长鑫科技Q1-Q3预盈1310亿同比扭亏+三星代工价上调15%+SK海力士股东回报承诺，Q3价格上行数据确认。逻辑最清晰"
         }
       ],
-      "next_checkpoint": "10月底三星/SK海力士Q3财报"
+      "next_checkpoint": "2026-11 SK海力士/三星Q3财报确认"
     },
     {
       "id": "102c5f435338",
@@ -3200,9 +3220,14 @@
           "date": "2026-09-24",
           "status": "加强",
           "evidence": "三星上调代工价最高15%+SK海力士90-110万亿股东回报+50%FCF回购=供给纪律重建信号史上最强。摩根大通首次覆盖给超配目标价$245"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "加强",
+          "evidence": "供给纪律重建最明确(三星+SK海力士)，杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭"
         }
       ],
-      "next_checkpoint": "2026-10-15SK海力士Q3存储价格数据"
+      "next_checkpoint": "2026-11韩国存储股Q3财报"
     },
     {
       "id": "0352f9908da6",
@@ -4537,8 +4562,14 @@
           "date": "2026-09-25",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "加强",
+          "evidence": "Meta Muse登顶App Store免费榜第一+单日+11.4%股价+ARM数据中心版税翻倍，是AI Agent商业化从概念到规模化消费的标志性验证"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-01 Meta Q3财报"
     },
     {
       "id": "8b9d63a861db",
@@ -4703,9 +4734,14 @@
           "date": "2026-10-16",
           "status": "加强",
           "evidence": "三位创始人股价崩跌前套现33亿美元，JPM/GS首次拒绝持有AI基建承销债，信用风险开始扩散至OpenAI/Anthropic估值Spread"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "加强",
+          "evidence": "三位创始人套现33亿美元+JPM/GS首次拒绝承销AI基建债+开方数据印证。这是新增的强信号"
         }
       ],
-      "next_checkpoint": "10月31日CoreWeave财报"
+      "next_checkpoint": "2026-11-15 CoreWeave财报+债务展期进展"
     },
     {
       "id": "785fa0845b0b",
@@ -4739,9 +4775,14 @@
           "date": "2026-10-16",
           "status": "不变",
           "evidence": "9月出口+36.3%+进口+31%同步印证关税前置，但10-11月断崖风险待验证"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "不变",
+          "evidence": "9月出口+36.3%+进口+31%同步印证关税前置，但10-11月断崖风险待验证。短期动能仍在"
         }
       ],
-      "next_checkpoint": "10月31日出口数据"
+      "next_checkpoint": "2026-11月出口数据"
     },
     {
       "id": "b6f18e138fea",
@@ -4770,8 +4811,14 @@
           "date": "2026-10-14",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "加强",
+          "evidence": "金价$4,128回撤10%提供了更好的入场价格，德银称量化抛压'绝对耗尽'，央行购金+BTC共振的底层逻辑未变"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-12-18 FOMC"
     },
     {
       "id": "e72338ef1f47",
@@ -4805,9 +4852,14 @@
           "date": "2026-10-16",
           "status": "不变",
           "evidence": "ASML Q3订单积压超出2027-28年产能上限，客户争抢2029-30年交货窗口，2028年产能扩张提速30%+"
+        },
+        {
+          "date": "2026-10-20",
+          "status": "不变",
+          "evidence": "Q3订单积压超出2027-2028年产能上限，客户争抢2029-30交货窗口，2028年产能扩张提速30%+"
         }
       ],
-      "next_checkpoint": "2027年Q1 ASML订单数据"
+      "next_checkpoint": "2026-11 ASML Q3财报"
     },
     {
       "id": "868f0d7f2696",
@@ -5146,6 +5198,216 @@
       "history": [
         {
           "date": "2026-10-16",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "04749eec0ce0",
+      "name": "AI债务链条信用分化→云巨头vs高杠杆neocloud",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave债券收益率15%+且JPM/GS首次拒绝承销，标志着AI基建债务链条从增长叙事进入偿债检验。资金将从高杠杆neocloud和AI REITs流向拥有资产负债表实力的云巨头(微软/Azure、谷歌/GCP)。高盛仍看多CRWV(IRR 15%)但银行已退场，说明信用利差正在结构性扩大而非临时恐慌",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CoreWeave成功完成债务再融资(保险资金大规模入场或获得投资级评级)，或AI云厂商Q3财报显示RPO和FCF持续超预期，则逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-15",
+          "event": "CoreWeave季度财报",
+          "what_to_watch": "RPO变化+债务到期结构+FCF覆盖利息倍数"
+        },
+        {
+          "date": "2026-11-30",
+          "event": "Anthropic第二轮交易签约",
+          "what_to_watch": "Neocloud是否获得长期合同锁定"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-04-18",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "cec312b18418",
+      "name": "Meta Muse×AI Agent算力扩散→载板/散热/铜链",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse登顶App Store免费榜第一、单日推升市值+$1923亿、ARM数据中心版税翻倍增长。Agent将用户意图转化为持续执行任务，新增算力需求从GPU推理延伸至CPU执行/调度/安全隔离。深南电路/兴森科技作为载板龙头直接受益。这是AI从模型层向应用层扩散的标志性时刻，且市场对此产业链的定价不充分",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse用户留存率显著低于预期，或Agent应用未能规模化渗透至消费端，则产业链逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "Meta Q3财报-AGI基础设施Capex披露",
+          "what_to_watch": "数据中心Capex指引及Agent推理需求占比"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "ARM数据中心版税持续跟踪",
+          "what_to_watch": "CPU端AI推理收入占比"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-10-15",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "99c3fe8564dc",
+      "name": "柴油挤压×中东供给侧交易(油价二元博弈)",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=结构性供给收缩。柴油裂解价差创四年新高。WTI$95-101被市场discount地缘风险，但布伦特$105-107+柴油$6/加仑印证真实成本传导。IEA否认年内重开海峡，沙特FII峰会推迟至2027年印证风险持续。但美伊谈判传闻导致油价盘中急跌，形成二元博弈",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊在4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-27",
+          "event": "EIA原油库存+IEA紧急储备释放进展",
+          "what_to_watch": "商业库存+SPR释放规模"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "霍尔木兹通行量数据",
+          "what_to_watch": "是否恢复至战前水平"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-01-18",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "bb0e5a5cb4a7",
+      "name": "中国新能源重卡渗透率突破50%→商用车电动化拐点",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "9月新能源重卡渗透率达50.28%，牵引车达64.48%连续超六成，而传统重卡总销量同比下降21%。这不是替代而是结构性迁移——柴油挤压(油价高位+碳税)加速重卡电动化拐点。宁德时代Q3单季营收+58.58%印证电池端需求爆发",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若干线运输补能基础设施进展不及预期，或锂价反弹侵蚀电动车TCO优势，则渗透率提升放缓",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-15",
+          "event": "10月新能源重卡渗透率数据",
+          "what_to_watch": "是否持续突破60%"
+        },
+        {
+          "date": "2026-12-01",
+          "event": "宁德时代年度产能利用率",
+          "what_to_watch": "重卡电池订单占比"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-10-15",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "b34f43f362b9",
+      "name": "法国主权信用恶化×欧洲股市结构性分化",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "法国10Y-德国10Y国债利差破150bp创10月以来最高，CAC40成为欧洲最不受欢迎市场，CTA系统性做空法国股市。政治上骚乱持续、财政赤字欧元区最大、预算赤字不可持续。但 draghi称欧洲需主导乌克兰停火、欧洲STOXX 600 EPS增速预测15%。这是欧洲内部的结构性分化机会",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若法国骚乱蔓延至德国/意大利引发连锁政治危机，或欧盟层面出台大规模财政救助方案",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-27",
+          "event": "法国CAC40 vs STOXX600相对表现",
+          "what_to_watch": "利差是否继续走阔"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "欧盟财政规则改革谈判",
+          "what_to_watch": "法国是否获得财政宽松窗口"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-04-18",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "f36a3e5e2ad9",
+      "name": "A股红利资产×险资新规驱动(政策催化)",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "《保险公司资产负债管理办法》落地，人身险净投资收益覆盖率100%硬性要求。37万亿险资在长端利率下行+存量高收益资产持续到期的背景下，将被迫增配高股息资产。金融街论坛期间央行、金监总局、证监会三部门同日发声稳市机制协同，政策底明确",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若长端利率快速上行(10Y国债突破4%)降低股息吸引力，或监管细则100%红线被弱化执行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "险资新规实施细则落地",
+          "what_to_watch": "100%覆盖率红线是否被弱化"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "全年险资配置数据",
+          "what_to_watch": "高股息资产增配规模"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-10-15",
+      "history": [
+        {
+          "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "152fd58a43fa",
+      "name": "黄金战术性回调后的再入场窗口",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "金价从$4,607回撤至$4,128(-10%)是对加息预期的反应，但央行购金逻辑未变(波兰648吨/中国8月创纪录+荷兰转移储备至伦敦)。德银称量化抛压接近绝对耗尽。BTC $76K和白银$58.55的三资产共振印证debasement trade底层逻辑。当前是战术回撤而非趋势反转",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+金价跌破$4,000+波兰/中国央行停止购金",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "CFTC黄金持仓报告",
+          "what_to_watch": "投机净空头是否开始回补"
+        },
+        {
+          "date": "2026-12-18",
+          "event": "FOMC点阵图",
+          "what_to_watch": "终端利率预期是否下修"
+        }
+      ],
+      "created_date": "2026-10-20",
+      "expiry_date": "2027-04-18",
+      "history": [
+        {
+          "date": "2026-10-20",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
