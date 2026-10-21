@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-20",
+  "updated": "2026-10-21",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -5408,6 +5408,186 @@
       "history": [
         {
           "date": "2026-10-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "2aa83de09767",
+      "name": "Meta Muse验证AI Agent消费爆发×载板/散热产业链",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse 40天1000万美区下载+留存率超越AI竞品，验证AI Agent从'概念'到'消费规模化'的拐点。Agent将算力需求从GPU推理延伸至CPU执行/调度/安全隔离，ARM数据中心版税翻倍增长，深南电路/兴森科技作为载板龙头直接受益。英伟达宣布未来三年基板产能提升至2.5倍，进一步印证产业链扩张方向。这是独立于SpaceX财报的验证信号。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse 2027年Q1付费转化率<5%或用户月留存<30%，则Agent消费叙事失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-15",
+          "event": "Meta Q4财报+Muse用户数据",
+          "what_to_watch": "付费用户数及ARPU增速"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "ARM Q4财报",
+          "what_to_watch": "数据中心版税增速是否持续翻倍"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2027-10-16",
+      "history": [
+        {
+          "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "dbec4a225df0",
+      "name": "存储超级周期×HBM价格弹性上修",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "三星KB证券分析显示HBM代工价2027年预期上涨100-150%，较此前市场预期的30-50%大幅上修。Q3订单已锁定80%。叠加SK海力士90-110万亿韩元股东回报+50%FCF回购承诺=供给纪律重建。韩国存储股此前因杠杆ETF去杠杆暴跌7%+，现已跌至$4,128附近的金价回撤区间，股价与基本面背离程度再次扩大。长鑫科技Q1-Q3预盈1310亿印证国产替代加速。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若2026年Q4三星HBM实际成交价涨幅<50%或AI大模型厂商削减2027年Capex",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-31",
+          "event": "三星Q4财报及HBM定价指引",
+          "what_to_watch": "HBM平均售价季度环比增速"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "SK海力士Q4财报",
+          "what_to_watch": "HBM产能利用率及订单能见度"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2027-10-16",
+      "history": [
+        {
+          "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "5d55cbc0f86f",
+      "name": "SpaceX-Tesla合并×AI基建新叙事",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "SpaceX Q3营收$14.58亿(+161% YoY)，AI数据中心租赁是主要引擎，季度净利润$44亿首次盈利。Musk宣布SpaceX-Tesla合并董事会特别委员会成立。若合并落地，将创造全球最大AI+出行+卫星通信平台，估值逻辑从'航天公司'重置为'AI基础设施+自动驾驶双轮驱动'。同时Musk宣布SpaceX计划到2027年底新增20GW电力和冷却基础设施。",
+      "time_horizon": "12-18个月",
+      "falsification_condition": "若SpaceX-Tesla合并交易在12个月内无实质性进展，或SpaceX AI业务增速回落至50%以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-31",
+          "event": "SpaceX-Tesla合并特别委员会首次会议",
+          "what_to_watch": "合并时间表及估值框架"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "SpaceX Q4财报",
+          "what_to_watch": "AI数据中心收入占比及利润率"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2028-04-13",
+      "history": [
+        {
+          "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "093d3fe8cddb",
+      "name": "柴油挤压×俄乌+中东双重供给侧冲击",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "乌克兰无人机袭击俄罗斯炼厂(全球第二大柴油生产国)后，叠加霍尔木兹通行量50%、沙特延布港停产，柴油供给侧从'单一地缘风险'升级为'双重结构性约束'。美国宣布释放取暖油储备(与柴油同源)，印证供给侧紧张已向终端传导。WTI被市场discount但布伦特维持$105+，裂解价差分化持续。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，或俄乌达成停火协议使俄罗斯炼厂恢复运营，油价将快速回落",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-15",
+          "event": "IEA月度石油市场报告",
+          "what_to_watch": "全球柴油库存变化及俄罗斯出口数据"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "美伊谈判进展",
+          "what_to_watch": "霍尔木兹通行量是否恢复至80%以上"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2027-01-19",
+      "history": [
+        {
+          "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "61be2412ed2a",
+      "name": "法国主权信用危机×欧洲债券重新定价",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "法国10Y国债收益率首破5%(2002年来首次)，法德利差154bp创欧债危机以来最高。富兰克林邓普顿警告法国债务规模是希腊危机时十倍以上，简单救助不在选项之列。但系统性风险概率仍较低(欧元区银行体系韧性+政策防火墙)。若穆迪评级下调触发恐慌性抛售，将成为欧洲股市结构性分化的催化剂。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若法国政府达成预算协议或ECB出台针对性流动性支持工具，风险溢价将快速收敛",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "穆迪法国主权评级审查",
+          "what_to_watch": "评级调整方向及展望"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "法国2027年预算案表决",
+          "what_to_watch": "议会通过概率及赤字目标"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2027-04-19",
+      "history": [
+        {
+          "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "f7151ef398e8",
+      "name": "日本BOJ确认通胀目标达成×套利交易逆转加速",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "日本央行10月29-30日会议可能正式宣告实现2%通胀目标，结束14年抗通缩框架。虽然短期内加息概率低(上次9月刚加息至1.25%)，但象征性确认将强化日元升值预期。Natixis称日元升值空间'还有很大余地'，GPIF可能大幅削减海外资产回流。叠加日本国债'滞销'→财务省转向散户+学校+医院募集，说明国内需求已接近极限。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若日本CPI连续两月低于2%或经济增速再度转弱，BOJ将推迟政策框架转型声明",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-30",
+          "event": "BOJ货币政策会议",
+          "what_to_watch": "是否正式宣告2%通胀目标达成及措辞变化"
+        },
+        {
+          "date": "2026-11-30",
+          "event": "日本CPI数据",
+          "what_to_watch": "核心CPI是否持续维持在2%以上"
+        }
+      ],
+      "created_date": "2026-10-21",
+      "expiry_date": "2027-04-19",
+      "history": [
+        {
+          "date": "2026-10-21",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
