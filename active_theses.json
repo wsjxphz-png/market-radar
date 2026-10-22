@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-21",
+  "updated": "2026-10-22",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -208,9 +208,14 @@
           "date": "2026-10-20",
           "status": "削弱",
           "evidence": "金价$4,128较$4,607回撤10%，美元指数反弹，Fed加息预期升温。但央行购金(波兰648吨/中国创纪录)和BTC $76K仍印证底层逻辑"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "金价$4,128回撤10%提供更好入场价，波兰央行增至648吨+中国央行8月购金创纪录+荷兰央行转移储备至伦敦，BTC $76K印证debasement trade"
         }
       ],
-      "next_checkpoint": "2026-12-18 FOMC点阵图+2027年3月央行购金数据"
+      "next_checkpoint": "2026-11-15波兰央行购金数据"
     },
     {
       "id": "f9a4a0ce363c",
@@ -399,9 +404,14 @@
           "date": "2026-10-20",
           "status": "不变",
           "evidence": "AMD市值突破$1T印证双轨竞争格局，高通×亚马逊$25亿合作持续，Google TPU v7性能领先B200达50%"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "谷歌TPU v7性能领先B200达50%，高通×亚马逊$25亿合作持续，Anthropic组建内部芯片团队"
         }
       ],
-      "next_checkpoint": "2026-11 AMD/Google TPU外部客户收入数据"
+      "next_checkpoint": "2026-11-30谷歌TPU外部客户收入数据"
     },
     {
       "id": "6bfed27dede5",
@@ -1408,9 +1418,14 @@
           "date": "2026-10-15",
           "status": "加强",
           "evidence": "杠杆ETF去杠杆完成(530亿→250亿)，卖压接近枯竭。股价反应与基本面背离最大化"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "三星KB证券将HBM 2027年涨价预期从30-50%上修至100-150%，Q3订单已锁定80%，长鑫科技Q1-Q3预盈1310亿"
         }
       ],
-      "next_checkpoint": "2026-11-01，存储价格数据"
+      "next_checkpoint": "2026-11-30三星HBM Q4价格指引"
     },
     {
       "id": "370db81b02d3",
@@ -3662,9 +3677,14 @@
           "date": "2026-10-15",
           "status": "加强",
           "evidence": "沙特阿美总部遭袭是继延布港停产+东西管道遇袭后的第三重打击，供给侧风险升级"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "胡塞武装48小时4次袭击沙特设施（阿美总部+延布港+东西管道），IEA否认年内重开海峡，柴油$6/加仑创四年新高"
         }
       ],
-      "next_checkpoint": "2026-10-25，霍尔木兹谈判进展"
+      "next_checkpoint": "2026-11-01霍尔木兹通行量数据"
     },
     {
       "id": "0ec3c8fe84ef",
@@ -4739,9 +4759,14 @@
           "date": "2026-10-20",
           "status": "加强",
           "evidence": "三位创始人套现33亿美元+JPM/GS首次拒绝承销AI基建债+开方数据印证。这是新增的强信号"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "CoreWeave债券收益率15%+，JPM/GS首次拒绝承销，三位创始人套现33亿美元，Meta CDS创历史新高"
         }
       ],
-      "next_checkpoint": "2026-11-15 CoreWeave财报+债务展期进展"
+      "next_checkpoint": "2026-11-15 CoreWeave Q3财报"
     },
     {
       "id": "785fa0845b0b",
@@ -5230,8 +5255,14 @@
           "date": "2026-10-20",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "CoreWeave债券收益率15%+且JPM/GS首次拒绝承销，标志着AI基建债务链条从增长叙事进入偿债检验"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-15 CoreWeave Q3财报"
     },
     {
       "id": "cec312b18418",
@@ -5410,8 +5441,14 @@
           "date": "2026-10-20",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "金价$4,128回撤10%提供更好入场价，德银称量化抛压接近绝对耗尽，波兰648吨+中国8月创纪录+荷兰转移储备至伦敦底层逻辑未变"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-15波兰央行购金数据"
     },
     {
       "id": "2aa83de09767",
@@ -5440,8 +5477,14 @@
           "date": "2026-10-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "Meta Muse 40天1000万美区下载+留存率超越AI竞品，ARM数据中心版税翻倍增长，深南电路Q3净利+94%"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-15 Meta Q4 Muse用户数据"
     },
     {
       "id": "dbec4a225df0",
@@ -5470,8 +5513,14 @@
           "date": "2026-10-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "加强",
+          "evidence": "三星KB证券将HBM 2027年预期从30-50%上修至100-150%，Q3订单已锁定80%"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-30三星HBM Q4实际成交价"
     },
     {
       "id": "5d55cbc0f86f",
@@ -5500,8 +5549,14 @@
           "date": "2026-10-21",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-10-22",
+          "status": "不变",
+          "evidence": "SpaceX Q3营收$14.58亿(+161% YoY)，AI数据中心租赁是主要引擎，季度净利润$44亿首次盈利，Musk宣布合并特别委员会成立"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-12-31合并特别委员会进展"
     },
     {
       "id": "093d3fe8cddb",
@@ -5588,6 +5643,181 @@
       "history": [
         {
           "date": "2026-10-21",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "efcd96708411",
+      "name": "AI Agent算力扩散×载板/散热产业链",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse 40天1000万下载验证Agent消费规模化拐点，ARM数据中心版税翻倍印证算力需求从GPU推理向CPU执行扩散，深南电路Q3净利+94%验证产业链景气，英伟达基板产能+2.5倍锁定扩张方向",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse 2027年Q1付费转化率<5%或用户月留存<30%，则Agent消费叙事失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-15",
+          "event": "Meta Q4 Muse用户数据",
+          "what_to_watch": "DAU增速及留存率"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "ARM全年数据中心版税",
+          "what_to_watch": "是否延续翻倍增速"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "深南电路Q4业绩",
+          "what_to_watch": "载板订单能见度及毛利率"
+        }
+      ],
+      "created_date": "2026-10-22",
+      "expiry_date": "2027-10-17",
+      "history": [
+        {
+          "date": "2026-10-22",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "8f88b69307df",
+      "name": "中东柴油挤压×油运供给侧交易",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "胡塞武装48小时4次袭击沙特设施（阿美总部+延布港+东西管道），霍尔木兹通行量50%，柴油裂解价差创四年新高（$6/加仑），WTI$91 vs Brent$111裂解显示市场定价不充分，IEA否认年内重开海峡",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，或伊朗军事行动限于局部不影响海峡通行，同时柴油裂解价差回落至$50/桶以下",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-01",
+          "event": "霍尔木兹通行量数据",
+          "what_to_watch": "是否恢复至战前80%以上"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "柴油裂解价差",
+          "what_to_watch": "是否持续高于$80/桶"
+        },
+        {
+          "date": "2026-12-01",
+          "event": "IEA月度石油市场报告",
+          "what_to_watch": "供给侧风险评估"
+        }
+      ],
+      "created_date": "2026-10-22",
+      "expiry_date": "2027-01-20",
+      "history": [
+        {
+          "date": "2026-10-22",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "08d7a12edfb0",
+      "name": "黄金白银战术性回调×debasement trade延续",
+      "category": "D反转",
+      "signal_strength": "中",
+      "core_logic": "金价$4,128（-10%）白银$56（-5.34%）是对加息预期的反应，但波兰央行增至648吨、中国央行8月购金创纪录、荷兰央行转移储备至伦敦、BTC $76K三资产共振印证底层逻辑未变",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+金价跌破$4,000+波兰/中国央行停止购金",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-15",
+          "event": "波兰央行10月购金数据",
+          "what_to_watch": "是否继续向700吨目标推进"
+        },
+        {
+          "date": "2026-12-01",
+          "event": "中国央行购金数据",
+          "what_to_watch": "是否延续创纪录节奏"
+        },
+        {
+          "date": "2026-11-01",
+          "event": "美联储11月FOMC",
+          "what_to_watch": "点阵图是否转向鸽派"
+        }
+      ],
+      "created_date": "2026-10-22",
+      "expiry_date": "2027-04-20",
+      "history": [
+        {
+          "date": "2026-10-22",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "f4f7f492514e",
+      "name": "A股红利资产×险资新规驱动",
+      "category": "C价值",
+      "signal_strength": "中",
+      "core_logic": "《保险公司资产负债管理办法》落地，人身险净投资收益覆盖率100%硬性监管要求。37万亿险资在长端利率下行+存量高收益资产持续到期的背景下，将被迫增配高股息资产，为数千亿至万亿级增量资金",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若长端利率快速上行(10Y国债突破4%)降低股息吸引力，或监管细则100%红线被弱化执行",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-30",
+          "event": "险资三季度权益配置数据",
+          "what_to_watch": "高股息资产占比是否提升"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "险资四季度配置调整",
+          "what_to_watch": "是否加速增配红利资产"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "10Y国债收益率",
+          "what_to_watch": "是否突破4%"
+        }
+      ],
+      "created_date": "2026-10-22",
+      "expiry_date": "2027-10-17",
+      "history": [
+        {
+          "date": "2026-10-22",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "661b9cce72e1",
+      "name": "Anthropic IPO×AI生态控制战",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Anthropic据悉将于周五提交S-1文件，可能是史上最大IPO之一。叠加OpenAI×Google Cloud合作、Google TPU v7性能领先B200达50%，AI芯片正从GPU单极走向ASIC+GPU双轨竞争",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Anthropic IPO估值过高导致上市后破发，或ASIC芯片性能不及预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-10-31",
+          "event": "Anthropic S-1文件",
+          "what_to_watch": "估值及募资金额"
+        },
+        {
+          "date": "2026-11-15",
+          "event": "Anthropic IPO定价",
+          "what_to_watch": "是否超募"
+        },
+        {
+          "date": "2027-03-31",
+          "event": "Anthropic Q4收入",
+          "what_to_watch": "云合同执行进度"
+        }
+      ],
+      "created_date": "2026-10-22",
+      "expiry_date": "2027-10-17",
+      "history": [
+        {
+          "date": "2026-10-22",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
