@@ -2,8 +2,10 @@
   "active": [
     "资金关注",
     "逆势吸筹嫌疑",
-    "派发嫌疑",
-    "资金撤离"
+    "派发嫌疑"
   ],
-  "consecutive_invalid": 1
+  "consecutive_invalid": 2,
+  "removed": [
+    "资金撤离"
+  ]
 }
