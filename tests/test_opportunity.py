@@ -149,7 +149,7 @@ def test_fetch_all_ok_path(monkeypatch):
 
 
 # ============================================================
-# O10-3: AI 输出后置校验三态（缺字段 / 含禁用词 / 正常）
+# O10-3: AI 输出后置校验（缺字段补空值 / 类型错误降级 / 含禁用词 / 正常）
 # ============================================================
 
 def _valid_ai():
@@ -177,12 +177,77 @@ def test_validate_ai_result_ok():
     assert len(r["opportunity_ranking"]) == 1
 
 
-def test_validate_ai_result_missing_field_degrades():
+def test_validate_ai_result_missing_field_gets_default_not_degrade():
+    # 2026-10-23 事故回归：模型漏掉 watchlist_30d → 渲染层 .get 默认值可安全处理，
+    # 不应丢弃整份分析（当时降级为模板卡 + workflow 失败）
     r = _valid_ai()
     del r["watchlist_30d"]
+    out = main.validate_ai_result(r)
+    assert out is not None
+    assert out["watchlist_30d"] == []
+    # 端到端：事故 payload 必须能正常出卡（旧版在这里降级为模板卡）
+    card = main.format_feishu(out, {"filtered": 1, "ok_sources": 1, "total_sources": 1, "calibration": {}})
+    assert card.get("card")
+
+
+def test_validate_ai_result_fills_small_number_of_missing_sections():
+    r = _valid_ai()
+    del r["watchlist_30d"]
+    r["barbell"] = None
+    out = main.validate_ai_result(r)
+    assert out is not None
+    assert out["watchlist_30d"] == []
+    assert out["barbell"] == {}
+
+
+def test_validate_ai_result_missing_core_field_degrades():
+    # 核心字段（机会排行榜）缺失 → 模型没完成主任务，仍降级告警
+    r = _valid_ai()
+    del r["opportunity_ranking"]
     assert main.validate_ai_result(r) is None
-    assert main.validate_ai_result({"opportunity_ranking": []}) is None
+    assert "核心字段" in main.AI_VALIDATION_REASON
+    assert main.validate_ai_result({"key_changes": []}) is None
     assert main.validate_ai_result("not-a-dict") is None
+
+
+def test_validate_ai_result_many_optional_missing_but_core_present_passes():
+    # 只有核心排行榜、其余板块全缺 → 补空值继续（排行榜仍是有价值的分析）
+    r = {"opportunity_ranking": [{"rank": 1, "name": "AI芯片",
+                                  "falsification_condition": "若需求增速低于20%"}]}
+    out = main.validate_ai_result(r)
+    assert out is not None
+    assert out["key_changes"] == []
+    assert out["barbell"] == {}
+
+
+def test_validate_ai_result_normalizes_nested_shapes_and_renders():
+    # 审查发现：LLM 常输出 null 代替空列表，旧校验放行后渲染/追踪阶段直接崩
+    r = _valid_ai()
+    r["logic_tracker"] = {"still_active": [{"thesis_id": 1, "status": 2}],
+                          "newly_falsified": None}
+    r["barbell"] = {"offense": None, "defense": [1, {"x": 2}, "现金"]}
+    r["cross_sectional_patterns"] = [{"pattern_type": 123,
+                                      "companies": None, "sectors": "新能源"}]
+    r["opportunity_ranking"][0]["name"] = None
+    r["opportunity_ranking"][0]["time_horizon"] = None
+    r["opportunity_ranking"][0]["verification_checkpoints"] = None
+    r["opportunity_ranking"][0]["cross_validated"] = True
+    r["opportunity_ranking"][0]["cross_validation_sources"] = None
+    out = main.validate_ai_result(r)
+    assert out is not None
+    assert out["logic_tracker"]["still_active"][0]["thesis_id"] == "1"
+    assert out["logic_tracker"]["still_active"][0]["status"] == "2"
+    assert out["logic_tracker"]["newly_falsified"] == []
+    assert out["barbell"]["offense"] == []
+    assert out["barbell"]["defense"] == ["1", "现金"]
+    assert out["cross_sectional_patterns"][0]["pattern_type"] == "123"
+    assert out["cross_sectional_patterns"][0]["companies"] == []
+    assert out["cross_sectional_patterns"][0]["sectors"] == ["新能源"]
+    assert out["opportunity_ranking"][0]["name"] == ""
+    assert out["opportunity_ranking"][0]["verification_checkpoints"] == []
+    assert out["opportunity_ranking"][0]["cross_validation_sources"] == []
+    card = main.format_feishu(out, {"filtered": 1, "ok_sources": 1, "total_sources": 1, "calibration": {}})
+    assert card.get("card")
 
 
 def test_validate_ai_result_filters_banned_advice():

@@ -1315,7 +1315,7 @@ def format_calibration_for_prompt(stats: Dict) -> str:
 # ============================================================
 
 # 卡片渲染所需顶层字段 → 期望类型。dict 字段下游用 .get() 链式取子键，
-# list 字段下游逐条迭代。任一缺失/类型不匹配 → 整体降级为模板卡。
+# list 字段下游逐条迭代。类型不匹配 → 整体降级为模板卡。
 # 类型必须逐一强校验：若 barbell 是 list、key_changes 是 dict 仍放行，
 # format_feishu 会直接抛 AttributeError/TypeError，整卡不发（O3 要防的故障模式）。
 REQUIRED_TOP_KEY_TYPES = {
@@ -1329,6 +1329,10 @@ REQUIRED_TOP_KEY_TYPES = {
     "barbell": dict,
     "final_advice": dict,
 }
+
+# 报告的核心交付物：缺失说明模型没完成主任务，必须降级告警。
+# 其余字段缺失可补空值继续（渲染层 .get 默认值安全），避免单字段漏输出毁掉整份分析。
+CORE_TOP_KEYS = {"opportunity_ranking"}
 
 # 买卖指令 / 绝对化断言。用模式匹配避免误伤描述性语句
 # （如"机构加仓白酒"是事实描述，不算建议）。
@@ -1360,15 +1364,107 @@ def _clean_advice_items(items: List[Dict]) -> Tuple[List[Dict], int]:
     return kept, removed
 
 
+def _as_str(v) -> str:
+    return v if isinstance(v, str) else ("" if v is None else str(v))
+
+
+def _dict_list(v) -> List[Dict]:
+    return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
+
+
+def _str_list(v) -> List[str]:
+    """列表 → 字符串列表；标量按单项处理，丢弃 dict/None 等无法安全 join 的项"""
+    if isinstance(v, (str, int, float)):
+        return [str(v)]
+    return [str(x) for x in v if isinstance(x, (str, int, float))] if isinstance(v, list) else []
+
+
+def _normalize_nested_shapes(result: Dict) -> int:
+    """条目级形状归一，返回修正处数。
+
+    LLM 常把空列表写成 null、把列表写成字符串；渲染层与 update_active_theses
+    只对顶层字段做了 .get 防御，嵌套不规范会直接抛 TypeError/AttributeError
+    （如 logic_tracker.still_active=null → 整卡不发）。这里在发卡前统一成安全形状。
+    只修"存在但形状错误"的值，不注入缺失键——空 dict 保持 falsy，渲染层会跳过该板块。
+    """
+    fixed = 0
+    for key in ("opportunity_ranking", "deep_dives"):
+        for it in result[key]:
+            for f in ("name", "signal_strength", "time_horizon", "category",
+                      "core_logic", "falsification_condition"):
+                if f in it and not isinstance(it[f], str):
+                    it[f] = _as_str(it[f]); fixed += 1
+            if "verification_checkpoints" in it:
+                v = it["verification_checkpoints"]
+                if not isinstance(v, list) or any(not isinstance(x, dict) for x in v):
+                    it["verification_checkpoints"] = _dict_list(v); fixed += 1
+            # 渲染层对 cross_validation_sources 只取 len()，null/标量都会 TypeError
+            if "cross_validation_sources" in it and not isinstance(it["cross_validation_sources"], list):
+                it["cross_validation_sources"] = []; fixed += 1
+    for p in result["cross_sectional_patterns"]:
+        for f in ("companies", "sectors"):
+            if f in p:
+                v = p[f]
+                if not isinstance(v, list) or any(not isinstance(x, (str, int, float)) for x in v):
+                    p[f] = _str_list(v); fixed += 1
+        if "pattern_type" in p and not isinstance(p["pattern_type"], str):
+            p["pattern_type"] = _as_str(p["pattern_type"]); fixed += 1
+    lt = result["logic_tracker"]
+    for f in ("still_active", "newly_falsified"):
+        if f in lt:
+            v = lt[f]
+            if not isinstance(v, list) or any(not isinstance(x, dict) for x in v):
+                lt[f] = _dict_list(v); fixed += 1
+    # thesis_id / status 会被当作 dict key，非 str 的 list/dict 会触发 unhashable TypeError
+    for f in ("still_active", "newly_falsified"):
+        for it in lt.get(f, []):
+            for k in ("thesis_id", "status"):
+                if k in it and not isinstance(it[k], str):
+                    it[k] = _as_str(it[k]); fixed += 1
+    barbell = result["barbell"]
+    for f in ("offense", "defense"):
+        if f in barbell:
+            v = barbell[f]
+            if not isinstance(v, list) or any(not isinstance(x, (str, int, float)) for x in v):
+                barbell[f] = _str_list(v); fixed += 1
+    return fixed
+
+
+AI_VALIDATION_REASON = ""  # 结构校验失败的具体原因，降级卡展示用
+
+
 def validate_ai_result(result) -> Optional[Dict]:
-    """结构校验 + 禁用词过滤。返回清洗后的结果；失败返回 None（降级为模板卡）。"""
+    """结构校验 + 禁用词过滤。返回清洗后的结果；失败返回 None（降级为模板卡）。
+
+    缺字段与类型错误区别对待：渲染层全部用 .get(默认值) 取值，缺字段安全，
+    补空值即可（2026-10-23 事故：模型漏掉 watchlist_30d，整份分析被丢弃）；
+    只有字段存在但类型错误才会让 format_feishu 抛异常，必须降级。
+    """
+    global AI_VALIDATION_REASON
+    AI_VALIDATION_REASON = ""
     if not isinstance(result, dict):
-        log("❌ AI 输出不是 JSON 对象，降级为模板卡")
+        AI_VALIDATION_REASON = "AI 输出不是 JSON 对象"
+        log(f"❌ {AI_VALIDATION_REASON}，降级为模板卡")
         return None
+    missing = []
     for key, expected in REQUIRED_TOP_KEY_TYPES.items():
-        if key not in result or not isinstance(result[key], expected):
-            log(f"❌ AI 输出缺少/类型错误必需字段 {key}，降级为模板卡")
+        if key not in result or result[key] is None:
+            result[key] = expected()
+            missing.append(key)
+        elif not isinstance(result[key], expected):
+            AI_VALIDATION_REASON = (f"AI 输出字段 {key} 类型错误"
+                                    f"（期望 {expected.__name__}，实际 {type(result[key]).__name__}）")
+            log(f"❌ {AI_VALIDATION_REASON}，降级为模板卡")
             return None
+    # 核心字段缺失 → 模型没完成主任务，仍走降级卡（降级告警不能被吞）；
+    # 次要字段缺失 → 补空值继续，避免单字段漏输出毁掉整份分析
+    missing_core = [k for k in missing if k in CORE_TOP_KEYS]
+    if missing_core:
+        AI_VALIDATION_REASON = f"AI 输出缺少核心字段: {', '.join(missing_core)}"
+        log(f"❌ {AI_VALIDATION_REASON}，降级为模板卡")
+        return None
+    if missing:
+        log(f"⚠️ AI 输出缺少字段 {', '.join(missing)}，已补空值（继续分析）")
     # 逐条目清洗：含禁用词 → 丢弃；机会类条目缺可证伪条件 → 丢弃
     removed_total = 0
     for key in ("opportunity_ranking", "deep_dives", "key_changes",
@@ -1395,6 +1491,9 @@ def validate_ai_result(result) -> Optional[Dict]:
         removed_total += 1
     if removed_total:
         log(f"⚠️ AI 输出后置校验: 过滤 {removed_total} 条（含禁用词/缺可证伪条件）")
+    fixed = _normalize_nested_shapes(result)
+    if fixed:
+        log(f"⚠️ AI 输出嵌套字段形状归一 {fixed} 处（null/错误类型 → 安全默认值）")
     return result
 
 
@@ -1438,7 +1537,7 @@ def call_deepseek(user_content: str) -> Optional[Dict]:
                 log(f"   ✅ Tokens: {usage.get('total_tokens','?')} (finish_reason={finish_reason})")
                 result = validate_ai_result(result)
                 if result is None:
-                    AI_FAILURE_REASON = "AI 输出未通过后置校验(缺字段/含禁用词)"
+                    AI_FAILURE_REASON = AI_VALIDATION_REASON or "AI 输出未通过结构校验"
                     log(f"❌ {AI_FAILURE_REASON}，走模板卡降级路径")
                     return None
                 return result
