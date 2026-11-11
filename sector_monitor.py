@@ -190,10 +190,14 @@ SECTOR_RULES = [
 HK_SECTORS = {"恒生科技": "3033.HK"}
 
 # 会议中提到的非板块指数/标的
+# 2026-08-11 审计修复：code 必须带市场前缀——ak.stock_zh_index_daily 把 symbol
+# 原样拼进 sina URL（纯数字必失败 KeyError），yfinance 映射键也是带前缀格式；
+# 原纯数字 code 三级兜底全断，指数监测区块静默缺失（fetch_index_kline 内源2
+# index_zh_a_hist 需要纯数字，内部去前缀）
 MARKET_INDICES = [
-    {"name": "上证指数", "code": "000001", "category": "大盘"},
-    {"name": "科创50", "code": "000688", "category": "科技"},
-    {"name": "创业板指", "code": "399006", "category": "成长"},
+    {"name": "上证指数", "code": "sh000001", "category": "大盘"},
+    {"name": "科创50", "code": "sh000688", "category": "科技"},
+    {"name": "创业板指", "code": "sz399006", "category": "成长"},
 ]
 
 # 关键参考票
@@ -449,8 +453,9 @@ def fetch_index_kline(code: str, lookback: int = LOOKBACK_DAYS) -> Optional[pd.D
                 df[col] = 0.0
         return df
 
-    # ── 数据源 2: index_zh_a_hist (EM 端点B) ──
-    df = _safe_call(ak.index_zh_a_hist, symbol=code, period="daily",
+    # ── 数据源 2: index_zh_a_hist (EM 端点B，需要纯数字代码，去前缀) ──
+    num_code = code[2:] if code[:2] in ("sh", "sz", "bj") else code
+    df = _safe_call(ak.index_zh_a_hist, symbol=num_code, period="daily",
                     start_date=start_date, end_date=end_date)
     if df is not None and len(df) > 0:
         cols_map = {
@@ -1191,23 +1196,44 @@ def analyze_fund_flow(board_name: str,
                        fund_hist_df: Optional[pd.DataFrame]) -> Dict:
     """汇总板块资金流向信号。
     注：主力/超大单为按单笔金额推断的代理指标（通常被认为代表机构行为），非实名披露。
-    数据源不可用（df 为 None）时按 0 处理，由调用方负责标注"资金流历史数据暂不可用"。"""
+    数据源不可用（df 为 None）时按 0 处理，由调用方负责标注"资金流历史数据暂不可用"。
+    2026-08-11 审计修复：候选名匹配——fund_5d/10d_df 是东财 86 行业表，而
+    SECTOR_RULES 名是 THS 体系（IT服务/消费电子…），原精确匹配查不到 → 静默全 0
+    → 资金流入分支永不触发且无标注；先试原名再试 THS_TO_EM 东财映射。"""
     result = {"main_inflow_5d": 0, "main_inflow_pct_5d": 0,
               "main_inflow_10d": 0, "main_inflow_pct_10d": 0,
               "signal": "neutral"}
 
-    if fund_5d_df is not None:
-        row = fund_5d_df[fund_5d_df["board_name"] == board_name]
-        if len(row) > 0:
-            result["main_inflow_5d"] = float(row.iloc[0].get("main_inflow_5d", 0) or 0)
-            result["main_inflow_pct_5d"] = float(row.iloc[0].get("main_inflow_pct_5d", 0) or 0)
-            result["top_inflow_stock_5d"] = str(row.iloc[0].get("top_inflow_stock_5d", "") or "")
+    def _hit_row(table: Optional[pd.DataFrame], name: str) -> pd.DataFrame:
+        """东财资金流表内候选名命中：原名 → THS_TO_EM 东财映射名。
+        每个候选再试 Ⅱ 后缀/去后缀——东财资金流行业表实测用"银行Ⅱ"，而板块名是
+        "银行"，不补这一层该板块永远静默 0。"""
+        if table is None:
+            return pd.DataFrame()
+        from val_config import THS_TO_EM
+        cands = []
+        for base in (name, THS_TO_EM.get(name)):
+            if not base:
+                continue
+            for cand in (base, base + "Ⅱ", base.replace("Ⅱ", "")):
+                if cand and cand not in cands:
+                    cands.append(cand)
+        for cand in cands:
+            hit = table[table["board_name"] == cand]
+            if len(hit) > 0:
+                return hit
+        return pd.DataFrame()
 
-    if fund_10d_df is not None:
-        row = fund_10d_df[fund_10d_df["board_name"] == board_name]
-        if len(row) > 0:
-            result["main_inflow_10d"] = float(row.iloc[0].get("main_inflow_10d", 0) or 0)
-            result["main_inflow_pct_10d"] = float(row.iloc[0].get("main_inflow_pct_10d", 0) or 0)
+    row = _hit_row(fund_5d_df, board_name)
+    if len(row) > 0:
+        result["main_inflow_5d"] = float(row.iloc[0].get("main_inflow_5d", 0) or 0)
+        result["main_inflow_pct_5d"] = float(row.iloc[0].get("main_inflow_pct_5d", 0) or 0)
+        result["top_inflow_stock_5d"] = str(row.iloc[0].get("top_inflow_stock_5d", "") or "")
+
+    row = _hit_row(fund_10d_df, board_name)
+    if len(row) > 0:
+        result["main_inflow_10d"] = float(row.iloc[0].get("main_inflow_10d", 0) or 0)
+        result["main_inflow_pct_10d"] = float(row.iloc[0].get("main_inflow_pct_10d", 0) or 0)
 
     # 综合信号
     inflow_5d = result["main_inflow_5d"]
@@ -1280,17 +1306,13 @@ def fetch_sector_monitor_data() -> Dict:
                     name_map[name] = ths_name
                     logger.info(f"   🔄 板块名映射: '{name}' → '{ths_name}' (同花顺)")
                 else:
-                    # 模糊匹配：找包含关系
-                    candidates = [n for n in real_names if name[:2] in n or n[:2] in name]
-                    if len(candidates) == 1:
-                        name_map[name] = candidates[0]
-                        logger.warning(f"   ⚠️ 板块名修正: '{name}' → '{candidates[0]}'")
-                    elif len(candidates) > 1:
-                        logger.warning(f"   ⚠️ '{name}' 模糊匹配多个: {candidates[:4]}，使用原名")
-                        name_map[name] = name
-                    else:
-                        logger.warning(f"   ❌ '{name}' 在 {len(real_names)} 个板块中未找到！可能需要修正名称")
-                        name_map[name] = name
+                    # 2026-08-11 审计修复：删除模糊匹配静默换名——"食品加工制造"→
+                    # "食品饮料"（含白酒的更大板块）把该板块 K线/资金流/当日行情
+                    # 全部换成东财大板块口径而卡片仍显示 THS 名，数据全错且无标注。
+                    # 未匹配 → 保留原名：当日行情/资金流查不到时该区块数据缺失但可见
+                    logger.warning(f"   ❌ '{name}' 在 {len(real_names)} 个板块中未找到"
+                                   f"（精确/同花顺映射均失败），保留原名，该板块当日行情缺失")
+                    name_map[name] = name
     else:
         # board_df 为 None：使用同花顺映射作为 name_map
         logger.warning("   板块概况获取失败，用同花顺映射表作为后备")
@@ -1354,7 +1376,8 @@ def fetch_sector_monitor_data() -> Dict:
 
         tech = calc_technical_indicators(df_kl) if df_kl is not None else {}
 
-        # 4b. 资金流向（用修正后的名称查）
+        # 4b. 资金流向（lookup_name 是逐板块解析名；_hit_row 内原名查不到再试
+        # THS_TO_EM 东财映射——fund_5d_df 是东财行业表，不能拿循环残留变量查）
         fund = analyze_fund_flow(lookup_name, fund_5d_df, fund_10d_df, None)
 
         # 4c. 板块当日行情
@@ -1464,7 +1487,10 @@ def format_sector_for_prompt(data: Dict) -> str:
     if anomalies:
         lines.append("\n### ⚠️ 资金异动")
         for a in anomalies:
-            lines.append(f"- **{a['sector']}**: {a['anomaly']}")
+            # 2026-08-11 审计：异动板块名统一东财口径（与板块判断一致；无映射保留原名）
+            from val_config import em_name_for
+            sector = em_name_for(a.get("sector", "")) or a.get("sector", "")
+            lines.append(f"- **{sector}**: {a['anomaly']}")
 
     # 汇总
     summary = data.get("summary", {})

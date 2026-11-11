@@ -57,3 +57,7 @@ def test_reference_and_label():
     assert reference_label(40.0, 40.0) == "正常"
     assert reference_label(25.0, 40.0) == "比平时少"      # 0.625 <= 0.8
     assert reference_label(25.7, None) == "参照积累中"
+    # 2026-08-11 审计修复：负值/异号按绝对值比（原 today/ref 比值反义）
+    assert reference_label(-60.0, -50.0) == "比平时多"   # 净流出更多=量级更大
+    assert reference_label(20.0, -30.0) == "比平时少"    # 今日净流入但量小于平时流出
+    assert reference_label(-10.0, -50.0) == "比平时少"

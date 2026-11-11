@@ -126,12 +126,15 @@ def test_parse_sector_flow_ths_simplified_schema():
     ], columns=["序号", "行业", "行业指数", "行业-涨跌幅", "流入资金", "流出资金", "净额",
                 "公司家数", "领涨股", "领涨股-涨跌幅", "当前价"])
     out = parse_sector_flow(df)
-    assert list(out.columns) == ["industry", "chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]
+    assert list(out.columns) == ["industry", "chg_pct", "main_net_yi", "super_large_net_yi",
+                                 "large_net_yi", "outflow_net_yi"]
     assert out.iloc[0]["industry"] == "半导体"
     assert abs(out.iloc[0]["chg_pct"] - 5.63) < 1e-6
     # 核心：超大单列取净额（98.81），而不是流出资金（1617.54）
     assert abs(out.iloc[0]["super_large_net_yi"] - 98.81) < 1e-6
-    assert abs(out.iloc[0]["large_net_yi"] - 1617.54) < 1e-6  # 流出资金入 large，不再冒充超大单
+    # 2026-08-11 审计改名：简化变体流出资金列 → outflow_net_yi（原 large_net_yi
+    # 名"大单净流入"实为流出，字段名与语义反向，测试旧断言固化错误命名）
+    assert abs(out.iloc[0]["outflow_net_yi"] - 1617.54) < 1e-6
     assert abs(out.iloc[1]["super_large_net_yi"] - (-33.02)) < 1e-6  # 银行净流出为负，方向正确
 
 def test_parse_sector_flow_full_variant_by_name():
@@ -156,9 +159,12 @@ def test_parse_repurchase_phase_and_filter():
         r[1], r[2], r[9], r[10] = code, name, plan_max, plan_min
         r[12], r[16], r[17] = progress, done, ann
         return r
+    # 日期相对今天生成：写死绝对日期会让用例随日历推移自动失效（2026-11-12 修复）
+    recent = (pd.Timestamp.now() - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+    old = (pd.Timestamp.now() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
     df = pd.DataFrame([
-        row("300750", "宁德时代", 400e8, 400e8, "董事会预案", 0, "2026-08-01"),
-        row("002352", "顺丰控股", 60e8, 40e8, "完成实施", 50e8, "2026-06-20"),  # 6月公告=超出4周窗口
+        row("300750", "宁德时代", 400e8, 400e8, "董事会预案", 0, recent),
+        row("002352", "顺丰控股", 60e8, 40e8, "完成实施", 50e8, old),  # 60天前=超出4周窗口
     ])
     out = parse_repurchase(df, weeks=4)
     assert len(out["items"]) == 1

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 from market_dashboard import (build_merged_card, compute_fund_state,
                               _with_metric_disclosure, compute_signals,
-                              SENTIMENT_CYCLE)
+                              SENTIMENT_CYCLE, _DCA_ACTION)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -109,7 +109,7 @@ def test_merged_card_order_market_first_sector_grouped_trade_last():
     i_glossary = card.find("名词释义")             # 释义必须紧跟手册(风险点1)
     i_trade = card.find("## 📊 今日信号")          # 交易组(2026-08-08:判断紧跟知识)
     i_agg = card.find("━━━ 🔷 板块判断")          # 板块聚合卡(交易组之后)
-    i_fund_obs = card.find("资金观察（南向/回购/承接）")
+    i_fund_obs = card.find("资金观察（板块归因·东财板块名口径，与板块判断一致；南向/回购/承接）")
     i_insight = card.find("## 📖 每日一得")
     i_honest = card.find("诚实声明")
     # 大盘组在前：温度→手册→释义，释义不得后置到板块区
@@ -125,7 +125,7 @@ def test_merged_card_order_market_first_sector_grouped_trade_last():
 def test_merged_card_fund_observation_enhanced_block():
     """资金观察增强区块（南向/回购/承接）存在（非板块级维度，独立保留）"""
     card = build_merged_card(_full_card_data())
-    assert "━━━ 📈 资金观察（南向/回购/承接） ━━━" in card
+    assert "━━━ 📈 资金观察（板块归因·东财板块名口径，与板块判断一致；南向/回购/承接） ━━━" in card
     assert "南向" in card
     assert "回购" in card
     assert "承接" in card
@@ -581,8 +581,10 @@ def _volume_kline_fixture():
 
 
 def _spot_fixture():
-    """sina 全量行情假数据：沪市（sh*）成交额合计 1.2082e12 元 = 12082亿（08-05 实测量级，
-    上交所官方 12097亿）；深市/北交所股票必须被排除（上证口径）"""
+    """sina 全量行情假数据：sh 沪市合计 1.2082e12 元 = 12082亿（08-05 实测量级，
+    上交所官方 12097亿）、sz 深市合计 1.5e12 元 = 15000亿（mock 值——2026-08-11
+    实测深市 12542亿，fixture 数值仅验证 sh+sz 聚合逻辑自洽，非真实量级）；
+    北交所（bj*）必须被排除（沪深两市口径，2026-08-11 修复：此前只算沪市单边）"""
     return pd.DataFrame({
         "代码": ["sh600000", "sh688000", "sz000001", "sz300750", "bj920000"],
         "成交额": [6.041e11, 6.041e11, 1.0e12, 5.0e11, 1.0e8],
@@ -591,17 +593,19 @@ def _spot_fixture():
 
 def test_market_volume_unit(monkeypatch):
     """get_market_volume 成交额量级：旧代码把上证成交量 592 亿股当成交额显示"592亿"，
-    真实上证成交额是数千亿（2026-08-05 上交所官方 12097亿）——修复后必须显示真实量级"""
+    真实上证成交额是数千亿（2026-08-05 上交所官方 12097亿）——修复后必须显示真实量级。
+    2026-08-11 口径修正：成交额 = 沪深两市合计（sh 12082亿 + sz 15000亿 = 27082亿），
+    此前只算沪市单边（推送 10651亿 实为沪市，真实两市合计 2.3万亿级）"""
     import akshare as ak
     from stock_data import StockData
     monkeypatch.setattr(ak, "stock_zh_index_daily", lambda symbol: _volume_kline_fixture())
     monkeypatch.setattr(ak, "stock_zh_a_spot", lambda: _spot_fixture())
     vol = StockData().get_market_volume(idx_volume=59215512400.0)  # 旧口径传入的成交量
     assert vol["available"] is True
-    # 成交额 = 沪市成交额求和（深市/北交所排除），单位元
-    assert vol["total_amount"] == 1.2082e12
-    # 渲染路径量级（format_dashboard 的 vol_str 公式）：12082亿（数千亿），绝非 592亿
-    assert f"{vol['total_amount']/1e8:.0f}亿" == "12082亿"
+    # 成交额 = 沪深两市成交额求和（北交所排除），单位元
+    assert vol["total_amount"] == 2.7082e12
+    # 渲染路径量级（format_dashboard 的 vol_str 公式）：27082亿（2.3万亿级），绝非 592亿
+    assert f"{vol['total_amount']/1e8:.0f}亿" == "27082亿"
     assert "592亿" != f"{vol['total_amount']/1e8:.0f}亿"
     # 20 日均比值来自成交量序列（单位无关）
     vols = _volume_kline_fixture()["volume"]
@@ -621,10 +625,47 @@ def test_market_volume_unavailable_when_source_fails(monkeypatch):
     assert vol["total_amount"] == 0
 
 
+def test_market_breadth_limit_thresholds_em_fallback(monkeypatch):
+    """东财回退（纯数字代码）下涨跌幅限制分档仍正确：先按板块定限制，再按 ST 收窄——
+    创业板/科创板 ST 仍 20%、北交所 ST 仍 30%，只有主板 ST 是 5%。"""
+    import akshare as ak
+    from stock_data import StockData
+    spot = pd.DataFrame({
+        "代码": ["688981", "300147", "600000", "000001", "920001", "830001", "600001", "300002"],
+        "名称": ["中芯国际", "*ST香雪", "ST某某", "平安银行", "北交所票", "北交所票2", "主板票", "创业板票"],
+        "涨跌幅": [12.0, 13.19, 5.0, 10.0, 30.0, 15.0, -10.0, -20.0],
+    })
+    monkeypatch.setattr(ak, "stock_zh_a_spot",
+                        lambda: (_ for _ in ()).throw(OSError("sina 被墙")))
+    monkeypatch.setattr(ak, "stock_zh_a_spot_em", lambda: spot)
+    b = StockData().get_market_breadth()
+    assert b["available"] is True
+    assert b["total"] == 8 and b["up_count"] == 6 and b["down_count"] == 2
+    # 涨停：主板 ST +5%、主板 +10%、北交所 +30%；688 +12%、创业板 ST +13.19%、北交所 +15% 均不算
+    assert b["limit_up"] == 3
+    # 跌停：主板 -10%、创业板 -20%
+    assert b["limit_down"] == 2
+
+
 # ═══════════════════════════════════════════════════════════
 # 聚合卡渲染（render_board_aggregate，2026-08-07 用户审计替代板块总览五区块）
 # 2026-08-07 用户需求重构：板块行=便宜度/趋势/资金/定投决策（删除短线语言）
 # ═══════════════════════════════════════════════════════════
+
+def test_dca_action_substring_order():
+    """2026-08-11 审计修复：judge_dca 文本以动作词开头 → 前缀匹配（startswith），
+    两处子串误配：①"按计划——…维持正常定投"含"正常定投"子串；②"无法判断：…
+    （观察）"含"观察"子串——修复前按计划被记正常定投、无法判断被记观察，留痕污染"""
+    def match(dca):
+        return next((a for k, a in _DCA_ACTION if dca.startswith(k)), "无法判断")
+    assert match("按计划——估值合理，维持正常定投") == "按计划"
+    assert match("按计划——趋势初现，维持正常定投") == "按计划"
+    assert match("正常定投——趋势启动且估值合理") == "正常定投"
+    assert match("暂停/减量——贵+趋势未确认") == "暂停/减量"
+    assert match("减量——趋势好但估值贵，定投减量不追") == "减量"
+    assert match("多买——便宜+趋势启动，符合【便宜+趋势】买入条件（中长期持有）") == "多买"
+    assert match("观察——便宜但趋势未启动，等趋势呈现") == "观察"
+    assert match("无法判断：估值证据不足（观察），等待证据（推断）") == "无法判断"
 
 def _agg_facts_fixture():
     """synthesize 输入契约全 key 事实（上升启动/下降未启动/全缺三态）"""

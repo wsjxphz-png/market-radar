@@ -214,6 +214,20 @@ def test_analyze_fund_flow_missing_inputs_neutral_zero():
     assert r["signal"] == "neutral"
 
 
+def test_analyze_fund_flow_ths_name_maps_to_em():
+    """同花顺细分名（IT服务）→ THS_TO_EM 东财名（计算机）命中，不再静默全 0"""
+    r = analyze_fund_flow("IT服务", _f5df("计算机", 10), _f10df("计算机", 5), None)
+    assert r["main_inflow_5d"] == 10 and r["main_inflow_10d"] == 5
+    assert r["signal"] == "accumulation"
+
+
+def test_analyze_fund_flow_em_ii_suffix_fallback():
+    """东财资金流行业表实测用"银行Ⅱ"→ 候选名补 Ⅱ 后缀后命中"""
+    r = analyze_fund_flow("银行", _f5df("银行Ⅱ", 8), _f10df("银行Ⅱ", 3), None)
+    assert r["main_inflow_5d"] == 8 and r["main_inflow_10d"] == 3
+    assert r["signal"] == "accumulation"
+
+
 def test_analyze_fund_flow_anomaly():
     """历史资金流前10日流出 + 近10日流入 → flow_anomaly 资金面反转"""
     hist = pd.DataFrame({"date": pd.date_range("2026-06-01", periods=20),
@@ -257,11 +271,22 @@ def test_detect_signal_flips_matches_yesterday(tmp_path):
 
 
 def test_detect_signal_flips_no_yesterday_entry(tmp_path):
-    """无昨日条目 → 返回空列表"""
+    """无昨日条目（仅同日记录）→ 返回空列表。2026-08-11 语义更新：取 date<今日 的
+    最近一条 index 记录（周一/节假日自动取上周五），同日记录不算昨日"""
     log = tmp_path / "trade_log.jsonl"
-    log.write_text(json.dumps({"type": "index", "date": "2020-01-01",
+    today = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d")
+    log.write_text(json.dumps({"type": "index", "date": today,
                                "signals": {"三周期趋势": "danger"}}) + "\n", encoding="utf-8")
     assert detect_signal_flips([Signal("三周期趋势", "v", "healthy")], str(log)) == []
+
+
+def test_detect_signal_flips_takes_most_recent_trade_day(tmp_path):
+    """2026-08-11 语义更新：周一运行时 today-1=周日无记录，须取最近交易日（上周五）"""
+    log = tmp_path / "trade_log.jsonl"
+    log.write_text(json.dumps({"type": "index", "date": "2026-08-07",
+                               "signals": {"三周期趋势": "danger"}}) + "\n", encoding="utf-8")
+    flips = " | ".join(detect_signal_flips([Signal("三周期趋势", "v", "healthy")], str(log)))
+    assert "三周期趋势" in flips
 
 
 # ═══════════════════════════════════════════════════════════

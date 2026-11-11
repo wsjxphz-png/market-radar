@@ -133,7 +133,9 @@ def render_board_aggregate(facts_list: list, sectors: list,
     glossary = glossary_for(sorted(all_terms))
 
     # 2026-08-07 用户完善：数据源可能滞后（8/7 实测资金流滞后一日）——区块头短提醒
-    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 便宜度+趋势+定投决策 · 数据源可能滞后一日） ━━━"]
+    # 2026-08-11 审计：声明东财板块口径——与资金观察（同花顺细分行业名）前后两块
+    # 名称体系不同，不加声明用户无法关联同名/异名板块
+    lines = [f"━━━ 🔷 板块判断（{len(per_board)} 板块 · 东财板块口径 · 便宜度+趋势+定投决策 · 数据源可能滞后一日） ━━━"]
     # 趋势共振统计：多少板块站上 20/60 日线（2026-08-07 用户需求：中长期持有看中期趋势）
     n_up = sum(1 for f, _ in per_board if isinstance(f, dict)
                and f.get("trend_state") == "above20_rising")
@@ -164,11 +166,16 @@ def render_board_aggregate(facts_list: list, sectors: list,
         pct = facts.get("main_pct") if isinstance(facts, dict) else None
         metric = facts.get("metric", "PE") if isinstance(facts, dict) else "PE"
         years = facts.get("years") if isinstance(facts, dict) else None
-        val_line = f"{val_short}" + (f"（{metric} 分位 {pct:.0f}%" if pct is not None else f"（{metric} 分位不可用")
+        # 2026-08-11 审计：metric="价格位置" 时与 val_explain._fact_valuation 特判对齐，
+        # 输出"价格位置 15%"而非病句"价格位置 分位 15%"（价格位置非分位指标）
+        metric_head = "价格位置" if metric == "价格位置" else f"{metric} 分位"
+        val_line = f"{val_short}" + (f"（{metric_head} {pct:.0f}%" if pct is not None
+                                     else f"（{metric_head} 不可用")
         val_line += f"，窗口 {_fmt_years(years)} 年）" if years is not None else "）"
         # 2026-08-07 用户通读：降级口径必须可见（PB 冷启动→PE 代替时不得静默）
+        # 2026-08-11 审计：所有 metric_note 均渲染（非银金融券商口径等），不限冷启动
         m_note = facts.get("metric_note") if isinstance(facts, dict) else None
-        if m_note and "冷启动" in str(m_note):
+        if m_note:
             val_line += f"（{m_note}）"
         trend_state = facts.get("trend_state") if isinstance(facts, dict) else "unknown"
         trend_mid = facts.get("trend_mid") if isinstance(facts, dict) else None

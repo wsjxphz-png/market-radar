@@ -188,18 +188,45 @@ class StockData:
                 chg_col = [c for c in df.columns if "涨跌幅" in str(c) or "change" in str(c).lower()]
                 if chg_col:
                     chg = pd.to_numeric(df[chg_col[0]], errors="coerce")
-                    result["total"] = len(df)
-                    result["up_count"] = int((chg > 0).sum())
-                    result["down_count"] = int((chg < 0).sum())
-                    result["limit_up"] = int((chg >= 9.9).sum())
-                    result["limit_down"] = int((chg <= -9.9).sum())
+                    # 2026-08-11 审计：total 分母用有效涨跌幅数而非 len(df)——盘中运行时
+                    # 停牌/无涨跌股 chg 为 NaN，原分母偏大导致"极好/极差"标签失真
+                    valid = chg.dropna()
+                    result["total"] = len(valid)
+                    result["up_count"] = int((valid > 0).sum())
+                    result["down_count"] = int((valid < 0).sum())
+                    # 2026-08-11 审计修复：涨停阈值按涨跌幅限制分档——原统一 9.9 把
+                    # 创业板/科创板涨 10.1%~19.9% 未涨停股虚增为涨停（实测 73 只含
+                    # 13 只误计），ST（5%）、北交所（30%）口径错误。分档：
+                    # 主板 10% / ST 5% / 创业·科创 20% / 北交所 30%（sina 全量含 bj）
+                    codes_all = df["代码"].astype(str)
+                    names_all = df["名称"].astype(str) if "名称" in df.columns \
+                        else pd.Series([""] * len(df), index=df.index)
+                    def _limit_thr(code: str, name: str) -> float:
+                        # 代码格式兼容 sina（sh600000）与东财回退（600000 纯数字）；
+                        # 先按板块定涨跌幅限制再按 ST 收窄——创业板/科创板 ST 仍 20%，
+                        # 北交所 ST 仍 30%，只有主板 ST 是 5%（原 ST 优先会把
+                        # sz300147 *ST香雪 +13.19% 误计涨停）
+                        c = str(code).strip().lower()
+                        num = c[2:] if c[:2] in ("sh", "sz", "bj") else c
+                        num = num.zfill(6)
+                        if num.startswith(("688", "689", "300", "301")):
+                            return 19.9
+                        if c.startswith("bj") or num.startswith(("4", "8", "92")):
+                            return 29.9
+                        if "ST" in str(name).upper():
+                            return 4.9
+                        return 9.9
+                    thr = pd.Series([_limit_thr(c, n) for c, n in zip(codes_all, names_all)],
+                                    index=chg.index)
+                    result["limit_up"] = int((chg >= thr).sum())
+                    result["limit_down"] = int((chg <= -thr).sum())
                     result["available"] = True
         except Exception:
             pass
         return result
 
     def get_market_volume(self, idx_volume: float = 0) -> Dict:
-        """获取上证市场成交额（单位：元）— sina 全量行情沪市聚合 + sina 日线成交量 20 日均比值。
+        """获取沪深两市成交额合计（单位：元）— sina 全量行情沪深聚合 + sina 日线成交量 20 日均比值。
 
         ⚠️ 历史换算 bug（Task 2 修复）：调用方传入的 idx_volume 是上证指数『成交量』
         （ak.stock_zh_index_daily 的 volume 列，单位股），不是成交额——旧代码把它当金额
@@ -209,7 +236,12 @@ class StockData:
         （腾讯 stock_zh_index_daily_tx 的 amount 列实测为成交量·手，与成交量·股恒成
         1:100，系错标）；东财 push2 被封。故：
         ① 成交额 = stock_zh_a_spot（sina 全量行情，收盘后即含全日数据，无上交所
-        官方每日概况的发布时滞）中沪市（sh*）成交额求和；
+        官方每日概况的发布时滞）中沪市（sh*）+ 深市（sz*）成交额求和，北交所（bj*）
+        排除（官方「沪深两市」口径不含北交所）。
+        ⚠️ 口径 bug（2026-08-11 修复）：此前只聚合 sh* 得沪市单边成交额——08-11 推送
+        10651亿 实为沪市（真实两市合计 23193亿/sina、23210亿/官方）。根因：08-05 量级
+        修复的验证基准选『上交所官方上证成交金额』（沪市口径），掩盖了少算深市的
+        问题，测试断言（12082亿）也固化了该错误口径。
         ② 20日均比值 = 上证指数日线成交量 20 日均（单位无关——放量/缩量本就是
         量价分析中的成交量概念；渲染层只显示当日成交额数字）。
         任一源失败 → 诚实返回 unavailable（错误数字比缺失更糟）。"""
@@ -224,17 +256,19 @@ class StockData:
             if len(vols) < 20 or float(vols.mean()) <= 0:
                 return result
             ratio = float(vols.iloc[-1]) / float(vols.mean())
-            # ── 当日成交额：sina 全量行情沪市成交额求和（元）──
+            # ── 当日成交额：sina 全量行情沪市+深市成交额求和（元），北交所排除 ──
             spot = ak.stock_zh_a_spot()
             if spot is None or len(spot) == 0:
                 return result
             codes = spot["代码"].astype(str)
             amt = pd.to_numeric(spot["成交额"], errors="coerce")
-            sh_amt = float(amt[codes.str.startswith("sh")].sum())
-            if sh_amt <= 0:
+            mkt_amt = float(amt[codes.str.startswith(("sh", "sz"))].sum())
+            if mkt_amt <= 0:
                 return result
-            result["total_amount"] = sh_amt
-            result["avg_amount_20d"] = sh_amt / ratio
+            result["total_amount"] = mkt_amt
+            # 语义=当日两市额 ÷ 上证量比（混合口径倒推值，无业务消费，仅调试打印
+            # stock_data.py:344；2026-08-11 审计标注，勿作真实 20 日均成交额使用）
+            result["avg_amount_20d"] = mkt_amt / ratio
             result["ratio"] = ratio
             result["available"] = True
         except Exception:
@@ -242,7 +276,8 @@ class StockData:
         return result
 
     def get_sector_fund_flow(self) -> pd.DataFrame:
-        """获取板块资金流向TOP — 用 stock_fund_flow_industry (非EM源)"""
+        """获取板块资金流向TOP — 用 stock_fund_flow_industry（走同花顺端点，
+        ltc_data.py:69-75 实测列名 序号/行业/…/净额/…；2026-08-11 审计统一两文件注释）"""
         try:
             import akshare as ak
             # stock_fund_flow_industry 走非东方财富端点，90个行业，含 净额 列
@@ -269,6 +304,10 @@ class StockData:
         code = str(code).zfill(6)
         if code.startswith(("0", "3")):
             return f"sz{code}"
+        if code.startswith(("4", "8")):
+            # 2026-08-11 审计：北交所在 sina 无 sh 前缀股票，原 else→sh 静默错标，
+            # 正确语义化失败（数据源不支持 bj 时失败可见）优于错标为沪市股票
+            return f"bj{code}"
         return f"sh{code}"
 
     def _normalize_columns(self, df: pd.DataFrame, days: int) -> pd.DataFrame:

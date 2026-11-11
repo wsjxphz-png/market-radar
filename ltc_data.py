@@ -86,16 +86,17 @@ def parse_sector_flow(df_raw: pd.DataFrame) -> Optional[pd.DataFrame]:
         rename["大单净流入-净额"] = "large_net_yi"
     elif "净额" in df_raw.columns:  # 简化变体：净额=流入-流出，无超大单拆分
         rename["流入资金"] = "main_net_yi"
-        rename["流出资金"] = "large_net_yi"
-        rename["净额"] = "super_large_net_yi"
+        rename["流出资金"] = "outflow_net_yi"   # 2026-08-11 审计改名：原 large_net_yi
+        rename["净额"] = "super_large_net_yi"   # 名"大单净流入"实为流出资金（正值=流出），字段名与语义反向
     if "industry" not in rename.values():
         return None
     df = df_raw.rename(columns=rename)
-    for c in ["chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]:
+    for c in ["chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi", "outflow_net_yi"]:
         if c not in df.columns:
             df[c] = float("nan")
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    return df[["industry", "chg_pct", "main_net_yi", "super_large_net_yi", "large_net_yi"]]
+    return df[["industry", "chg_pct", "main_net_yi", "super_large_net_yi",
+               "large_net_yi", "outflow_net_yi"]]
 
 def fetch_sector_flow() -> Optional[pd.DataFrame]:
     df = _safe_call(ak.stock_fund_flow_industry)

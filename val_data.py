@@ -114,7 +114,19 @@ def fetch_sector_pb(sector: str) -> Optional[dict]:
     try:
         pb_vals = []
         deadline = time.time() + PB_BUDGET_SECONDS
-        for c in cons[:PB_SAMPLE_LIMIT]:
+        # 2026-08-11 审计修复：等距采样替代顺序切片——cons.xls 按代码排序，
+        # 原 [:20] 大概率集中同一代码段（全 60xxxx 或全 000xxx）；[::step] 在
+        # 长度不能整除时尾部永远采不到（50 取 20 只覆盖到前 39 位）。
+        # 用两端闭区间等距下标，保证覆盖全代码段。
+        n = min(PB_SAMPLE_LIMIT, len(cons))
+        if n >= len(cons):
+            sample = list(cons)
+        elif n == 1:
+            sample = [cons[0]]
+        else:
+            step = (len(cons) - 1) / (n - 1)
+            sample = [cons[round(i * step)] for i in range(n)]
+        for c in sample:
             if time.time() > deadline:
                 logger.warning("板块 %s PB 聚合超预算，已采样 %d 只，降级处理", sector, len(pb_vals))
                 break

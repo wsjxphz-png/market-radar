@@ -69,9 +69,14 @@ def compute_reference(history: List[dict], key: str, days: int = 20) -> Optional
     return sum(vals) / len(vals) if vals else None
 
 def reference_label(today: float, ref: Optional[float]) -> str:
+    """今日值 vs 近20日均值的量级比对（2026-08-11 修复：按绝对值比，负值不反义——
+    -60 vs -50（净流出更多）→"比平时多"描述量级，方向由数字符号传达；
+    +20 vs -30（今日净流入但量更小）→"比平时少"。原实现 today/ref 在异号时
+    标签反义：-60 vs +50（今日净流出、平时净流入）比值 -1.2 被标"比平时少"，
+    实际流出量级更大，推送误导。"""
     if ref is None or ref == 0:
         return "参照积累中"
-    ratio = today / ref
+    ratio = abs(today) / abs(ref)
     if ratio >= REF_RATIO_HIGH:
         return "比平时多"
     if ratio <= REF_RATIO_LOW:

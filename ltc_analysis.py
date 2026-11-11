@@ -38,6 +38,7 @@ def analyze_flows(df: pd.DataFrame) -> List[dict]:
             "signal": signal, "sl_percentile": round(sl_pct, 0),
             "chg_pct": round(chg, 2), "sl_net": round(sl_net, 2),
             "large_net": round(float(row.get("large_net_yi", 0) or 0), 2),
+            "outflow_net": round(float(row.get("outflow_net_yi", 0) or 0), 2),
             "tag": tag,
         })
     results.sort(key=lambda x: x["sl_net"], reverse=True)
