@@ -211,8 +211,9 @@ def main() -> int:
 
     import push_feishu
     try:
-        # 日历未知时 target 可能是旧日期或 None，去重键改用面板数据日期（当天稳定）
-        run_key = pan.date.date() if cal_unknown else target
+        # 去重键统一用面板数据日期：日历未知时 target 可能是旧日期或 None；
+        # --force 时 target 也可能和面板日期不同，混用会让下一次定时任务重发一遍。
+        run_key = pan.date.date()
         status = push_feishu.push_panel(pan, force=args.force, fresh=data_fresh, run_date=run_key)
     except Exception:
         log("飞书推送异常:\n" + traceback.format_exc())
