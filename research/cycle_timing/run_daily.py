@@ -190,14 +190,14 @@ def main() -> int:
         log("飞书推送异常:\n" + traceback.format_exc())
         return 1
     if status == "failed":
-        log("飞书推送失败，未写“已推送”标记；计划任务会在 10 分钟后重试一次")
+        log("飞书推送失败，未写“已推送”标记；下一次定时任务会自动重试")
         return 1
     if data_fresh:
         panel_data.save_state(pan)
     log("飞书推送完成" if status == "sent" else "今天已推送过，跳过重复发送")
     if not data_fresh:
         log(f"数据未更新到最近交易日 {expected}，已推送带警告的旧面板；"
-            "本次按失败处理，计划任务 10 分钟后会再试一次")
+            "本次按失败处理，下一次定时任务会自动重试")
         return 1
     return 0
 
