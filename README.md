@@ -1,13 +1,26 @@
-# 📊 A股全景仪表盘 + 市场机会发现系统
+# 📊 A股周期面板 + 市场机会发现系统
 
-> 一套规则驱动的 A 股投资决策工具。不是炒股机器人，是一本可以每天翻阅的交易手册 + 练习本——帮你记规则、练纪律、看后果。
+> 一套规则驱动的 A 股投资决策工具。每天收盘后推送一张看得懂的周期面板：估值、资金、广度、情绪、趋势五个角度，三个底走到哪一步，顶部风险亮了几项。
 
 ---
 
 ## 系统构成
 
-### 🏠 全景仪表盘 `market_dashboard.py`
-**每个交易日 16:00 自动运行，飞书推送。**
+### 📈 A股周期面板 `research/cycle_timing/`（当前 A 股每日主推送）
+**每个交易日 19:00 自动运行，飞书推送；休市日跳过、不补发。** 跑在 GitHub Actions 上，电脑关机也照跑。
+
+```
+🧭 一句话        — 现在是什么阶段（磨底/便宜区/趋势正常/顶部风险）
+📊 指数状态      — 四个主要指数逐个解释“这意味着什么”
+⚠️ 顶部风险      — 五项风险条件亮了几项，涨上去以后每天看这个
+🕳️ 三个底        — 政策底 → 市场底 → 盈利底 的先后状态机
+💰 大资金动向    — 宽基 ETF 份额变化（国家队托底代理）
+🩺 五维体检      — 估值 / 流动性 / 广度 / 情绪 / 趋势
+📖 名词小抄      — 200日线、PE、社融等白话解释
+```
+
+### 🏠 全景仪表盘 `market_dashboard.py`（定时已停用，保留手动）
+**原每个交易日推送的交易手册式看板；2026-11-12 起由周期面板接管每日 A 股推送。**
 
 ```
 🔥 市场温度   — 涨跌家数 · 涨停生态 · 成交额放缩
@@ -26,7 +39,7 @@
 ```
 
 ### 🔍 市场机会发现 `main.py`
-**每个交易日 15:00 自动运行，飞书推送。** RSS + FRED + AKShare + Polymarket + Tavily 多源抓取 → DeepSeek 8 层分析 → 飞书。
+**每天 19:00 自动运行，飞书推送。** RSS + FRED + AKShare + Polymarket + Tavily 多源抓取 → AI 8 层分析 → 飞书。
 
 ### 📊 月度复盘 `backtest_review.py`
 **每月 1 号自动运行，飞书推送。** 不统计预测准确率——只检查五大模块纪律执行情况，违例标 ❌。
@@ -40,7 +53,7 @@
 | 指数数据 | akshare → yfinance 双源自动降级 |
 | 板块数据 | akshare (23 个申万行业) |
 | 个股数据 | adata → akshare 双源 |
-| AI 分析 | DeepSeek (chat) |
+| AI 分析 | Agnes AI（环境变量兼容 DeepSeek 旧key） |
 | M1 宏观 | akshare / FRED |
 | 消息推送 | 飞书 Bot API + 交互卡片 |
 | 定时运行 | GitHub Actions (UTC 08:00) |
@@ -52,11 +65,12 @@
 
 | Workflow | 触发时间 | 内容 |
 |----------|---------|------|
-| `rally-health.yml` | 工作日 16:00 北京时间 | 全景仪表盘 → 飞书 |
-| `daily-report.yml` | 每天 15:00 北京时间 | RSS 市场机会发现 → 飞书 |
+| `cycle-panel.yml` | 工作日 19:00（失败 19:10 自动重试） | 周期面板 → 飞书；休市日跳过 |
+| `daily-report.yml` | 每天 19:00 北京时间 | RSS 市场机会发现 → 飞书 |
 | `monthly-review.yml` | 每月 1 号 09:00 | 月度纪律复盘 → 飞书 |
+| `rally-health.yml` | 仅手动触发 | 旧全景仪表盘（定时已停用，由周期面板取代） |
 
-三个 workflow 均有开市检查，周末 / 节假日 / 未收盘自动跳过，不浪费配额。
+A 股相关 workflow 均有开市检查，周末 / 节假日 / 未收盘自动跳过，不补发、不浪费配额。
 
 ---
 
@@ -65,7 +79,13 @@
 ```bash
 pip install -r requirements.txt
 
-# 仪表盘
+# 周期面板（当前每日推送）
+cd research/cycle_timing
+python run_daily.py --no-push                 # 生成面板不推送
+python run_daily.py --force                   # 忽略交易日/时间限制，调试用
+python run_daily.py --skip-refresh --no-push  # 不联网，用缓存
+
+# 旧仪表盘（手动）
 python market_dashboard.py --dry-run          # 仅打印
 python market_dashboard.py --force --dry-run  # 跳过日期检查
 
@@ -85,7 +105,7 @@ python stock_data.py
 
 | Secret | 用途 |
 |--------|------|
-| `DEEPSEEK_API_KEY` | AI 分析 + 决策审计 |
+| `AI_API_KEY` | AI 分析 + 决策审计（兼容旧名 `DEEPSEEK_API_KEY`） |
 | `FEISHU_APP_ID` | 飞书 Bot 推送 |
 | `FEISHU_APP_SECRET` | 飞书 Bot 推送 |
 | `FEISHU_CHAT_ID` | 飞书群聊 ID (可选) |
@@ -115,10 +135,16 @@ market-radar/
 ├── portfolio.py             # 100万模拟账户
 ├── backtest_review.py       # 月度复盘 (纪律检查)
 ├── main.py                  # RSS 市场机会发现
+├── research/cycle_timing/   # A股周期面板（当前每日主推送）
+│   ├── run_daily.py         # 交易日/收盘时间闸门 + 调度入口
+│   ├── panel_data.py        # 五维/三个底/顶部风险计算
+│   ├── push_feishu.py       # 白话推送
+│   └── test_panel.py        # 规则测试
 ├── sources.json             # 信息源配置
 ├── requirements.txt
 ├── .github/workflows/
-│   ├── rally-health.yml     # 仪表盘定时
+│   ├── cycle-panel.yml      # 周期面板定时（工作日 19:00）
+│   ├── rally-health.yml     # 旧仪表盘（仅手动）
 │   ├── daily-report.yml     # 市场发现定时
 │   └── monthly-review.yml   # 月度复盘
 └── docs/

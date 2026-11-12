@@ -874,6 +874,24 @@ def lpr_tenor(row: pd.Series) -> str:
     return "1Y" if row["chg1"] < 0 else "5Y"
 
 
+def market_bottom_status(above200_5: bool, top_adj: float,
+                         strong: list[str], weak: list[str]) -> tuple[str, str]:
+    """市场底是一次性事件：趋势修复（连续5日站上200日线）就确认，之后不会再退回“观察区”。
+
+    顶部风险只影响“现在能不能追买”，不影响“底是否成立”。旧逻辑把 top<0.4 写进确认条件，
+    导致牛市里涨出顶部风险时反而说“市场底未确认、下跌可能没走完”——方向完全错了。
+    """
+    if above200_5:
+        if top_adj < 0.4:
+            return "确认（趋势修复）", "ok"
+        return "确认（趋势修复；顶部风险升高，不宜追买）", "watch"
+    if strong:
+        return f"观察（未确认；强：{'、'.join(strong)}）", "bottom"
+    if weak:
+        return "观察（未确认）", "watch"
+    return "未出现", "neutral"
+
+
 def build_bottoms(s: pd.DataFrame, indices: list, etf: EtfFlowPanel,
                   panel_date: pd.Timestamp) -> BottomPanel:
     # 政策底（LPR/降准缓存 7 天内复用，过期自动重抓，避免漏掉新一次宽松）
@@ -952,17 +970,9 @@ def build_bottoms(s: pd.DataFrame, indices: list, etf: EtfFlowPanel,
     breadth_recovery = bool(breadth > 0.25 and breadth_chg > 0.10)
     above200_5 = bool(confirm(s["close"] > s["ma200"], 5).iloc[-1])
     top_adj = float(indices[0].top_adj)
-    confirmed = bool(above200_5 and top_adj < 0.4)
     strong = [i.name for i in indices if i.bottom_adj >= 0.8]
     weak = [i.name for i in indices if 0.6 <= i.bottom_adj < 0.8]
-    if confirmed:
-        m_status, m_tone = "确认（趋势修复）", "ok"
-    elif strong:
-        m_status, m_tone = f"观察（未确认；强：{'、'.join(strong)}）", "bottom"
-    elif weak:
-        m_status, m_tone = "观察（未确认）", "watch"
-    else:
-        m_status, m_tone = "未出现", "neutral"
+    m_status, m_tone = market_bottom_status(above200_5, top_adj, strong, weak)
     bz = indices[0].bottom_zone
     m_stats = ""
     if bz.get("n") and bz.get("n_full"):
@@ -971,9 +981,14 @@ def build_bottoms(s: pd.DataFrame, indices: list, etf: EtfFlowPanel,
         m_stats = (f"本指数历史 bottom≥0.8 区间 {n_part}，"
                    f"结束后120日再跌中位 {bz['post_dd_med']*100:.1f}%，"
                    f"跌超10%概率 {bz['post_dd_10']:.0%}。")
-    if confirmed:
+    if m_status.startswith("确认") and top_adj < 0.4:
         m_plain = ("市场底已经确认：价格连续5个交易日站在200日线上方，同时顶部风险很低。"
                    "意思是下跌趋势已经修复，可以按趋势规则持有；但“确认”不等于不会再跌，防守线还是200日线。")
+    elif m_status.startswith("确认"):
+        lit = sum(1 for v in indices[0].top_flags.values() if v)
+        m_plain = ("市场底已经确认：价格连续5个交易日站在200日线上方，下跌趋势已经修复。"
+                   f"但顶部风险也在升高（风险条件亮了 {lit} 项），说明这轮已经涨了一段；"
+                   "现在不是加仓的时候，跌破200日线就防守。")
     elif strong:
         m_plain = (f"市场底还在“观察区”，没有确认。强观察的指数是：{'、'.join(strong)}——"
                    "意思是这些指数已经跌到便宜、超跌的位置，5项见底条件满足了大部分；"

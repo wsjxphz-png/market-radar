@@ -32,6 +32,15 @@ TONE = {
     "neutral": "中性", "down": "偏弱", "cheap": "偏便宜",
 }
 
+# 顶部风险的五个来源，翻成新手能看懂的话
+TOP_LABELS = {
+    "估值": "估值偏贵",
+    "信用": "信用环境收紧",
+    "广度": "指数涨但多数行业没跟上",
+    "情绪": "借钱炒股/交易过热",
+    "趋势": "涨得离200日线太远",
+}
+
 
 def _q(v) -> str:
     """分位：0.49 → 49%"""
@@ -164,6 +173,31 @@ def _etf_read(e) -> str:
     return "".join(out)
 
 
+def _top_verdict(i, lit: int, total: int) -> str:
+    if i.state.startswith("顶部"):
+        return "已经进入顶部风险区，规则上减仓/防守。"
+    if pd.notna(i.ma200) and i.close < i.ma200:
+        return "趋势还没修复，先防守。"
+    if total and lit / total >= 0.4:
+        return "接近警戒线，不加仓。"
+    return "还没到警戒线，按趋势规则持有。"
+
+
+def _top_risk_lines(pan) -> list[str]:
+    """每天把“顶部风险”摆出来：上涨阶段这才是主菜，不是等跌了才看。"""
+    out = []
+    for i in pan.indices:
+        flags = getattr(i, "top_flags", {}) or {}
+        lit = [k for k, v in flags.items() if v]
+        names = "、".join(TOP_LABELS.get(k, k) for k in lit) or "无"
+        if not flags:
+            out.append(f"{i.name}：风险数据不足，这次不判断。")
+            continue
+        out.append(f"{i.name}：风险条件亮了 {len(lit)} 项（{names}）。"
+                   f"{_top_verdict(i, len(lit), len(flags))}")
+    return out
+
+
 def _bottom_state_plain(b) -> str:
     """把“疑似 / 观察（未确认；强：X）”翻成一句人话。"""
     if b.name == "政策底":
@@ -171,6 +205,8 @@ def _bottom_state_plain(b) -> str:
                 "疑似": "疑似，出现了两个迹象"}.get(b.status, "还没出现，托底迹象不足")
     if b.name == "市场底":
         if b.status.startswith("确认"):
+            if "顶部风险" in b.status:
+                return "已确认，下跌趋势修复（但顶部风险升高，不宜追买）"
             return "已确认，下跌趋势修复"
         if b.status.startswith("观察"):
             m = re.search(r"强：(.+?)）", b.status)
@@ -201,6 +237,10 @@ def _plain_headline(pan) -> str:
     if weak:
         return (f"现在是下跌趋势里的“便宜区”阶段：{'、'.join(weak)}刚开始变便宜（弱观察），"
                 "但趋势没修复，还不是买点。")
+    warn = [i.name for i in pan.indices if getattr(i, "top_adj", 0.0) >= 0.4]
+    if warn:
+        return (f"趋势还没坏，但顶部风险开始累积：{'、'.join(warn)}的风险条件已经亮了 2 项以上。"
+                "规则上不加仓，连续5个交易日跌破200日线就防守。")
     return "现在没有明显的顶部或底部信号，按趋势规则持有或防守。"
 
 
@@ -223,6 +263,14 @@ def build_message(pan) -> str:
         move = "涨" if i.chg1 >= 0 else "跌"
         L.append(f"{i.name}：{i.close:,.2f} 点（{move} {abs(i.chg1) * 100:.2f}%）。")
         L.append(_index_meaning(i))
+    L.append("")
+
+    L.append("■ 顶部风险（涨上去以后，每天看这个）")
+    L.extend(_top_risk_lines(pan))
+    if any("信用" not in (getattr(i, "top_flags", {}) or {}) for i in pan.indices):
+        L.append("说明：社融数据太旧，“信用”这一项不参与，亮灯数按剩下的条件算。")
+    L.append("规则：风险条件亮到 2 项开始谨慎（不加仓）；亮到 3 项、并且价格在200日线上方，"
+             "就是“顶部风险区”，规则上减仓/防守。最硬的防守线：价格连续5个交易日跌破200日线。")
     L.append("")
 
     L.append("■ 三个底：政策底 → 市场底 → 盈利底（历史上按这个顺序出现）")
@@ -258,7 +306,8 @@ def build_message(pan) -> str:
     strong = [i.name for i in pan.indices if "强" in i.state]
     L.append("■ 接下来盯什么")
     if pan.bottoms.market.status.startswith("确认"):
-        L.append("1. 市场底已经确认：接下来看能不能继续站稳200日线；跌破就回到防守。")
+        L.append("1. 市场底已经确认：接下来重点是顶部风险（见上方“顶部风险”），"
+                 "连续5个交易日跌破200日线就回到防守。")
     else:
         txt = (f"1. 市场底确认：{'、'.join(below) or '主要指数'}需要连续5个交易日站上200日线，"
                "同时顶部风险分数低于0.4（0到1，越低越安全）。")

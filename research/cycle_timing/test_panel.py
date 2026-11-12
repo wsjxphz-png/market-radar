@@ -141,6 +141,17 @@ def test_attach_credit_ok_current_and_history():
     assert bool(out.iloc[-1]["credit_ok"]) is False
 
 
+def test_market_bottom_is_confirmed_once_trend_repairs():
+    # 趋势修复就是底成立的证据；后来涨出顶部风险，不能反过来把底“撤回”
+    st, tone = p.market_bottom_status(True, 0.6, [], [])
+    assert st.startswith("确认")
+    assert "顶部风险" in st
+    assert p.state_key(st) == "确认"
+    assert tone == "watch"
+    assert p.market_bottom_status(True, 0.2, [], []) == ("确认（趋势修复）", "ok")
+    assert p.market_bottom_status(False, 0.2, ["创业板指"], [])[0].startswith("观察")
+
+
 def test_phase_text_uses_all_three_statuses():
     assert "均已确认" in p.phase_text("确认", "确认（趋势修复）", "确认（改善）")
     assert "盈利底未现" in p.phase_text("确认", "确认（趋势修复）", "未出现（仍在恶化）")
@@ -180,8 +191,11 @@ def test_push_message_is_plain_and_not_stale():
     import push_feishu
     pan = p.build_panel()
     msg = push_feishu.build_message(pan)
-    for key in ("一句话", "三个底", "五维体检", "数据日期", "名词小抄", "不是交易指令"):
+    for key in ("一句话", "顶部风险", "三个底", "五维体检", "数据日期", "名词小抄", "不是交易指令"):
         assert key in msg
+    # 上涨阶段要有对称的顶部检查，不能只找底
+    assert "风险条件亮了" in msg
+    assert "已经进入顶部风险区" not in msg or any(i.state.startswith("顶部") for i in pan.indices)
     assert "nan" not in msg.lower()
     assert "None" not in msg
     # 冒号后面不能出现只有内行才懂的缩写/记号
@@ -375,6 +389,17 @@ def test_push_message_adapts_to_confirmed_market_bottom():
     assert "市场底：已确认，下跌趋势修复" in msg
     assert "市场底已经确认" in msg
     assert "现在只是观察区，不是买点" not in msg
+
+
+def test_headline_warns_when_top_risk_builds():
+    import push_feishu
+    pan = p.build_panel()
+    for i in pan.indices:
+        i.state = "趋势正常"
+        i.top_adj = 0.4
+    out = push_feishu._plain_headline(pan)
+    assert "顶部风险开始累积" in out
+    assert "不加仓" in out
 
 
 def test_push_failure_leaves_no_marker(tmp_path, monkeypatch):

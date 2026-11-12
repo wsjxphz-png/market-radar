@@ -1,10 +1,8 @@
 name: A股全景观察
 
 on:
-  schedule:
-    # 北京时间 19:30 = UTC 11:30（2026-08-06 调整：避开 DeepSeek 高峰价 9-12/14-18 点，
-    # GitHub schedule 实际延迟 ~2.5h → 实际推送约 22:00；周一至周五，合并推送：估值+资金单卡单推）
-    - cron: '30 11 * * 1-5'
+  # schedule 已停用（2026-11-12）：A股每日推送由 research/cycle_timing 的周期面板接管，
+  # 避免同一天两套A股内容重复刷屏。旧看板保留，可在 Actions 手动触发回查。
   workflow_dispatch:
     inputs:
       force:
