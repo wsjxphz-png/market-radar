@@ -22,4 +22,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/ltc || true
           git diff --cached --quiet || git commit -m "data: 验证月报留痕 [skip ci]"
+          # 别的 bot 可能刚提交过，先 rebase 再推，避免被拒导致留痕丢失
+          git pull --rebase origin main || true
           git push

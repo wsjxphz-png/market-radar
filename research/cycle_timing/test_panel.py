@@ -291,6 +291,12 @@ def test_overnight_delayed_run_pushes_last_completed_day(monkeypatch):
 
     monkeypatch.setattr(run_daily, "datetime", FakeDT)
     monkeypatch.setattr(run_daily, "refresh_calendar", lambda: True)
+    # 固定日历：全新克隆里没有 cache/trade_dates.csv，别让测试依赖本地缓存
+    monkeypatch.setattr(
+        run_daily, "trading_days",
+        lambda: {real_datetime(2026, 11, 13).date(),
+                 real_datetime(2026, 11, 16).date(),
+                 real_datetime(2026, 11, 17).date()})
     monkeypatch.setattr(run_daily, "log", lambda msg: None)
     monkeypatch.setitem(sys.modules, "panel", FakePanel)
     monkeypatch.setattr(panel_data, "save_state", lambda pan: None)
@@ -336,9 +342,12 @@ def test_unknown_calendar_uses_index_data_before_pushing(monkeypatch):
     assert pushed == []
 
 
-def test_latest_completed_trading_day_uses_previous_day_before_close():
+def test_latest_completed_trading_day_uses_previous_day_before_close(monkeypatch):
     import run_daily
     from datetime import date, datetime as real_datetime
+    # 固定日历：不依赖本地 cache/trade_dates.csv
+    monkeypatch.setattr(run_daily, "trading_days",
+                        lambda: {date(2026, 11, 13), date(2026, 11, 16)})
     # 2026-11-16 周一：开盘前/盘中应算上周五，收盘后才算当天
     assert run_daily.latest_completed_trading_day(real_datetime(2026, 11, 16, 9, 0)) == date(2026, 11, 13)
     assert run_daily.latest_completed_trading_day(real_datetime(2026, 11, 16, 19, 0)) == date(2026, 11, 16)

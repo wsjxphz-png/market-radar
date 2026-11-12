@@ -87,6 +87,25 @@ jobs:
             git push origin HEAD:main
           fi
 
+      - name: 失败通知（飞书）
+        # 崩溃（未捕获异常/超时）不会生成告警面板，必须补一条消息，
+        # 否则 GitHub 上一个红叉等于没通知。
+        if: failure() && hashFiles('research/cycle_timing/push_feishu.py') != ''
+        run: |
+          python - <<'PY' || true
+          import os
+          import push_feishu
+          try:
+              creds = push_feishu.load_credentials()
+              url = (f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', '')}"
+                     f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}")
+              push_feishu.send_text(
+                  f"⚠️ A股周期面板这次没有完整跑完：面板可能已经发出，也可能没有。"
+                  f"请对照日志确认。\n{url}", creds)
+          except Exception as exc:
+              print("失败通知发送失败:", type(exc).__name__, exc)
+          PY
+
       - name: 上传面板和日志（出问题可回查）
         if: always()
         uses: actions/upload-artifact@v4

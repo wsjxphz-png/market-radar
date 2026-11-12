@@ -24,7 +24,9 @@ concurrency:
 jobs:
   daily-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 实测真实运行时 10.5~17.7 分钟（2026-09~11 记录），20 分钟余量太薄；
+    # 超时会静默丢掉当天日报，给到 30 分钟
+    timeout-minutes: 30
     env:
       # 关键：日志时间、日报标题、推送标记都按北京时间；服务器默认 UTC 会差 8 小时
       TZ: Asia/Shanghai
@@ -83,7 +85,25 @@ jobs:
           fi
 
       - name: 失败通知
-        if: failure()
+        # 崩溃（未捕获异常/超时）不会走 main.py 里的告警卡，必须在这里补一条飞书消息，
+        # 否则 GitHub 上一个红叉等于没通知。
+        if: failure() && hashFiles('main.py') != ''
+        env:
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
         run: |
           echo "::error::市场机会日报生成或数据持久化失败，请检查 GitHub Actions 日志。"
-          echo "日报生成失败，请检查 GitHub Actions 日志。"
+          python - <<'PY' || true
+          import os
+          import main
+          try:
+              url = (f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', '')}"
+                     f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}")
+              card = main.build_alert_card(
+                  "⚠️ 市场机会日报 · 运行失败",
+                  f"这次运行没有完整跑完：日报可能已经发出，也可能没有。请对照日志确认。\n\n日志：{url}")
+              main.send_feishu_card(card)
+          except Exception as exc:
+              print("失败通知发送失败:", type(exc).__name__, exc)
+          PY
