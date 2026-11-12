@@ -301,7 +301,6 @@ def build_message(pan) -> str:
     L.append("数据日期："
              f"指数 {_src('指数行情')}；PE估值 {_src('PE估值')}；"
              f"ETF份额 {_src('ETF份额')}；两融 {_src('两融')}；社融 {_src('社融')}。")
-    L.append(f"完整面板（复制到资源管理器地址栏打开）：{BASE / 'results' / ('panel_%s.html' % pan.date.date())}")
     L.append("参考信息，不是交易指令。")
     return "\n".join(L)
 
