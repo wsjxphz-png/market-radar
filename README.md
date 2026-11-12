@@ -58,7 +58,7 @@
 | AI 分析 | Agnes AI（环境变量兼容 DeepSeek 旧key） |
 | M1 宏观 | akshare / FRED |
 | 消息推送 | 飞书 Bot API + 交互卡片 |
-| 定时运行 | GitHub Actions (UTC 08:00) |
+| 定时运行 | GitHub Actions (UTC 11:00 = 北京时间 19:00) |
 | 数据持久化 | JSON (portfolio / trade_log / position_state) |
 
 ---
