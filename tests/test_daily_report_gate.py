@@ -1,4 +1,6 @@
 """日报送达闸门：GitHub 定时任务延迟到凌晨时仍应出最近一个交易日的数据。"""
+import sys
+import types
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -52,6 +54,56 @@ def test_market_data_confirms_only_when_data_reaches_report_day():
     assert not main.market_data_confirms(date(2027, 1, 4), "2026-12-31")
     assert main.market_data_confirms(date(2027, 1, 4), "2027-01-04")
     assert main.market_data_confirms(date(2027, 1, 4), "2027-01-05")
+
+
+class _FakeResult:
+    def __init__(self, rows):
+        self.error_code = "0"
+        self._it = iter(rows)
+        self._row = None
+
+    def next(self):
+        try:
+            self._row = next(self._it)
+            return True
+        except StopIteration:
+            return False
+
+    def get_row_data(self):
+        return self._row
+
+
+class _FakeBSIndex:
+    def login(self):
+        return types.SimpleNamespace(error_code="0", error_msg="")
+
+    def logout(self):
+        pass
+
+    def query_history_k_data_plus(self, code, fields, start_date, end_date, frequency="d"):
+        # 上证指数只在开市日有日K：10-1 国庆休市没有，9-30 有
+        return _FakeResult([["2026-09-30"]] if start_date == "2026-09-30" else [])
+
+
+class _FakeBSLoginFail:
+    def login(self):
+        return types.SimpleNamespace(error_code="1", error_msg="认证失败")
+
+
+def test_latest_market_trade_day_walks_back_from_holiday(monkeypatch):
+    class FakeDT(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 1, 9, 0)  # 国庆假期
+
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSIndex())
+    monkeypatch.setattr(main, "datetime", FakeDT)
+    assert main.latest_market_trade_day() == "2026-09-30"
+
+
+def test_latest_market_trade_day_login_failure_returns_none(monkeypatch):
+    monkeypatch.setitem(sys.modules, "baostock", _FakeBSLoginFail())
+    assert main.latest_market_trade_day() is None
 
 
 def test_title_uses_report_day_not_wall_clock():

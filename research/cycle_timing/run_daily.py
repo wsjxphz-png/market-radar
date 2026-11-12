@@ -64,6 +64,9 @@ def refresh_calendar() -> bool:
     try:
         import akshare as ak
         df = ak.tool_trade_date_hist_sina()
+        if df is None or len(df) == 0:
+            # 接口偶发空数据时不能覆盖掉缓存里可用的旧日历
+            raise ValueError("交易日历接口返回空数据")
         df["trade_date"] = pd.to_datetime(df["trade_date"])
         df.to_csv(CAL, index=False, encoding="utf-8-sig")
         log(f"交易日历已更新至 {df['trade_date'].max().date()}")
@@ -105,6 +108,12 @@ def latest_completed_trading_day(now: datetime) -> date | None:
     return latest_trading_day(day)
 
 
+def hours_since_close(day: date, now: datetime) -> float:
+    """day 收盘（15:00）到现在过了多少小时；负值表示还没到收盘。"""
+    close_at = pd.Timestamp(day) + pd.Timedelta(hours=15)
+    return (pd.Timestamp(now) - close_at).total_seconds() / 3600
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="每日自动跑面板并推飞书")
     ap.add_argument("--force", action="store_true", help="忽略交易日/16:00/已推送限制")
@@ -133,8 +142,7 @@ def main() -> int:
             # 不再问“今天是不是交易日、现在过没过 16:00”——GitHub 实际送达时间常在
             # 次日凌晨，那样问会把每一班都当成“未收盘”静默吞掉。只问一件事：
             # 要推的这份面板（最近一个已收盘交易日）离收盘多久。16 小时内算正常送达。
-            close_at = pd.Timestamp(target) + pd.Timedelta(hours=15)
-            age_hours = (pd.Timestamp(now) - close_at).total_seconds() / 3600
+            age_hours = hours_since_close(target, now)
             if age_hours > PUSH_WINDOW_HOURS:
                 log(f"最近交易日 {target} 收盘已 {age_hours:.1f} 小时，"
                     f"超过 {PUSH_WINDOW_HOURS} 小时送达窗口，不补发")
@@ -182,11 +190,14 @@ def main() -> int:
         return 1
     log(f"面板已生成: {pan.date.date()} | {pan.headline}")
 
-    # 日历不可用时，用指数数据反推今天有没有开市：数据没更新到今天，就无法证明今天开市。
-    # 用户明确要求休市日不强推，这种情况按休市处理（宁可少推一天，也不在假期推旧面板）。
-    if not args.force and cal_unknown and pan.date.date() < today:
-        log(f"交易日历不可用，且指数数据停在 {pan.date.date()}，无法确认今天开市；按休市处理，不推送")
-        return 0
+    # 日历未知时用“面板数据日期离收盘多久”判断，不能和“今天”比：
+    # 定时任务常延迟到次日凌晨，送达昨天已收盘的面板是正常的；只有假期旧数据才会超窗。
+    if not args.force and cal_unknown:
+        age_hours = hours_since_close(pan.date.date(), now)
+        if age_hours > PUSH_WINDOW_HOURS:
+            log(f"交易日历未知，指数数据停在 {pan.date.date()}（收盘已 {age_hours:.1f} 小时），"
+                f"超过 {PUSH_WINDOW_HOURS} 小时送达窗口，不推送")
+            return 0
 
     # 数据是否更新到“最近一个应收盘的交易日”；没有就不能推进状态基线，也不能标成新鲜
     expected = latest_completed_trading_day(now)

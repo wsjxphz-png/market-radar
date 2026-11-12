@@ -47,9 +47,6 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 TRADE_CAL_FILE = os.path.join(DATA_DIR, "trade_dates.csv")
 REPORT_STATE_FILE = os.path.join(DATA_DIR, "last_daily_report.json")
 PUSH_WINDOW_HOURS = 16  # 收盘后 16 小时内送达算正常；超过视为过期，不补发
-# 本次运行实际拿到的最新行情数据日期（YYYY-MM-DD）；
-# 交易日历没覆盖今天时，用它确认今天到底有没有开市
-_MARKET_STATS_DAY: str | None = None
 
 _log_lines: List[str] = []
 def log(msg: str):
@@ -335,6 +332,37 @@ def fetch_fred_data(fred_config: Dict) -> List[Dict]:
 # AKShare A股数据
 # ============================================================
 
+def latest_market_trade_day() -> Optional[str]:
+    """探测最近一个真有行情的交易日（YYYY-MM-DD），不采样涨跌。
+    用上证指数的日K判断：指数只在开市日有K线，比“股票列表”可靠，也不会被停牌干扰。
+    用于交易日历没覆盖今天时确认“今天到底开没开市”。"""
+    try:
+        import baostock as bs
+    except ImportError:
+        log("⚠️ baostock 未安装，无法确认交易日")
+        return None
+    lg = bs.login()
+    if getattr(lg, "error_code", "1") != "0":
+        log(f"⚠️ baostock 登录失败: {getattr(lg, 'error_msg', '?')}")
+        return None
+    try:
+        for back in range(0, 6):
+            d = (datetime.now() - timedelta(days=back)).strftime("%Y-%m-%d")
+            try:
+                k = bs.query_history_k_data_plus(
+                    "sh.000001", "date", start_date=d, end_date=d, frequency="d")
+            except Exception:
+                continue
+            if getattr(k, "error_code", "1") == "0" and k.next():
+                return d
+    finally:
+        try:
+            bs.logout()
+        except Exception:
+            pass
+    return None
+
+
 def fetch_a_share_market_stats() -> Optional[Dict]:
     """baostock 获取 A 股概况：全市场只数 + 沪深300/中证500 涨跌家数样本。
 
@@ -344,7 +372,6 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
       输出时如实标注样本口径；不再输出"上涨0只/下跌0只"假数据。
     - 任一步失败返回 None，由调用方标注"暂不可用"并计入失败源清单。
     """
-    global _MARKET_STATS_DAY
     try:
         import baostock as bs
     except ImportError:
@@ -374,8 +401,6 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
         if day is None:
             log("⚠️ baostock query_all_stock 无数据，A股概况不可用")
             return None
-        # 即使后面的涨跌采样失败，这个日期也有效：日历失效时靠它判断今天开没开市
-        _MARKET_STATS_DAY = day
 
         # 全市场只数（仅 A 股：sh.60*/sh.68*/sz.00*/sz.30*，且为交易状态；sz.20* 为深市B股不计）
         total = 0
@@ -1906,6 +1931,9 @@ def refresh_trade_days(now: datetime) -> set:
         import akshare as ak
         import pandas as pd
         df = ak.tool_trade_date_hist_sina()
+        if df is None or len(df) == 0:
+            # 接口偶发空数据时不能覆盖掉仓库里可用的旧日历
+            raise ValueError("交易日历接口返回空数据")
         df["trade_date"] = pd.to_datetime(df["trade_date"])
         os.makedirs(DATA_DIR, exist_ok=True)
         df.to_csv(TRADE_CAL_FILE, index=False, encoding="utf-8-sig")
@@ -2027,6 +2055,18 @@ def main():
     tasks = build_rss_urls(sources_config)
     log(f"📋 {len(tasks)} 个 RSS 抓取任务")
 
+    # 日历没覆盖今天（例如跨年后新日历还没拿到）时，不能靠“工作日”猜：
+    # 在抓取/推送任何内容之前，先用行情数据确认这一天真的开市，否则按休市跳过。
+    # 放在这里而不是拿到 AI 结果之后，是为了连“无内容”之类的告警也不在假期发。
+    if report_day and not calendar_ok:
+        data_day = latest_market_trade_day()
+        if not market_data_confirms(report_day, data_day):
+            log(f"交易日历未覆盖今天，行情数据日期为 {data_day or '未知'}；"
+                f"无法确认 {report_day} 开市，按休市处理，不推送")
+            return
+        log(f"交易日历未覆盖今天，但行情数据已更新到 {data_day}，"
+            f"确认 {report_day} 开市")
+
     all_items = fetch_all(tasks)
 
     if not all_items:
@@ -2060,17 +2100,7 @@ def main():
     fred_config = sources_config.get("fred", {}) if isinstance(sources_config, dict) else {}
     fred_items = fetch_fred_data(fred_config) if fred_config.get("enabled") else []
     ak_config = sources_config.get("akshare", {}) if isinstance(sources_config, dict) else {}
-    akshare_text = fetch_akshare_data(ak_config)
-
-    # 日历没覆盖今天（例如跨年后新日历还没拿到）时，不能靠“工作日”猜：
-    # 用行情数据日期确认这一天真的开市，否则按休市跳过，避免假期推旧数据。
-    if report_day and not calendar_ok:
-        if not market_data_confirms(report_day, _MARKET_STATS_DAY):
-            log(f"交易日历未覆盖今天，行情数据日期为 {_MARKET_STATS_DAY or '未知'}；"
-                f"无法确认 {report_day} 开市，按休市处理，不推送")
-            return
-        log(f"交易日历未覆盖今天，但行情数据已更新到 {_MARKET_STATS_DAY}，"
-            f"确认 {report_day} 开市") if ak_config.get("enabled") else ""
+    akshare_text = fetch_akshare_data(ak_config) if ak_config.get("enabled") else ""
 
 
     # Tavily 实时搜索
