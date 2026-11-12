@@ -423,19 +423,22 @@ def mark_pushed(panel_date, run_date: date | None = None, fresh: bool = True) ->
         ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def push_panel(pan, force: bool = False, dry_run: bool = False, fresh: bool = True) -> str:
+def push_panel(pan, force: bool = False, dry_run: bool = False, fresh: bool = True,
+               run_date: date | None = None) -> str:
     """返回 sent / skipped / dry-run / failed，便于调用方写准确的日志。
-    fresh=False 表示本次数据未更新（刷新失败或数据源滞后），用于让之后的新数据补发。"""
+    fresh=False 表示本次数据未更新（刷新失败或数据源滞后），用于让之后的新数据补发。
+    run_date 是这次任务“负责的那一天”（最近一个已收盘交易日），默认当前日期。
+    用它而不是墙钟日期做去重键：23:55 推过、00:05 的重试班次不会重复发。"""
     if dry_run:
         print(build_message(pan))
         return "dry-run"
-    if not force and already_pushed(pan.date, fresh=fresh):
+    if not force and already_pushed(pan.date, run_date=run_date, fresh=fresh):
         print(f"面板 {pan.date.date()} 已推送过，跳过（--force 可强制重发）")
         return "skipped"
     text = build_message(pan)
     if not send_text(text, load_credentials()):
         return "failed"
-    mark_pushed(pan.date, fresh=fresh)
+    mark_pushed(pan.date, run_date=run_date, fresh=fresh)
     return "sent"
 
 

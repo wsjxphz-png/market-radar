@@ -3,9 +3,10 @@
 """每个交易日收盘后自动：刷新数据 → 生成面板 → 推送飞书。
 
 云端由 GitHub Actions 定时调用（电脑关机也照跑），本地 Windows 计划任务只作手动/调试入口。
-休市日（周末、法定节假日）直接跳过，不补发、不强推。
+休市日（周末、法定节假日）不推当天内容；定时任务延迟到次日凌晨时，送达的是最近一个
+已收盘交易日的面板（收盘超过 16 小时则不补发），不会在假期推旧数据。
 也可以手动：
-    python run_daily.py                 # 正常跑（非交易日/16:00 前自动跳过）
+    python run_daily.py                 # 正常跑（只推最近一个已收盘交易日，超过 16 小时不补发）
     python run_daily.py --force         # 强制跑，忽略交易日、时间、已推送限制
     python run_daily.py --no-push       # 只生成面板，不推飞书
     python run_daily.py --skip-refresh  # 不联网，直接用缓存生成（调试用）
@@ -32,6 +33,11 @@ BASE = Path(__file__).parent
 CACHE = BASE / "cache"
 LOGS = BASE / "logs"
 CAL = CACHE / "trade_dates.csv"
+
+# GitHub 定时任务实测常晚 5~10 小时（19:00 的班次经常北京时间凌晨才真正跑到），
+# 所以不能按“现在几点”判断要不要推，只能按“要推的那份面板离收盘多久”判断。
+# 收盘后 16 小时内算正常送达；超过就视为过期，不补发（周末白天不会收到周五的旧面板）。
+PUSH_WINDOW_HOURS = 16
 
 
 def log(msg: str) -> None:
@@ -109,31 +115,33 @@ def main() -> int:
     now = datetime.now()
     refresh_calendar()  # 先更新日历；失败会沿用旧日历
     today = now.date()
+    target = latest_completed_trading_day(now)
     cal_unknown = False
     if not args.force:
-        trading = is_trading_day(today)
-        if trading is False:
-            log(f"{today} 不是 A 股交易日（休市），今天不推送、也不补发")
-            return 0
-        if trading is None:
+        if target is None:
             # 日历没覆盖/取不到：先照常刷新，稍后用指数数据判断今天有没有开市
             cal_unknown = True
             log("交易日历不可用，无法提前判断是否交易日；刷新后按指数数据判断，判断不了就不推")
-        if now.hour < 16:
-            log(f"未到 16:00（当前 {now:%H:%M}），等收盘后再跑，跳过")
-            return 0
-
-    # 19:00 推过之后，22:00 的补跑不必再联网刷新（数据滞后时此检查会放行）
-    if not args.force and not args.no_push:
-        target = latest_completed_trading_day(now)
-        if target is not None:
-            try:
-                import push_feishu
-                if push_feishu.already_pushed(pd.Timestamp(target), fresh=True):
-                    log(f"{target} 的面板今天已推送过，跳过重复刷新")
-                    return 0
-            except Exception as exc:
-                log(f"检查推送标记失败，继续执行: {type(exc).__name__} {exc}")
+        else:
+            # 不再问“今天是不是交易日、现在过没过 16:00”——GitHub 实际送达时间常在
+            # 次日凌晨，那样问会把每一班都当成“未收盘”静默吞掉。只问一件事：
+            # 要推的这份面板（最近一个已收盘交易日）离收盘多久。16 小时内算正常送达。
+            close_at = pd.Timestamp(target) + pd.Timedelta(hours=15)
+            age_hours = (pd.Timestamp(now) - close_at).total_seconds() / 3600
+            if age_hours > PUSH_WINDOW_HOURS:
+                log(f"最近交易日 {target} 收盘已 {age_hours:.1f} 小时，"
+                    f"超过 {PUSH_WINDOW_HOURS} 小时送达窗口，不补发")
+                return 0
+            # 19:00 推过之后，凌晨/重试班次不必再联网刷新（数据滞后时此检查会放行）。
+            # 去重键用 target 而不是 today：23:55 推过、00:05 重试不能重复发一遍。
+            if not args.no_push:
+                try:
+                    import push_feishu
+                    if push_feishu.already_pushed(pd.Timestamp(target), run_date=target, fresh=True):
+                        log(f"{target} 的面板已推送过，跳过重复刷新")
+                        return 0
+                except Exception as exc:
+                    log(f"检查推送标记失败，继续执行: {type(exc).__name__} {exc}")
 
     alerts: list[str] = []
     refresh_ok = True
@@ -185,7 +193,7 @@ def main() -> int:
 
     import push_feishu
     try:
-        status = push_feishu.push_panel(pan, force=args.force, fresh=data_fresh)
+        status = push_feishu.push_panel(pan, force=args.force, fresh=data_fresh, run_date=target)
     except Exception:
         log("飞书推送异常:\n" + traceback.format_exc())
         return 1

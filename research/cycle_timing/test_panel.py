@@ -239,14 +239,14 @@ def test_push_alert_hides_cli_commands():
     assert "自动任务" in out
 
 
-def test_non_trading_day_skips_without_pushing(monkeypatch):
+def test_stale_weekend_run_skips_without_pushing(monkeypatch):
     import run_daily
     from datetime import datetime as real_datetime
 
     class FakeDT:
         @staticmethod
         def now():
-            return real_datetime(2026, 11, 14, 9, 0)  # 周六早上开机
+            return real_datetime(2026, 11, 14, 9, 0)  # 周六早上 9 点，周五收盘已过 18 小时
 
     pushed = []
     monkeypatch.setattr(run_daily, "datetime", FakeDT)
@@ -254,8 +254,53 @@ def test_non_trading_day_skips_without_pushing(monkeypatch):
     monkeypatch.setattr(run_daily, "is_trading_day", lambda d: False)
     monkeypatch.setattr(run_daily, "log", lambda msg: None)
     monkeypatch.setattr(sys, "argv", ["run_daily.py"])
-    assert run_daily.main() == 0  # 休市日直接跳过，不补发周五的面板
+    assert run_daily.main() == 0  # 超过 16 小时送达窗口，不补发周五的面板
     assert pushed == []
+
+
+def test_overnight_delayed_run_pushes_last_completed_day(monkeypatch):
+    """GitHub 定时任务实测常晚 5~10 小时：周二 02:00 才跑到，也应推周一的面板。"""
+    import run_daily
+    from datetime import date, datetime as real_datetime
+
+    class FakeDT:
+        @staticmethod
+        def now():
+            return real_datetime(2026, 11, 17, 2, 0)  # 周二凌晨，周一已收盘
+
+    class FakePanel:
+        @staticmethod
+        def refresh():
+            pass
+
+        @staticmethod
+        def run(**kwargs):
+            class P:
+                date = pd.Timestamp("2026-11-16")
+                headline = "test"
+            return P()
+
+    import panel_data
+    import push_feishu
+
+    sent = []
+
+    def fake_push(pan, **kwargs):
+        sent.append((pan.date.date(), kwargs.get("run_date")))
+        return "sent"
+
+    monkeypatch.setattr(run_daily, "datetime", FakeDT)
+    monkeypatch.setattr(run_daily, "refresh_calendar", lambda: True)
+    monkeypatch.setattr(run_daily, "log", lambda msg: None)
+    monkeypatch.setitem(sys.modules, "panel", FakePanel)
+    monkeypatch.setattr(panel_data, "save_state", lambda pan: None)
+    monkeypatch.setattr(push_feishu, "already_pushed", lambda *a, **kw: False)
+    monkeypatch.setattr(push_feishu, "push_panel", fake_push)
+    monkeypatch.setattr(sys, "argv", ["run_daily.py"])
+    assert run_daily.main() == 0
+    assert sent and sent[0][0] == date(2026, 11, 16)  # 推的是周一的面板
+    # 去重键也是周一：23:55 推过、00:05 的重试班次不会重复发
+    assert sent[0][1] == date(2026, 11, 16)
 
 
 def test_unknown_calendar_uses_index_data_before_pushing(monkeypatch):

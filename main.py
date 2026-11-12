@@ -14,7 +14,7 @@
 """
 
 import os, sys, re, json, time, hashlib, argparse
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from typing import List, Dict, Optional, Tuple
 
@@ -38,6 +38,15 @@ REQUEST_TIMEOUT = 30
 REQUEST_DELAY = 0.5
 MAX_RETRIES = 2
 CARD_MAX_CHARS = 28000
+
+# 日报只负责“最近一个已收盘的 A 股交易日”，不按当前钟点判断。
+# GitHub 定时任务实测常晚 5~10 小时（UTC 11:00 的班次常在北京时间次日凌晨才跑到），
+# 旧闸门按“现在是不是当天 15:00 之后”判断，凌晨到达会被当成“未收盘”全部静默跳过。
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+TRADE_CAL_FILE = os.path.join(DATA_DIR, "trade_dates.csv")
+REPORT_STATE_FILE = os.path.join(DATA_DIR, "last_daily_report.json")
+PUSH_WINDOW_HOURS = 16  # 收盘后 16 小时内送达算正常；超过视为过期，不补发
 
 _log_lines: List[str] = []
 def log(msg: str):
@@ -1663,8 +1672,9 @@ def section(title: str, body: str) -> str:
     return f"\n━━━━━━━━━━━━━━━━━━━\n\n{title}\n\n{body}"
 
 
-def format_feishu(ai: Dict, stats: Dict) -> Dict:
-    d = datetime.now()
+def format_feishu(ai: Dict, stats: Dict, report_day: date | None = None) -> Dict:
+    # 标题日期用“数据日期”，不用送达时的墙钟：凌晨送达的日报应该写昨天，不是今天。
+    d = datetime.combine(report_day, datetime.min.time()) if report_day else datetime.now()
     date_str = d.strftime("%Y.%m.%d")
     weekday = ["一","二","三","四","五","六","日"][d.weekday()]
     md = [f"📊 **市场机会发现系统** · {date_str} 周{weekday}", f"从 {stats['filtered']} 条信息中为你发现机会", "━━━━━━━━━━━━━━━━━━━"]
@@ -1826,7 +1836,7 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
 
     # 尾部
     md.append("\n━━━━━━━━━━━━━━━━━━━")
-    md.append(f"📊 市场机会发现系统 · 每日 {d.strftime('%H:%M')} 自动生成")
+    md.append("📊 市场机会发现系统 · 每日收盘后自动生成")
     md.append(f"AI: {AI_MODEL} · {stats['ok_sources']}源成功 · 本报告不构成投资建议")
 
     # 系统校准
@@ -1850,6 +1860,94 @@ def format_feishu(ai: Dict, stats: Dict) -> Dict:
 
 
 # ============================================================
+# 交易日判断与送达窗口（日报只推最近一个已收盘交易日）
+# ============================================================
+
+def _trade_days_from_file() -> set:
+    """读仓库里缓存的 A 股交易日历；缺失/损坏返回空集合。"""
+    try:
+        import pandas as pd
+        df = pd.read_csv(TRADE_CAL_FILE, encoding="utf-8-sig")
+        return set(pd.to_datetime(df["trade_date"]).dt.date)
+    except Exception:
+        return set()
+
+
+def refresh_trade_days(now: datetime) -> set:
+    """交易日历快到期时才联网更新；失败沿用旧日历（文件随 data/ 提交回仓库）。"""
+    days = _trade_days_from_file()
+    if days and max(days) >= now.date() + timedelta(days=30):
+        return days
+    try:
+        import akshare as ak
+        import pandas as pd
+        df = ak.tool_trade_date_hist_sina()
+        df["trade_date"] = pd.to_datetime(df["trade_date"])
+        os.makedirs(DATA_DIR, exist_ok=True)
+        df.to_csv(TRADE_CAL_FILE, index=False, encoding="utf-8-sig")
+        return set(df["trade_date"].dt.date)
+    except Exception as e:
+        log(f"⚠️ 交易日历更新失败，沿用已有日历: {str(e)[:80]}")
+        return days
+
+
+def latest_completed_trading_day(now: datetime, days: set) -> date | None:
+    """此刻理应已收盘的最近一个 A 股交易日。
+    交易日 16:00 前算上一个交易日（收盘数据通常 16:00 后才齐）。"""
+    if not days:
+        return None
+    d = now.date()
+    if d in days and now.hour < 16:
+        d -= timedelta(days=1)
+    past = [x for x in days if x <= d]
+    return max(past) if past else None
+
+
+def resolve_report_day(now: datetime) -> date | None:
+    """本次日报该用哪一天的数据；超出送达窗口返回 None（不推送）。
+    只要离目标交易日收盘不超过 PUSH_WINDOW_HOURS，就出那个交易日的日报；
+    定时任务延迟到凌晨也照发，而不是因为“今天未收盘”把报告吞掉。"""
+    days = refresh_trade_days(now)
+    target = None
+    if days and max(days) >= now.date():
+        target = latest_completed_trading_day(now, days)
+    if target is None:
+        # 日历完全不可用：退回“工作日”近似（判断不了法定节假日，宁可按工作日）
+        d = now.date()
+        if now.hour < 16:
+            d -= timedelta(days=1)
+        while d.weekday() >= 5:
+            d -= timedelta(days=1)
+        target = d
+        log("⚠️ 交易日历不可用，按工作日近似判断数据日期")
+    close_at = datetime.combine(target, datetime.min.time()).replace(hour=15)
+    age_hours = (now - close_at).total_seconds() / 3600
+    if age_hours > PUSH_WINDOW_HOURS:
+        log(f"最近交易日 {target} 收盘已 {age_hours:.1f} 小时，超过 {PUSH_WINDOW_HOURS} 小时送达窗口，本次不推送")
+        return None
+    return target
+
+
+def report_already_pushed(day: date) -> bool:
+    try:
+        with open(REPORT_STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f).get("report_date") == str(day)
+    except Exception:
+        return False
+
+
+def mark_report_pushed(day: date) -> None:
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(REPORT_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"report_date": str(day),
+                       "pushed_at": datetime.now().isoformat(timespec="seconds")},
+                      f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        log(f"⚠️ 写日报推送标记失败（不影响本次推送）: {e}")
+
+
+# ============================================================
 # 主流程
 # ============================================================
 
@@ -1861,16 +1959,24 @@ def main():
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
-    # 开市检查
-    if not args.force:
+    # 送达闸门：按“最近一个已收盘交易日”判断，不按当前钟点。
+    # 旧逻辑问“今天是不是交易日、现在过没过 15:00”，但 GitHub 定时任务常晚
+    # 5~10 小时，凌晨才跑到的班次会被全部当成“未收盘”静默跳过（连续多日无日报）。
+    report_day = None
+    if not args.dry_run:
         now = datetime.now(ZoneInfo("Asia/Shanghai"))
-        weekday = now.weekday()
-        if weekday >= 5:
-            log("周末休市，不推送"); return
-        if 1 <= weekday <= 4 and now.hour < 15:
-            log(f"交易日未收盘(当前{now.hour}:{now.minute:02d})，不推送"); return
-        if weekday == 0 and now.hour < 10:
-            log("周一早于10点数据可能未更新，不推送"); return
+        if args.force:
+            days = refresh_trade_days(now)
+            report_day = latest_completed_trading_day(now, days) or now.date()
+            log(f"--force：按 {report_day} 的数据生成（忽略送达窗口与已推送标记）")
+        else:
+            report_day = resolve_report_day(now)
+            if report_day is None:
+                return
+            if report_already_pushed(report_day):
+                log(f"{report_day} 的日报已推送过，跳过重复推送")
+                return
+            log(f"日报数据日期 {report_day}（北京时间 {now:%Y-%m-%d %H:%M}）")
 
     log("="*50)
     log("📊 市场机会发现系统")
@@ -1945,7 +2051,8 @@ def main():
 
     if ai_result is None:
         fail = render_source_failure_block()
-        content_md = (f"📊 市场机会发现系统 · {datetime.now().strftime('%Y.%m.%d')}\n\n"
+        day_str = (report_day or datetime.now()).strftime("%Y.%m.%d")
+        content_md = (f"📊 市场机会发现系统 · {day_str}\n\n"
                       f"⚠️ AI 分析暂不可用。今日抓取 {len(filtered)} 条内容。\n\n"
                       f"失败原因: {AI_FAILURE_REASON}\n\n"
                       + (fail or ""))
@@ -1957,10 +2064,14 @@ def main():
         # 留痕提交步骤不受影响（daily-report.yml 仅依赖 checkout outcome）。
         sys.exit(1)
     else:
-        card = format_feishu(ai_result, stats)
+        card = format_feishu(ai_result, stats, report_day)
 
-    send_feishu_card(card)
+    ok = send_feishu_card(card)
     send_feishu_webhook(card)
+    # 只有正式日报推送成功才记“已推送”：AI 失败/无内容时的告警卡不记账，
+    # 重试班次还能补发真正的日报。
+    if ok and report_day:
+        mark_report_pushed(report_day)
 
     log("\n"+"="*50)
     log("✅ 完成")

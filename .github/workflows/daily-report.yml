@@ -2,20 +2,32 @@ name: 市场机会日报
 
 on:
   schedule:
-    # 北京时间 19:00 = UTC 11:00（2026-08-06 调整：避开 DeepSeek 高峰价 9-12/14-18 点，
-    # 且 GitHub schedule 实际延迟 ~2.5h → 实际推送约 21:30）
+    # 北京时间 19:00 = UTC 11:00。注意：GitHub 对这个仓库的定时任务实测会晚
+    # 5~10 小时（2026-11 观测：UTC 11:00 的班次常在北京时间次日 00:00~05:15
+    # 才真正启动）。main.py 不再按“当前钟点”判断，而是推“最近一个已收盘
+    # 交易日”的日报，并在收盘 16 小时内送达；超过窗口自动跳过，不补发旧报告。
     - cron: '0 11 * * *'
+    # 重试班次：已推送成功则按 data/last_daily_report.json 跳过，不会重复发
+    - cron: '10 11 * * *'
   workflow_dispatch:
     inputs:
       force:
-        description: '跳过非交易日检查，强制运行'
+        description: '跳过交易日/送达窗口检查，强制运行'
         type: boolean
         default: false
+
+# 同一时间只跑一个，避免两个班次同时判断“未推送”而重复发送
+concurrency:
+  group: daily-report
+  cancel-in-progress: false
 
 jobs:
   daily-report:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # 关键：日志时间、日报标题、推送标记都按北京时间；服务器默认 UTC 会差 8 小时
+      TZ: Asia/Shanghai
     # O1：需要写回 active_theses.json / archive/（追踪/校准闭环持久化）
     permissions:
       contents: write
@@ -65,6 +77,8 @@ jobs:
             echo "无追踪数据变更，跳过提交"
           else
             git commit -m "data: 活跃判断追踪留痕 [skip ci]"
+            # 周期面板的 bot 也会提交 cache/ 文件；先 rebase 再推，避免被拒
+            git pull --rebase origin main || true
             git push
           fi
 
