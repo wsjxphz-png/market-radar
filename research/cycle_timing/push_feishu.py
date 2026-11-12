@@ -274,9 +274,15 @@ def build_message(pan) -> str:
     L.append("")
 
     L.append("■ 三个底：政策底 → 市场底 → 盈利底（历史上按这个顺序出现）")
+    market_confirmed = pan.bottoms.market.status.startswith("确认")
     for b in (pan.bottoms.policy, pan.bottoms.market, pan.bottoms.earnings):
-        L.append(f"{b.name}：{_bottom_state_plain(b)}")
-        L.append(b.plain or b.meaning)
+        if b.name == "政策底" and market_confirmed:
+            # 市场已修复后，政策底的三个条件自然回落，再说“未出现”会让人误以为还要等底
+            L.append("政策底：当前不适用（市场已修复，政策底只在下跌/磨底阶段看）")
+            L.append("政策底是“政策开始托底”的信号；现在市场已经修复，这一项不用每天盯。")
+        else:
+            L.append(f"{b.name}：{_bottom_state_plain(b)}")
+            L.append(b.plain or b.meaning)
         L.append("")
     L.append(f"现在走到哪一步：{pan.bottoms.phase.replace('磨底', '磨底（在底部附近反复震荡、还没转强）')}")
     L.append("")

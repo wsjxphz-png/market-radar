@@ -389,6 +389,9 @@ def test_push_message_adapts_to_confirmed_market_bottom():
     assert "市场底：已确认，下跌趋势修复" in msg
     assert "市场底已经确认" in msg
     assert "现在只是观察区，不是买点" not in msg
+    # 市场已修复后，政策底不再说“还没出现”，否则像还在等底
+    assert "政策底：当前不适用" in msg
+    assert "政策底：还没出现" not in msg
 
 
 def test_headline_warns_when_top_risk_builds():
