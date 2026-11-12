@@ -342,6 +342,61 @@ def test_unknown_calendar_uses_index_data_before_pushing(monkeypatch):
     assert pushed == []
 
 
+@pytest.mark.parametrize("pan_date, expect_push", [
+    ("2026-11-17", True),   # 跨年后日历没更新，但指数数据已到今天：照常推
+    ("2026-11-13", False),  # 日历没更新、指数数据也停在旧日期（假期）：不推
+])
+def test_stale_calendar_decides_by_index_data(monkeypatch, pan_date, expect_push):
+    import run_daily
+    from datetime import date, datetime as real_datetime
+
+    class FakeDT:
+        @staticmethod
+        def now():
+            return real_datetime(2026, 11, 17, 2, 0)
+
+    class P:
+        date = pd.Timestamp(pan_date)
+        headline = "test"
+
+    class FakePanel:
+        @staticmethod
+        def refresh():
+            pass
+
+        @staticmethod
+        def run(**kwargs):
+            return P()
+
+    import panel_data
+    import push_feishu
+
+    sent = []
+
+    def fake_push(pan, **kwargs):
+        sent.append((pan.date.date(), kwargs.get("run_date")))
+        return "sent"
+
+    monkeypatch.setattr(run_daily, "datetime", FakeDT)
+    monkeypatch.setattr(run_daily, "refresh_calendar", lambda: True)
+    # 日历只到 11-13（没覆盖 11-17），模拟跨年新日历还没拿到
+    monkeypatch.setattr(run_daily, "trading_days",
+                        lambda: {real_datetime(2026, 11, 13).date()})
+    monkeypatch.setattr(run_daily, "log", lambda msg: None)
+    monkeypatch.setitem(sys.modules, "panel", FakePanel)
+    monkeypatch.setattr(panel_data, "save_state", lambda pan: None)
+    monkeypatch.setattr(push_feishu, "already_pushed", lambda *a, **kw: False)
+    monkeypatch.setattr(push_feishu, "push_panel", fake_push)
+    monkeypatch.setattr(sys, "argv", ["run_daily.py"])
+    assert run_daily.main() == 0
+    if expect_push:
+        assert sent and sent[0][0] == date.fromisoformat(pan_date)
+        # 去重键用面板数据日期（当天稳定），不用停在去年的 target
+        assert sent[0][1] == date.fromisoformat(pan_date)
+    else:
+        assert sent == []
+
+
 def test_latest_completed_trading_day_uses_previous_day_before_close(monkeypatch):
     import run_daily
     from datetime import date, datetime as real_datetime

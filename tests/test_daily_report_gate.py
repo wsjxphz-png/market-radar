@@ -40,6 +40,20 @@ def test_report_state_roundtrip(monkeypatch, tmp_path):
     assert not main.report_already_pushed(date(2026, 11, 17))
 
 
+def test_calendar_covers_checks_max_date(monkeypatch):
+    monkeypatch.setattr(main, "_trade_days_from_file", lambda: {date(2026, 12, 31)})
+    assert main.calendar_covers(date(2026, 12, 31))
+    assert not main.calendar_covers(date(2027, 1, 4))
+
+
+def test_market_data_confirms_only_when_data_reaches_report_day():
+    # 日历没覆盖今天时，只有行情数据里真有这一天，才确认开市
+    assert not main.market_data_confirms(date(2027, 1, 4), None)
+    assert not main.market_data_confirms(date(2027, 1, 4), "2026-12-31")
+    assert main.market_data_confirms(date(2027, 1, 4), "2027-01-04")
+    assert main.market_data_confirms(date(2027, 1, 4), "2027-01-05")
+
+
 def test_title_uses_report_day_not_wall_clock():
     stats = {"filtered": 1, "ok_sources": 1, "total_sources": 1, "calibration": {}}
     card = main.format_feishu({}, stats, date(2026, 11, 16))

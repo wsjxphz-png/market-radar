@@ -47,6 +47,9 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 TRADE_CAL_FILE = os.path.join(DATA_DIR, "trade_dates.csv")
 REPORT_STATE_FILE = os.path.join(DATA_DIR, "last_daily_report.json")
 PUSH_WINDOW_HOURS = 16  # 收盘后 16 小时内送达算正常；超过视为过期，不补发
+# 本次运行实际拿到的最新行情数据日期（YYYY-MM-DD）；
+# 交易日历没覆盖今天时，用它确认今天到底有没有开市
+_MARKET_STATS_DAY: str | None = None
 
 _log_lines: List[str] = []
 def log(msg: str):
@@ -341,6 +344,7 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
       输出时如实标注样本口径；不再输出"上涨0只/下跌0只"假数据。
     - 任一步失败返回 None，由调用方标注"暂不可用"并计入失败源清单。
     """
+    global _MARKET_STATS_DAY
     try:
         import baostock as bs
     except ImportError:
@@ -370,6 +374,8 @@ def fetch_a_share_market_stats() -> Optional[Dict]:
         if day is None:
             log("⚠️ baostock query_all_stock 无数据，A股概况不可用")
             return None
+        # 即使后面的涨跌采样失败，这个日期也有效：日历失效时靠它判断今天开没开市
+        _MARKET_STATS_DAY = day
 
         # 全市场只数（仅 A 股：sh.60*/sh.68*/sz.00*/sz.30*，且为交易状态；sz.20* 为深市B股不计）
         total = 0
@@ -1873,6 +1879,24 @@ def _trade_days_from_file() -> set:
         return set()
 
 
+def calendar_covers(day: date) -> bool:
+    """本地交易日历是否覆盖到 day。没覆盖（例如跨年新日历还没拿到）时，
+    不能靠日历判断休市/开市，得用实际行情数据确认。"""
+    days = _trade_days_from_file()
+    return bool(days) and max(days) >= day
+
+
+def market_data_confirms(report_day: date, data_day: str | None) -> bool:
+    """日历没覆盖今天时，用行情数据日期反推：数据里已经有 report_day 这一天，
+    才说明那天真开市；数据停在更早的日期（节假日）就不推。"""
+    if not data_day:
+        return False
+    try:
+        return date.fromisoformat(data_day[:10]) >= report_day
+    except ValueError:
+        return False
+
+
 def refresh_trade_days(now: datetime) -> set:
     """交易日历快到期时才联网更新；失败沿用旧日历（文件随 data/ 提交回仓库）。"""
     days = _trade_days_from_file()
@@ -1965,6 +1989,7 @@ def main():
     # 旧逻辑问“今天是不是交易日、现在过没过 15:00”，但 GitHub 定时任务常晚
     # 5~10 小时，凌晨才跑到的班次会被全部当成“未收盘”静默跳过（连续多日无日报）。
     report_day = None
+    calendar_ok = True
     if not args.dry_run:
         now = datetime.now(ZoneInfo("Asia/Shanghai"))
         if args.force:
@@ -1975,6 +2000,9 @@ def main():
             report_day = resolve_report_day(now)
             if report_day is None:
                 return
+            # resolve_report_day 在日历没覆盖今天时会按“工作日”近似，
+            # 这里记下来，拿到行情数据后再确认那天真的开市
+            calendar_ok = calendar_covers(now.date())
             if report_already_pushed(report_day):
                 log(f"{report_day} 的日报已推送过，跳过重复推送")
                 return
@@ -2032,7 +2060,17 @@ def main():
     fred_config = sources_config.get("fred", {}) if isinstance(sources_config, dict) else {}
     fred_items = fetch_fred_data(fred_config) if fred_config.get("enabled") else []
     ak_config = sources_config.get("akshare", {}) if isinstance(sources_config, dict) else {}
-    akshare_text = fetch_akshare_data(ak_config) if ak_config.get("enabled") else ""
+    akshare_text = fetch_akshare_data(ak_config)
+
+    # 日历没覆盖今天（例如跨年后新日历还没拿到）时，不能靠“工作日”猜：
+    # 用行情数据日期确认这一天真的开市，否则按休市跳过，避免假期推旧数据。
+    if report_day and not calendar_ok:
+        if not market_data_confirms(report_day, _MARKET_STATS_DAY):
+            log(f"交易日历未覆盖今天，行情数据日期为 {_MARKET_STATS_DAY or '未知'}；"
+                f"无法确认 {report_day} 开市，按休市处理，不推送")
+            return
+        log(f"交易日历未覆盖今天，但行情数据已更新到 {_MARKET_STATS_DAY}，"
+            f"确认 {report_day} 开市") if ak_config.get("enabled") else ""
 
 
     # Tavily 实时搜索

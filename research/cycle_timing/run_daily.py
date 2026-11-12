@@ -118,10 +118,17 @@ def main() -> int:
     target = latest_completed_trading_day(now)
     cal_unknown = False
     if not args.force:
-        if target is None:
+        # 日历没覆盖今天（跨年后新日历还没拿到）时，target 会停在去年的最后一天，
+        # 若按它算 16 小时窗口，之后每天都会被判“过期”而静默不推。
+        # 这种情况按“日历未知”处理：刷新后用指数数据日期判断今天开没开市。
+        try:
+            cal_stale = max(trading_days()) < today
+        except Exception:
+            cal_stale = True
+        if target is None or cal_stale:
             # 日历没覆盖/取不到：先照常刷新，稍后用指数数据判断今天有没有开市
             cal_unknown = True
-            log("交易日历不可用，无法提前判断是否交易日；刷新后按指数数据判断，判断不了就不推")
+            log("交易日历不可用或未覆盖今天，无法提前判断是否交易日；刷新后按指数数据判断，判断不了就不推")
         else:
             # 不再问“今天是不是交易日、现在过没过 16:00”——GitHub 实际送达时间常在
             # 次日凌晨，那样问会把每一班都当成“未收盘”静默吞掉。只问一件事：
@@ -193,7 +200,9 @@ def main() -> int:
 
     import push_feishu
     try:
-        status = push_feishu.push_panel(pan, force=args.force, fresh=data_fresh, run_date=target)
+        # 日历未知时 target 可能是旧日期或 None，去重键改用面板数据日期（当天稳定）
+        run_key = pan.date.date() if cal_unknown else target
+        status = push_feishu.push_panel(pan, force=args.force, fresh=data_fresh, run_date=run_key)
     except Exception:
         log("飞书推送异常:\n" + traceback.format_exc())
         return 1
