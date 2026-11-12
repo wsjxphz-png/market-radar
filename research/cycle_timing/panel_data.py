@@ -1001,7 +1001,8 @@ def build_bottoms(s: pd.DataFrame, indices: list, etf: EtfFlowPanel,
     m_plain += (f"最近60个交易日的最低点出现在 {days_since_low} 个交易日前；"
                 f"价格连续站上20日线5天：{'是' if above_ma20_5 else '否'}；"
                 f"站上200日线连续5天：{'是' if above200_5 else '否'}。"
-                "要确认市场底，需要价格连续5个交易日站上200日线，同时顶部风险分数低于0.4（0到1，越低越安全）。")
+                "要确认市场底，看价格能不能连续5个交易日站上200日线；"
+                "确认之后，顶部风险分数低于0.4（0到1，越低越安全）才适合加仓，分数高说明涨得太急，先别追。")
     market = BottomState(
         "市场底", m_status, m_tone,
         f"60日低点距今 {days_since_low} 个交易日；站上MA20连续5日：{'是' if above_ma20_5 else '否'}；"
@@ -1009,7 +1010,7 @@ def build_bottoms(s: pd.DataFrame, indices: list, etf: EtfFlowPanel,
         f"（20日 {fmt(breadth_chg*100, '+.0f')}pp）；"
         f"站上200日线5日：{'是' if above200_5 else '否'}。",
         "市场底是价格低点，通常滞后政策底 1-3 个月。底部分数只说明“进入观察区”，不是买点。"
-        + m_stats + "确认要看趋势修复（站上200日线5日 + top<0.4）。",
+        + m_stats + "确认看趋势修复（连续5日站上200日线）；top<0.4 只决定确认后能否加仓。",
         [("强/弱观察", f"强：{'、'.join(strong) or '无'}；弱：{'、'.join(weak) or '无'}"),
          ("60日低点", f"{days_since_low} 个交易日前"),
          ("站上MA20", "连续5日" if above_ma20_5 else "未满足"),
