@@ -1,0 +1,9 @@
+# 行情/信号是每次跑的中间数据，不提交（云端用 actions/cache 持久化）
+cache/*
+!cache/last_push.json
+!cache/panel_state.json
+signals/
+results/
+logs/
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,94 @@
+name: A股周期面板
+
+# 每个 A 股交易日收盘后自动跑：刷新数据 → 生成面板 → 推飞书。
+# 跑在 GitHub 的服务器上，电脑关机也照跑；休市日由 run_daily.py 直接跳过。
+# 定时任务用 UTC 时间；北京时间 19:00 = UTC 11:00。GitHub 定时常有延迟，晚 1-3 小时属正常。
+on:
+  schedule:
+    - cron: '0 11 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 强制推送（忽略“今天已推送”标记，调试用）
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# 同一时间只跑一个，避免两个任务同时写推送标记
+concurrency:
+  group: cycle-panel
+  cancel-in-progress: false
+
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # 关键：GitHub 服务器默认 UTC，不改时区会以为还没到 16:00 而跳过
+      TZ: Asia/Shanghai
+      FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+      FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+      FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+    defaults:
+      run:
+        working-directory: research/cycle_timing
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 缓存行情数据（避免每次重抓全部历史）
+        uses: actions/cache@v4
+        with:
+          path: |
+            research/cycle_timing/cache
+            research/cycle_timing/signals
+          key: cycle-timing-${{ github.run_id }}
+          restore-keys: |
+            cycle-timing-
+
+      - name: 以仓库记录为准恢复推送标记和状态基线
+        # 缓存可能比仓库旧；git 里的 last_push/panel_state 才是跨机器可信的那份
+        run: |
+          git checkout -- cache/last_push.json cache/panel_state.json 2>/dev/null || true
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 刷新数据、生成面板并推送
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            python run_daily.py --force
+          else
+            python run_daily.py
+          fi
+
+      - name: 保存推送标记和状态基线
+        if: always()
+        run: |
+          git config user.name "market-radar-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -f cache/last_push.json cache/panel_state.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 周期面板推送标记 [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: 上传面板和日志（出问题可回查）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cycle-panel-${{ github.run_id }}
+          path: |
+            research/cycle_timing/results/
+            research/cycle_timing/logs/
+          retention-days: 7
+          if-no-files-found: ignore
