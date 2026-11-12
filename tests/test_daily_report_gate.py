@@ -1,5 +1,6 @@
 """日报送达闸门：GitHub 定时任务延迟到凌晨时仍应出最近一个交易日的数据。"""
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import main
 
@@ -16,6 +17,13 @@ def test_stale_weekend_and_holiday_runs_skip():
     assert main.resolve_report_day(datetime(2026, 11, 14, 9, 0)) is None
     assert main.resolve_report_day(datetime(2026, 11, 16, 2, 0)) is None
     assert main.resolve_report_day(datetime(2026, 10, 2, 2, 0)) is None
+
+
+def test_aware_beijing_datetime_from_workflow():
+    # 云端传入的是带时区的北京时间（datetime.now(ZoneInfo(...))），不能和 naive 时间相减
+    tz = ZoneInfo("Asia/Shanghai")
+    assert main.resolve_report_day(datetime(2026, 11, 17, 2, 0, tzinfo=tz)) == date(2026, 11, 16)
+    assert main.resolve_report_day(datetime(2026, 11, 14, 9, 0, tzinfo=tz)) is None
 
 
 def test_normal_evening_run_targets_today():

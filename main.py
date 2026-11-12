@@ -1920,7 +1920,9 @@ def resolve_report_day(now: datetime) -> date | None:
             d -= timedelta(days=1)
         target = d
         log("⚠️ 交易日历不可用，按工作日近似判断数据日期")
-    close_at = datetime.combine(target, datetime.min.time()).replace(hour=15)
+    # 沿用 now 的时区（云端是带时区的北京时间），否则 aware/naive 相减会直接抛异常
+    close_at = now.replace(year=target.year, month=target.month, day=target.day,
+                           hour=15, minute=0, second=0, microsecond=0)
     age_hours = (now - close_at).total_seconds() / 3600
     if age_hours > PUSH_WINDOW_HOURS:
         log(f"最近交易日 {target} 收盘已 {age_hours:.1f} 小时，超过 {PUSH_WINDOW_HOURS} 小时送达窗口，本次不推送")
