@@ -92,6 +92,7 @@ jobs:
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: |
           echo "::error::市场机会日报生成或数据持久化失败，请检查 GitHub Actions 日志。"
           python - <<'PY' || true
@@ -104,6 +105,7 @@ jobs:
                   "⚠️ 市场机会日报 · 运行失败",
                   f"这次运行没有完整跑完：日报可能已经发出，也可能没有。请对照日志确认。\n\n日志：{url}")
               main.send_feishu_card(card)
+              main.send_feishu_webhook(card)  # Bot 凭据本身出问题时，webhook 还有机会送达
           except Exception as exc:
               print("失败通知发送失败:", type(exc).__name__, exc)
           PY
