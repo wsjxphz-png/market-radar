@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-12",
+  "updated": "2026-11-14",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -218,9 +218,14 @@
           "date": "2026-11-12",
           "status": "削弱→重新评估",
           "evidence": "金价跌破$4,000，三连跌。但波兰央行648吨/中国央行创纪录购金/荷兰转移储备至伦敦逻辑未变。德银称量化抛压'绝对耗尽'。关键看$4,000能否守住"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "削弱→重新评估",
+          "evidence": "金价$4,070跌破$4,100心理关口是对加息预期的反应，但波兰648吨+中国8月创纪录+荷兰转移储备逻辑未变。BTC $76K仍在共振。当前是战术回撤区间而非趋势反转"
         }
       ],
-      "next_checkpoint": "2026-12月FOMC会议+中国央行11月购金数据"
+      "next_checkpoint": "11月20日WGC央行购金数据 + 12月FOMC会议"
     },
     {
       "id": "f9a4a0ce363c",
@@ -419,9 +424,14 @@
           "date": "2026-11-12",
           "status": "不变",
           "evidence": "谷歌TPU v7性能领先B200达50%持续验证。高通×亚马逊$25亿合作推进。Anthropic组建内部芯片团队印证趋势扩散"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "加强",
+          "evidence": "谷歌TPU v7性能领先B200达50%持续验证+高通×亚马逊$25亿合作推进+Anthropic组建内部芯片团队。英伟达防御性收购Hugging Face($12.9B)和MTK($3.5B可转债)承认了竞争威胁"
         }
       ],
-      "next_checkpoint": "Anthropic IPO后ASIC战略披露"
+      "next_checkpoint": "2026-12谷歌TPU v8路线图 + 2027-03高通×亚马逊交付进度"
     },
     {
       "id": "6bfed27dede5",
@@ -1125,9 +1135,14 @@
           "date": "2026-11-12",
           "status": "削弱",
           "evidence": "Nebius Q3营收+571%但盘前跌9%，标志着市场对AI云从增长叙事切换至盈利检验。CoreWeave债券15%+、巴克莱下调目标价至$85。盈利检验阶段正式确立"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "削弱→分化确认",
+          "evidence": "Nebius Q3营收+571%但盘前跌9%，CoreWeave债券收益率15%+，JPM/GS首次拒绝承销AI基建债。市场已从'增长叙事'切换至'偿债检验'阶段。AI基建不再是无差别机会，信用分层正在确立"
         }
       ],
-      "next_checkpoint": "CoreWeave债务再融资结果；Nebius 2027H1盈亏平衡进展"
+      "next_checkpoint": "2026-11 CoreWeave债券二级市场价格 + 2026-12 Nebius Q4 guidance"
     },
     {
       "id": "5c71a6db80bf",
@@ -1352,9 +1367,14 @@
           "date": "2026-11-12",
           "status": "加强",
           "evidence": "三星KB证券HBM 2027年涨价预期从30-50%上修至100-150%，Q3订单已锁定80%。长鑫科技Q1-Q3预盈1310亿。供给纪律重建+需求扩张双重验证"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "加强",
+          "evidence": "三星KB证券HBM 2027年涨价预期从30-50%上修至100-150%是最重要的数据变化。Q3订单锁定80%。长鑫科技Q1-Q3预盈1310亿印证国产替代。韩国存储股因杠杆ETF去杠杆暴跌7%+，股价与基本面背离扩大"
         }
       ],
-      "next_checkpoint": "2026年Q4三星/SK海力士财报(HBM实际成交价)"
+      "next_checkpoint": "2026-12三星HBM Q4实际成交价 + 2027-03长鑫科技正式审计盈利"
     },
     {
       "id": "102c5f435338",
@@ -2229,9 +2249,14 @@
           "date": "2026-08-26",
           "status": "削弱",
           "evidence": "WTI已回调至$84-86，市场正在discount地缘风险，但印度Hormuz航运成本飙升印证供给侧真实压力"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "削弱→重新评估",
+          "evidence": "IEA11月月报首次预测2026Q4全球油市转为供应过剩(此前预测短缺)，这是重要的叙事转变。但霍尔木兹通行量仍50%+柴油裂解价差四年新高显示供给侧约束仍在。这是'预测过剩' vs '现实短缺'的时间差机会"
         }
       ],
-      "next_checkpoint": "2026-09伊朗-阿曼谈判结果"
+      "next_checkpoint": "2026-12-13 IEA 12月月报(供过于求预测是否修正) + 霍尔木兹实际通行量"
     },
     {
       "id": "54fb635c9268",
@@ -2517,8 +2542,14 @@
           "date": "2026-09-01",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "不变",
+          "evidence": "金价$4,128回撤提供更好入场价。德银称量化抛压接近绝对耗尽。波兰648吨+中国8月创纪录+荷兰转移储备至伦敦底层逻辑未变。BTC $76K和白银$56.55的三资产共振印证debasement trade"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-20世界黄金协会央行购金数据 + 2026-12 FOMC会议"
     },
     {
       "id": "c6a50a5fc3e0",
@@ -3265,9 +3296,14 @@
           "date": "2026-10-20",
           "status": "加强",
           "evidence": "供给纪律重建最明确(三星+SK海力士)，杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "加强",
+          "evidence": "三星HBM涨价预期上修至100-150%(重要变化)+SK海力士股东回报计划+杠杆ETF去杠杆完成(530亿→250亿韩元)。股价与基本面背离最大化。长鑫预盈1310亿同步验证"
         }
       ],
-      "next_checkpoint": "2026-11韩国存储股Q3财报"
+      "next_checkpoint": "2026-12三星HBM Q4实际成交价涨幅"
     },
     {
       "id": "0352f9908da6",
@@ -5522,9 +5558,14 @@
           "date": "2026-11-12",
           "status": "加强",
           "evidence": "40天1000万美区下载+留存率超越竞品+ARM数据中心版税翻倍增长。深南电路Q3净利+94%。英伟达基板产能+2.5倍锁定扩张方向。市场对此产业链定价仍然不充分"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "加强",
+          "evidence": "40天1000万美区下载+留存率超越竞品+ARM数据中心版税翻倍+深南Q3净利+94%+英伟达基板产能+2.5倍。OpenAI推ChatGPT Wallet使Agent可直接购物。DeepSeek开放全家桶API。消费规模化拐点验证"
         }
       ],
-      "next_checkpoint": "2027年Q1 Meta Muse付费转化率数据"
+      "next_checkpoint": "2027-03 Meta Muse Q1付费转化率 + 2026-12深南Q4预告"
     },
     {
       "id": "dbec4a225df0",
@@ -5604,9 +5645,14 @@
           "date": "2026-11-12",
           "status": "不变",
           "evidence": "SpaceX Q3营收$14.58亿(+161% YoY)，AI数据中心租赁为主要引擎，首次实现季度净利润$44亿。Musk宣布合并特别委员会成立。无实质性进展或退步"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "不变",
+          "evidence": "SpaceX Q3营收$14.58亿(+161%)，AI数据中心租赁为主要引擎，首次季度净利润$44亿。合并特别委员会成立。无实质性进展或退步"
         }
       ],
-      "next_checkpoint": "2027年Q1合并交易进展披露"
+      "next_checkpoint": "2027-01 SpaceX-Tesla合并交易进展 + 星舰第15次飞行结果"
     },
     {
       "id": "093d3fe8cddb",
@@ -5900,8 +5946,14 @@
           "date": "2026-11-12",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-11-14",
+          "status": "新加强(本周期新增)",
+          "evidence": "黄仁勋辞职后NVDA股价-30%+，远期P/E 10-12x创14年最低。但AI芯片需求刚性由ASML订单超产能验证。黄仁勋是对华管制的最大反对者，其离职反而消除政策不确定性。Kress内部提拔可保战略连续性。散户和景林反向操作"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-11-17 NVDA Q3财报(ex-China) + 2026-11-20 商务部出口管制新规"
     },
     {
       "id": "0e4c53728889",
@@ -5928,6 +5980,286 @@
       "history": [
         {
           "date": "2026-11-12",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "9225bb7af7ac",
+      "name": "英伟达错杀×治理危机修复",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "黄仁勋辞职引发NVDA从$243跌至$166（-30%+），远期P/E降至10-12x创14年最低。市场定价包含两大假设：(1) Jensen不可替代，(2) 中国出口管制将加码。但现实是：黄仁勋恰恰是中国管制的主要反对者，其离职消除了政策不确定性；AI芯片需求刚性由ASML订单积压(超2028年产能)验证；Kress作为CFO出身更关注利润率而非激进扩张，可能反而改善资本配置。当前定价隐含了极端治理失败情景，而最可能的结果是平稳过渡。",
+      "time_horizon": "1-3个月(财报窗口)",
+      "falsification_condition": "若新任CEO在3个月内明确启动ASML/Hugging Face生态剥离，或国会借丑闻背景大幅加码对华出口管制立法，则逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-17",
+          "event": "NVDA Q3财报",
+          "what_to_watch": "排除中国收入后的Guidance + 毛利率变化 + 新CEO表态对Hugging Face/ASML关系的态度"
+        },
+        {
+          "date": "2026-12-03",
+          "event": "FOMC会议",
+          "what_to_watch": "点阵图中位数是否维持加息路径 + 鲍威尔对PPI态度的措辞"
+        },
+        {
+          "date": "2026-11-20",
+          "event": "商务部出口管制新规",
+          "what_to_watch": "NV系列卡进入中国的难度是否进一步加大"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-02-12",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "5c12fec4b6dd",
+      "name": "AI Agent产业链扩散 × 载板/散热",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse 40天1000万美区下载+留存率超越AI竞品→验证Agent从'概念'到'消费规模化'拐点。Agent将用户意图转化为持续执行任务，新增算力需求从GPU推理延伸至CPU执行/调度/安全隔离。ARM数据中心版税翻倍增长(双重验证)。深南电路Q3净利+94%已验证A股产业链景气。英伟达宣布基板产能扩2.5倍锁定扩张方向。OpenAI推ChatGPT Wallet使AI agent可直接购物(支付入口)。DeepSeek开放全家桶API降低开发门槛。这是独立于SpaceX/Meta Muse之外的交叉验证信号。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Meta Muse 2027年Q1付费转化率<5%或月留存<30%，则Agent消费叙事失效；若英伟达基板扩产推迟，则供给侧信号弱化",
+      "verification_checkpoints": [
+        {
+          "date": "2027-03",
+          "event": "Meta Muse Q1财报/用户数据",
+          "what_to_watch": "付费转化率 + MAU + 日均使用时长"
+        },
+        {
+          "date": "2026-12",
+          "event": "深南电路/兴森科技Q4业绩预告",
+          "what_to_watch": "载板业务收入增速是否维持高位"
+        },
+        {
+          "date": "2026-12",
+          "event": "英伟达GTC 2027",
+          "what_to_watch": "基板产能扩2.5倍的具体时间表和客户承诺"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-11-09",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "20d5a220e5ef",
+      "name": "滞胀交易 × 金融/能源相对收益",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "PPI 6.5%+CPI 3.7%+服务业通胀顽固=滞胀概率上升。戴利称'需要加息'，但消费者信心48.1(4年最差)+初请失业金20万趋势不稳=经济在减速但通胀在下不去。在此环境下：(1)银行股净息差改善(Morgan Stanley Q3 beat)；(2)能源股受益于供给侧约束；(3)资金从高估值成长股流向价值/质量因子。当前市场仍主要定价'软着陆'，低估了滞胀路径下的金融/能源弹性。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美联储明确鸽派转向(鲍曼言论被解读为最后一次加息)，或CPI后续月份快速回落至3%以下，则滞胀叙事失效；若PPI回到3%以下则条件不成立",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-25",
+          "event": "PCE物价指数",
+          "what_to_watch": "核心PCE环比是否高于0.3% + 服务业分项"
+        },
+        {
+          "date": "2026-12-13",
+          "event": "FOMC会议+点阵图",
+          "what_to_watch": "2027年加息次数预期是否上调"
+        },
+        {
+          "date": "2026-11-22",
+          "event": "11月非农就业",
+          "what_to_watch": "新增就业<15万将强化滞胀叙事"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-02-12",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "51e122af22f3",
+      "name": "黄金白银战术性买入 × debasement trade延续",
+      "category": "E防御",
+      "signal_strength": "强",
+      "core_logic": "金价$4,070较$4,607回撤约11%，白银$52附近。这是加息预期升温带来的战术性回撤，不是趋势反转。(1)央行购金底层逻辑未变：波兰增至648吨向700吨目标推进+中国8月创纪录+荷兰转移储备至伦敦；(2)挪威主权基金大幅削减美债持仓印证去美元化趋势；(3)BTC $76K+白银三资产共振；(4)德银称量化抛压'绝对耗尽'；(5)CTA空头回补可能点燃反弹。关键变化：催化从'降息预期'切换为'财政脆弱信号'。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+金价跌破$4,000+波兰/中国央行停止购金，则该判断失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-20",
+          "event": "世界黄金协会央行购金数据",
+          "what_to_watch": "10月全球央行净购金量是否继续正向"
+        },
+        {
+          "date": "2026-12-03",
+          "event": "FOMC会议",
+          "what_to_watch": "是否释放暂停加息信号"
+        },
+        {
+          "date": "2026-12",
+          "event": "中国/波兰央行购金公布",
+          "what_to_watch": "是否继续增持"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-05-13",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "0dfe50181aab",
+      "name": "AI ASIC生态控制战 × GPU护城河重塑",
+      "category": "A成长",
+      "signal_strength": "中信",
+      "core_logic": "谷歌TPU v7性能领先B200达50%+高通×亚马逊$25亿认股权证合作+Anthropic组建内部芯片团队，AI ASIC从实验性选择升级为大规模生产级方案。英伟达$12.9B收购Hugging Face+$3.5B联发科可转债是防御性动作。但黄仁勋辞职带来不确定性：新管理层对ASIC竞争的应对策略可能调整。核心问题是NVDA能否在ASIC蚕食下维持70%+毛利率的护城河。",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "若Google TPU外部客户收入持续低于预期，或ASIC芯片能效优势在下一代制程下降，或NVDA Rubin架构大幅缩小性能差距",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-10",
+          "event": "谷歌TPU v8路线图公布",
+          "what_to_watch": "性能领先幅度是否持续扩大"
+        },
+        {
+          "date": "2027-03",
+          "event": "高通×亚马逊$25亿认股权证执行情况",
+          "what_to_watch": " ASIC交付进度和收入确认"
+        },
+        {
+          "date": "2026-11-17",
+          "event": "NVDA Q3财报",
+          "what_to_watch": "Data Center收入增速是否放缓+毛利率指引"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-11-09",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:中信"
+        }
+      ]
+    },
+    {
+      "id": "b5fb4a766fd3",
+      "name": "油运供给侧交易 × 结构性短缺",
+      "category": "B周期",
+      "signal_strength": "中信",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭→有效运力结构性收缩。柴油裂解价差创四年新高(高盛'柴油处于供应挤压中心')。布伦特$105 vs WTI$89裂解显示WTI被discount。VLCC-TCE曾创46万美元/天。反常识：中东原油出口量减少36%但运价暴涨——这是结构性供给侧约束，不是短期事件溢价。但IEA11月月报预测2026Q4转为供应过剩，这是新的变量。",
+      "time_horizon": "1-3个月",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下；或IEA 12月月报证实过剩格局确立且库存持续累积",
+      "verification_checkpoints": [
+        {
+          "date": "每日",
+          "event": "霍尔木兹实际通行量(油轮AIS数据)",
+          "what_to_watch": "是否回升至80%+"
+        },
+        {
+          "date": "2026-12-13",
+          "event": "IEA 12月月报",
+          "what_to_watch": "过剩预测是否被修正"
+        },
+        {
+          "date": "每周",
+          "event": "BP/Diesel裂解价差",
+          "what_to_watch": "是否突破$100/桶"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-02-12",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:中信"
+        }
+      ]
+    },
+    {
+      "id": "1698a5f12b96",
+      "name": "AI Cloud信用分层 → 云巨头vs neocloud",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "CoreWeave债券收益率15%+且JPM/GS首次拒绝承销AI基建债→标志着AI债务链条从增长叙事进入偿债检验阶段。Nebius Q3营收+571%但盘前跌9%，印证neocloud板块信用分层。博通寻求$1T表外SPV债务，AI企业债全年有望达$2.1T。受益者：拥有资产负债表实力的云巨头(微软/Azure、谷歌/GCP)；受损者：高杠杆neocloud和AI基础设施REITs。这是AI基建从'增长'到'质量'的风格切换。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CoreWeave成功完成债务再融资(保险资金大规模入场或获得投资级评级)，或AI云厂商Q4财报显示RPO和FCF持续超预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-17",
+          "event": "CoreWeave债券二级市场交易",
+          "what_to_watch": "收益率是否突破20%"
+        },
+        {
+          "date": "2026-11-28",
+          "event": "Nebius Q4 guidance",
+          "what_to_watch": "现金流和债务可持续性"
+        },
+        {
+          "date": "2026-12",
+          "event": "保险资金AI基建投资公告",
+          "what_to_watch": "是否有大型险资入场CoreWeave等 distressed assets"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-05-13",
+      "history": [
+        {
+          "date": "2026-11-14",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "b145249ed006",
+      "name": "存储超级周期 × HBM价格弹性上修",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "三星KB证券将HBM 2027年预期从30-50%上修至100-150%，Q3订单已锁定80%。SK海力士90-110万亿韩元股东回报+50%FCF回购承诺=供给纪律重建。长鑫科技Q1-Q3预盈1310亿印证国产替代加速。韩国存储股此前因杠杆ETF去杠杆暴跌7%+，现卖压接近枯竭。这是明确的周期底部布局窗口。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若2026年Q4三星HBM实际成交价涨幅<50%，或AI大模型厂商削减2027年Capex超过20%",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12",
+          "event": "三星HBM Q4实际成交价",
+          "what_to_watch": "涨幅是否达到KB证券预期的100%+"
+        },
+        {
+          "date": "2027-03",
+          "event": "SK海力士Q4财报",
+          "what_to_watch": "HBM出货量及毛利率"
+        },
+        {
+          "date": "2026-12",
+          "event": "长鑫科技全面审计后正式盈利公告",
+          "what_to_watch": "预盈1310亿是否得到审计确认"
+        }
+      ],
+      "created_date": "2026-11-14",
+      "expiry_date": "2027-05-13",
+      "history": [
+        {
+          "date": "2026-11-14",
           "status": "新识别",
           "evidence": "信号强度:强"
         }
