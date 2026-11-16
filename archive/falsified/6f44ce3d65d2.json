@@ -1,0 +1,42 @@
+{
+  "id": "6f44ce3d65d2",
+  "name": "柴油挤压×能源供给侧结构性短缺",
+  "category": "B周期",
+  "signal_strength": "强",
+  "core_logic": "霍尔木兹通行量50%+沙特延布港停产+柴油裂解价差创四年新高。WTI被discount但布伦特维持$97，裂解显示定价不充分",
+  "time_horizon": "1-3个月",
+  "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下",
+  "verification_checkpoints": [
+    {
+      "date": "2026-10-20",
+      "event": "霍尔木兹通行量数据",
+      "what_to_watch": "是否恢复至80%+"
+    },
+    {
+      "date": "2026-11-01",
+      "event": "柴油裂解价差",
+      "what_to_watch": "是否维持$80+/桶"
+    }
+  ],
+  "created_date": "2026-10-15",
+  "expiry_date": "2027-01-13",
+  "history": [
+    {
+      "date": "2026-10-15",
+      "status": "新识别",
+      "evidence": "信号强度:强"
+    },
+    {
+      "date": "2026-10-16",
+      "status": "削弱",
+      "evidence": "美国宣布从SPR释放1700万桶+IEA拟释放柴油储备，短期压制油价。但霍尔木兹50%+柴油裂解价差四年新高显示结构性短缺仍在"
+    },
+    {
+      "date": "2026-11-17",
+      "status": "证伪",
+      "evidence": "WTI本周暴跌至$85.72(-6.5%)，EIA数据显示Q3 Hormuz运输量环比+400万桶/日，IEA预测Q4转为供应过剩。柴油挤压的逻辑暂时被大宗商品全面下跌压倒。但仍保持观察，因为柴油裂解价差和布伦特-WTI裂解仍有结构性差异"
+    }
+  ],
+  "next_checkpoint": "11月初霍尔木兹通行数据",
+  "falsified_date": "2026-11-17"
+}

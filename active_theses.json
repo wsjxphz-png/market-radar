@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-14",
+  "updated": "2026-11-17",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -223,9 +223,14 @@
           "date": "2026-11-14",
           "status": "削弱→重新评估",
           "evidence": "金价$4,070跌破$4,100心理关口是对加息预期的反应，但波兰648吨+中国8月创纪录+荷兰转移储备逻辑未变。BTC $76K仍在共振。当前是战术回撤区间而非趋势反转"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "削弱→重新评估",
+          "evidence": "金价$3,875较$4,607回撤16%+，是对加息预期的强烈反应。但波兰648吨+中国购金+荷兰转移储备底层逻辑未变。高盛预测金价需2年回新高=当前可能有50%+上行空间。Debasement trade的战术回撤区间"
         }
       ],
-      "next_checkpoint": "11月20日WGC央行购金数据 + 12月FOMC会议"
+      "next_checkpoint": "2026年12月世界黄金协会央行购金数据+12月FOMC点阵图"
     },
     {
       "id": "f9a4a0ce363c",
@@ -429,9 +434,14 @@
           "date": "2026-11-14",
           "status": "加强",
           "evidence": "谷歌TPU v7性能领先B200达50%持续验证+高通×亚马逊$25亿合作推进+Anthropic组建内部芯片团队。英伟达防御性收购Hugging Face($12.9B)和MTK($3.5B可转债)承认了竞争威胁"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "不变",
+          "evidence": "谷歌TPU v7性能领先B200达50%持续验证+高通×亚马逊$25亿合作推进+Anthropic组建内部芯片团队。但SemiAnalysis下修AI Capex预测可能对ASIC需求产生边际负面影响"
         }
       ],
-      "next_checkpoint": "2026-12谷歌TPU v8路线图 + 2027-03高通×亚马逊交付进度"
+      "next_checkpoint": "2026年Q4 Google TPU外部客户收入数据"
     },
     {
       "id": "6bfed27dede5",
@@ -1140,9 +1150,14 @@
           "date": "2026-11-14",
           "status": "削弱→分化确认",
           "evidence": "Nebius Q3营收+571%但盘前跌9%，CoreWeave债券收益率15%+，JPM/GS首次拒绝承销AI基建债。市场已从'增长叙事'切换至'偿债检验'阶段。AI基建不再是无差别机会，信用分层正在确立"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "CoreWeave债券收益率15%++JPM/GS首次拒绝承销AI基建债+Nebius Q3营收+571%但盘前跌9%+QTS融资缩水60%+SemiAnalysis大幅下修AI Capex预测。四条独立证据确认AI基建从增长叙事进入偿债检验"
         }
       ],
-      "next_checkpoint": "2026-11 CoreWeave债券二级市场价格 + 2026-12 Nebius Q4 guidance"
+      "next_checkpoint": "CoreWeave债务再融资进展+Anthropic IPO表现"
     },
     {
       "id": "5c71a6db80bf",
@@ -1372,9 +1387,14 @@
           "date": "2026-11-14",
           "status": "加强",
           "evidence": "三星KB证券HBM 2027年涨价预期从30-50%上修至100-150%是最重要的数据变化。Q3订单锁定80%。长鑫科技Q1-Q3预盈1310亿印证国产替代。韩国存储股因杠杆ETF去杠杆暴跌7%+，股价与基本面背离扩大"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "三星KB证券HBM 2027年涨价预期从30-50%上修至100-150%是最重要的数据变化。Q3订单锁定80%。长鑫预盈1310亿印证国产替代。韩国存储股因杠杆ETF去杠杆暴跌后卖压接近枯竭"
         }
       ],
-      "next_checkpoint": "2026-12三星HBM Q4实际成交价 + 2027-03长鑫科技正式审计盈利"
+      "next_checkpoint": "2026年12月三星/SK海力士Q4预订价公布"
     },
     {
       "id": "102c5f435338",
@@ -2028,9 +2048,14 @@
           "date": "2026-09-08",
           "status": "加强",
           "evidence": "韩国杠杆ETF去杠杆完成(530亿→250亿韩元)，卖压接近枯竭。供给纪律重建信号最明确，股价反应与基本面背离最大化"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "HBM涨价预期上修至100-150%+杠杆ETF去杠杆完成大半(530亿→250亿韩元)=卖压枯竭信号强化。股价与基本面背离最大化"
         }
       ],
-      "next_checkpoint": "2026-10月底Q3存储价格数据"
+      "next_checkpoint": "2026年Q4韩国存储股走势+HBM实际成交价"
     },
     {
       "id": "8c697ee2819c",
@@ -2932,9 +2957,14 @@
           "date": "2026-09-11",
           "status": "不变",
           "evidence": "$12.9B收购Hugging Face完成，300万+开发者/1800万+模型锁定。但ASIC竞争加剧（谷歌TPU v7性能领先），生态控制战进入第二阶段"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "减弱",
+          "evidence": "$12.9B Hugging Face收购已完成，但Jensen辞职引发治理危机。ASIC竞争加剧(谷歌TPU v7领先50%)+SemiAnalysis下修AI Capex。生态控制战进入第二阶段：从扩张到防御守成"
         }
       ],
-      "next_checkpoint": "2026-12月 Hugging Face用户活跃度数据"
+      "next_checkpoint": "NVDA Q3财报(11/19)+新管理层战略方向"
     },
     {
       "id": "99a23fa740dd",
@@ -4779,9 +4809,14 @@
           "date": "2026-10-15",
           "status": "加强",
           "evidence": "PPI 6.3%+CPI 3.7%全面超预期，能源冲击持续传导，10月加息概率提升至50%"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "PPI 6.5%+CPI 3.7%持续高位+消费者信心48.1(4年最差)+BTIG指消费必需品30天跑赢科技33pct(25年来最大差距)+NZ联储警告AI估值过高使市场易受回调冲击。Fed Warsh宣布AI三预案(含泡沫破裂情景)"
         }
       ],
-      "next_checkpoint": "2026-10-31，FOMC会议"
+      "next_checkpoint": "11月21日CPI数据+12月FOMC点阵图"
     },
     {
       "id": "9bce004e418c",
@@ -5052,42 +5087,6 @@
         }
       ],
       "next_checkpoint": "10月27日FOMC"
-    },
-    {
-      "id": "6f44ce3d65d2",
-      "name": "柴油挤压×能源供给侧结构性短缺",
-      "category": "B周期",
-      "signal_strength": "强",
-      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+柴油裂解价差创四年新高。WTI被discount但布伦特维持$97，裂解显示定价不充分",
-      "time_horizon": "1-3个月",
-      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下",
-      "verification_checkpoints": [
-        {
-          "date": "2026-10-20",
-          "event": "霍尔木兹通行量数据",
-          "what_to_watch": "是否恢复至80%+"
-        },
-        {
-          "date": "2026-11-01",
-          "event": "柴油裂解价差",
-          "what_to_watch": "是否维持$80+/桶"
-        }
-      ],
-      "created_date": "2026-10-15",
-      "expiry_date": "2027-01-13",
-      "history": [
-        {
-          "date": "2026-10-15",
-          "status": "新识别",
-          "evidence": "信号强度:强"
-        },
-        {
-          "date": "2026-10-16",
-          "status": "削弱",
-          "evidence": "美国宣布从SPR释放1700万桶+IEA拟释放柴油储备，短期压制油价。但霍尔木兹50%+柴油裂解价差四年新高显示结构性短缺仍在"
-        }
-      ],
-      "next_checkpoint": "11月初霍尔木兹通行数据"
     },
     {
       "id": "886d5354a105",
@@ -5563,9 +5562,14 @@
           "date": "2026-11-14",
           "status": "加强",
           "evidence": "40天1000万美区下载+留存率超越竞品+ARM数据中心版税翻倍+深南Q3净利+94%+英伟达基板产能+2.5倍。OpenAI推ChatGPT Wallet使Agent可直接购物。DeepSeek开放全家桶API。消费规模化拐点验证"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "40天1000万美区下载+留存率超越竞品+ARM数据中心版税翻倍+深南Q3净利+94%+英伟达基板产能+2.5倍+OpenAI推ChatGPT Wallet+DeepSeek开放全家桶API。五条独立证据交叉验证Agent消费规模化拐点"
         }
       ],
-      "next_checkpoint": "2027-03 Meta Muse Q1付费转化率 + 2026-12深南Q4预告"
+      "next_checkpoint": "2027年Q1 Meta Muse付费转化率数据"
     },
     {
       "id": "dbec4a225df0",
@@ -5951,9 +5955,14 @@
           "date": "2026-11-14",
           "status": "新加强(本周期新增)",
           "evidence": "黄仁勋辞职后NVDA股价-30%+，远期P/E 10-12x创14年最低。但AI芯片需求刚性由ASML订单超产能验证。黄仁勋是对华管制的最大反对者，其离职反而消除政策不确定性。Kress内部提拔可保战略连续性。散户和景林反向操作"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "加强",
+          "evidence": "董事会确认暂不考虑黄仁勋复职=治理过渡不确定性增加。但Tiger Global逆势加仓7.2%至1200万股+NVDA已跌至P/E 10-12x(14年最低)+ASML订单验证需求刚性。市场定价了最坏情景"
         }
       ],
-      "next_checkpoint": "2026-11-17 NVDA Q3财报(ex-China) + 2026-11-20 商务部出口管制新规"
+      "next_checkpoint": "NVDA Q3财报(11/19)+董事会新成员任命"
     },
     {
       "id": "0e4c53728889",
@@ -6192,8 +6201,14 @@
           "date": "2026-11-14",
           "status": "新识别",
           "evidence": "信号强度:中信"
+        },
+        {
+          "date": "2026-11-17",
+          "status": "削弱",
+          "evidence": "WTI暴跌至$85.72(-6.5%周跌幅)+EIA称Q3 Hormuz运输环比+400万桶/日+IEA预测Q4供应过剩。这与之前的'结构性短缺'叙事形成矛盾。但柴油裂解价差仍处四年高位提供部分支撑"
         }
-      ]
+      ],
+      "next_checkpoint": "IEA 12月月报+霍尔木兹通行量月度数据"
     },
     {
       "id": "1698a5f12b96",
@@ -6262,6 +6277,96 @@
           "date": "2026-11-14",
           "status": "新识别",
           "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "a908730fa37e",
+      "name": "NVDA治理危机错杀修复",
+      "category": "C价值",
+      "signal_strength": "强",
+      "core_logic": "NVDA从$243跌至~$166(-32%)，远期P/E约10-12x创14年最低。市场对治理失败的定价隐含了ASML/Hugging Face生态剥离+中国管制加码的极端情景。但现实：(1)黄仁勋恰恰是对华管制最大反对者，其离职消除政策不确定性；(2)ASML订单积压超2028产能+客户争抢2029-30交货窗口证明需求刚性；(3)Tiger Global逆势加仓7.2%至1200万股；(4)Kress CFO出身预计改善利润率而非激进扩张。若NVDA Q3 Beat且Q4 guidance合理（>$120B），当前为近五年来最佳买点",
+      "time_horizon": "2-4周（财报催化）+ 3-6个月（治理过渡落地）",
+      "falsification_condition": "若新任CEO在3个月内启动ASML/Hugging Face生态剥离，或国会借丑闻背景大幅加码对华出口管制立法，则逻辑失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-19",
+          "event": "NVDA Q3财报发布",
+          "what_to_watch": "营收是否>=$$109B，Q4 guidance是否>$120B，毛利率是否维持>70%"
+        },
+        {
+          "date": "2026-12中旬",
+          "event": "Nvidia董事会新成员任命进展",
+          "what_to_watch": "是否有外部独立董事加入，治理结构改善信号"
+        }
+      ],
+      "created_date": "2026-11-17",
+      "expiry_date": "2027-05-16",
+      "history": [
+        {
+          "date": "2026-11-17",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "d5066c4157da",
+      "name": "滞胀交易×金融/能源相对收益",
+      "category": "B周期",
+      "signal_strength": "强",
+      "core_logic": "PPI 6.5%+CPI 3.7%+服务业通胀顽固=滞胀概率上升。消费者信心48.1(4年最差)+初请失业金20万趋势不稳=经济减速但通胀在下不去。在此环境下：(1)银行股净息差改善(Morgan Stanley Q3 beat $909M)；(2)能源股受益于供给侧约束(尽管WTI今日大跌，柴油挤压逻辑仍在)；(3)资金从高估值成长股流向价值/质量因子。BTIG指出消费必需品板块30天跑赢科技33个百分点，为约25年来最大单月差距——上次类似走势出现在2000年4月至2001年10月互联网泡沫破裂前夜",
+      "time_horizon": "1-3个月（到下次FOMC+就业数据）",
+      "falsification_condition": "若CPI后续月份快速回落至3%以下，或PPI回到3%以下则条件不成立；若美联储明确鸽派转向则失效",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-21",
+          "event": "美国CPI数据",
+          "what_to_watch": "是否继续高于3.5%或开始回落"
+        },
+        {
+          "date": "2026-12月FOMC",
+          "event": "点阵图+声明措辞",
+          "what_to_watch": "是否释放2027年降息的明确信号或继续鹰派"
+        }
+      ],
+      "created_date": "2026-11-17",
+      "expiry_date": "2027-02-15",
+      "history": [
+        {
+          "date": "2026-11-17",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "43ea045018cd",
+      "name": "柴油挤压×油运结构性短缺（二元博弈下行侧）",
+      "category": "B周期",
+      "signal_strength": "中信",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=结构性供给收缩。柴油裂解价差创四年新高印证真实成本传导。但WTI本周暴跌至$85.72（-6.5%），布伦特至$92.44，EIA数据称Q3 Hormuz运输环比+400万桶/日。这是'预测过剩' vs '现实短缺'的时间差博弈。若美伊谈判取得突破，油价可能进一步下探；但若谈判停滞，柴油挤压逻辑仍然存在",
+      "time_horizon": "1-3个月（取决于美伊谈判进展）",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹，同时柴油裂解价差回落至$50/桶以下；或IEA 12月月报证实过剩格局确立且库存持续累积",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11月下旬",
+          "event": "美伊谈判进展",
+          "what_to_watch": "是否有实质性协议迹象"
+        },
+        {
+          "date": "2026-12月中旬",
+          "event": "IEA 12月月报",
+          "what_to_watch": "Q4供需平衡表及库存数据"
+        }
+      ],
+      "created_date": "2026-11-17",
+      "expiry_date": "2027-02-15",
+      "history": [
+        {
+          "date": "2026-11-17",
+          "status": "新识别",
+          "evidence": "信号强度:中信"
         }
       ]
     }
