@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-19",
+  "updated": "2026-11-20",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -5143,8 +5143,14 @@
           "date": "2026-10-16",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "不变",
+          "evidence": "《保险公司资产负债管理办法》落地逻辑未变，37万亿险资30%红线驱动增配高股息资产的刚性需求逻辑仍然成立。无新增催化但监管框架已经确立"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-12 险资Q3配置数据 + 2027-03 寿险偿付能力报告"
     },
     {
       "id": "04749eec0ce0",
@@ -6135,9 +6141,14 @@
           "date": "2026-11-18",
           "status": "加强",
           "evidence": "黄仁勋愿重返但董事会明确不考虑=治理过渡进入第二阶段（确定性下降但波动扩大），NVDA跌至P/E 10-12x(14年最低)，Tiger Global逆势加仓，New Street维持买入"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "加强",
+          "evidence": "董事会确认暂不考虑黄仁勋复职=治理过渡进入第二阶段，NVDA跌至P/E 10-12x(14年最低)，Tiger Global逆势加仓7.2%，Satya Nadella公开表态支持Kress过渡"
         }
       ],
-      "next_checkpoint": "2026-11-18盘后NVDA Q3财报"
+      "next_checkpoint": "2027-02 NVDA Q4财报 + 2026-12 FOMC管制立法动态"
     },
     {
       "id": "d5066c4157da",
@@ -6171,9 +6182,14 @@
           "date": "2026-11-18",
           "status": "加强",
           "evidence": "Williams确认通胀'顽固高位'+冲击蔓延至更广数据，Musalem暗示需再加息4次，BTIG必需vs科技跑赢33pct创25年最大差距，消费者信心48.1创4年新低"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "加强",
+          "evidence": "Fed Jefferson明确AI建设正在推高通胀(需求侧)+生产率提升要'未来'才显现。Williams确认通胀'顽固高位'+冲击蔓延至更广数据。Musalem暗示需再加息4次。BTIG必需vs科技跑赢33pct创25年最大差距。消费者信心48.1创4年新低"
         }
       ],
-      "next_checkpoint": "2026年12月FOMC+点阵图"
+      "next_checkpoint": "2026-12-12 CPI/PPI数据 + 2027-01 FOMC点阵图"
     },
     {
       "id": "43ea045018cd",
@@ -6207,9 +6223,14 @@
           "date": "2026-11-18",
           "status": "削弱",
           "evidence": "WTI暴跌6.5%至$85.72+EIA称Q3 Hormuz运输环比+400万桶/日+IEA预测Q4供应过剩+美伊外交渠道开启。供给侧风险叙事vs需求坍塌叙事开始分化"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "削弱",
+          "evidence": "WTI暴跌6.5%至$85.72+EIA称Q3 Hormuz运输环比+400万桶/日+IEA预测Q4供应过剩+美伊外交渠道开启(伊朗总统称'认真寻求结束不战不和')+特朗普×习主席×普京深圳三方会晤承诺'增加精炼石油产品产量供应'。供给侧叙事vs需求坍塌叙事开始分化"
         }
       ],
-      "next_checkpoint": "2026年12月IEA月报+美伊谈判进展"
+      "next_checkpoint": "2026-12 IEA月度石油市场报告 + 美伊谈判实质性进展"
     },
     {
       "id": "caae85f13913",
@@ -6303,8 +6324,14 @@
           "date": "2026-11-18",
           "status": "新识别",
           "evidence": "信号强度:中"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "不变",
+          "evidence": "金价$3,858较$4,607回撤16%是对鹰派Fed的反应，但波兰648吨+中国8月创纪录+荷兰转移储备至伦敦底层逻辑未变。德银称量化抛压接近绝对耗尽。BTC $76K和白银$47三资产共振印证debasement trade"
         }
-      ]
+      ],
+      "next_checkpoint": "2026-12-18 FOMC会议 + 各国央行12月购金数据"
     },
     {
       "id": "06296f5af725",
@@ -6368,8 +6395,14 @@
           "date": "2026-11-18",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "加强",
+          "evidence": "CoreWeave债券收益率逼近15%+JPM/GS首次拒绝承销AI基建债→标志着AI债务链条从增长叙事进入偿债检验。Steve Eisman(大空头)公开表示neocloud面临'big trouble'。SpaceX最快启动$40B债务融资采购AI芯片印证传统巨头仍在加杠杆"
         }
-      ]
+      ],
+      "next_checkpoint": "CoreWeave债务再融资公告 + Nebius Q4财报"
     },
     {
       "id": "318a51005340",
@@ -6398,8 +6431,14 @@
           "date": "2026-11-19",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "加强",
+          "evidence": "三星KB证券HBM 2027年涨价预期从30-50%上修至100-150%(最重要数据变化)，Q3订单锁定80%，长鑫预盈1310亿验证国产替代，杠杆ETF去杠杆完成大半"
         }
-      ]
+      ],
+      "next_checkpoint": "2027-01 三星/SK海力士Q4业绩会HBM实际成交价"
     },
     {
       "id": "f82dc4a5c53d",
@@ -6428,6 +6467,97 @@
           "date": "2026-11-19",
           "status": "新识别",
           "evidence": "信号强度:强"
+        },
+        {
+          "date": "2026-11-20",
+          "status": "加强",
+          "evidence": "四条独立证据交叉验证：(1)Meta Muse 40天1000万下载+留存超越竞品 (2)ARM数据中心版税翻倍 (3)深南电路Q3净利+94% (4)英伟达基板产能+2.5倍。OpenAI推ChatGPT Wallet + DeepSeek开放全家桶API进一步降低Agent开发门槛"
+        }
+      ],
+      "next_checkpoint": "2027-02 Meta Q4财报Muse数据 + 2027-03 深南电路年报"
+    },
+    {
+      "id": "d5a556e25a2d",
+      "name": "韩国存储股错杀×HBM价格弹性上修",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "三星KB证券HBM 2027涨价预期从30-50%上修至100-150%，Q3订单锁定80%。SK海力士90-110万亿韩元股东回报+50%FCF回购承诺=供给纪律重建信号史上最强。长鑫科技Q1-Q3预盈1310亿印证国产替代。但韩国存储股此前因杠杆ETF去杠杆暴跌后卖压接近枯竭，当前股价与基本面背离程度最大化",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "2026年Q4三星HBM实际成交价涨幅<50%，或AI大模型厂商削减2027年Capex超过20%",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-15",
+          "event": "三星/SK海力士季度业绩会",
+          "what_to_watch": "HBM实际成交价涨幅是否达50%+"
+        },
+        {
+          "date": "2027-03",
+          "event": "韩国存储股年报展望",
+          "what_to_watch": "Capex指引是否维持克制"
+        }
+      ],
+      "created_date": "2026-11-20",
+      "expiry_date": "2027-05-19",
+      "history": [
+        {
+          "date": "2026-11-20",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "1b1c55dce50e",
+      "name": "AI Agent消费规模化×载板/散热产业链",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Meta Muse 40天1000万美区下载+留存率超越AI竞品→验证Agent从概念到消费规模化拐点。交叉验证证据五条：(1) ARM数据中心版税翻倍 (2)深南电路Q3净利+94% (3)英伟达宣布基板产能提升2.5倍 (4) OpenAI推ChatGPT Wallet支付入口 (5) DeepSeek开放全家桶API降低开发门槛。这是独立于SpaceX/Meta Muse之外的广泛交叉验证",
+      "time_horizon": "6-12个月",
+      "falsification_condition": "Meta Muse 2027年Q1付费转化率<5%或月留存<30%，则Agent消费叙事失效；英伟达基板扩产推迟则供给侧信号弱化",
+      "verification_checkpoints": [
+        {
+          "date": "2027-02",
+          "event": "Meta Q4财报",
+          "what_to_watch": "Muse用户留存率和付费转化率数据"
+        },
+        {
+          "date": "2026-12",
+          "event": "深南电路/兴森科技订单指引",
+          "what_to_watch": "载板业务增速是否持续"
+        }
+      ],
+      "created_date": "2026-11-20",
+      "expiry_date": "2027-11-15",
+      "history": [
+        {
+          "date": "2026-11-20",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "bfdcafdb90ea",
+      "name": "Anthropic IPO后AI chip产业链重新定价",
+      "category": "A成长",
+      "signal_strength": "中",
+      "core_logic": "Anthropic $107.3B IPO打破SpaceX纪录，但超过半数机构投资者分文未获，配售向美国投资者高度倾斜。公司$900B commitment需大量compute支持。但同期香港家族办公室清仓39亿美元AI硬件押注(美光、西部数据)。这预示着AI投资将从'hype阶段'进入'交付检验阶段'——有实绩的云基础设施厂商将被重估，纯概念型AI公司将遭抛售",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若Anthropic Q1财报显示compute利用率超过80%且收入增速>200% YoY，则AI需求逻辑得到验证",
+      "verification_checkpoints": [
+        {
+          "date": "2027-05",
+          "event": "Anthropic首份季报",
+          "what_to_watch": "Compute利用率、收入增速、customer concentration"
+        }
+      ],
+      "created_date": "2026-11-20",
+      "expiry_date": "2027-05-19",
+      "history": [
+        {
+          "date": "2026-11-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
         }
       ]
     }
