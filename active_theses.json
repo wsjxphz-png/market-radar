@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-20",
+  "updated": "2026-11-21",
   "theses": [
     {
       "id": "098de7cd2ea3",
@@ -6556,6 +6556,141 @@
       "history": [
         {
           "date": "2026-11-20",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "c7d951487457",
+      "name": "AI基础设施信用分化×云巨头相对收益",
+      "category": "A成长",
+      "signal_strength": "强",
+      "core_logic": "Anthropic IPO失败后次日暴跌13%+CoreWeave破发行价+JPM/GS首次拒绝承销AI基建债+Nebius Q3营收+571%但盘前跌9%，四条独立证据共同指向同一方向：AI债务链条已从增长叙事进入偿债检验阶段。资金将从高杠杆neocloud和AI REITs系统性流向微软/Azure、谷歌/GCP等拥有资产负债表实力的云巨头。Steve Eisman(Big Short)公开警告neocloud有big trouble，Goldman仍看多CRWV(IRR 15%)但银行已退场，说明信用利差在结构性扩大而非临时恐慌。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若CoreWeave在2027年Q1完成债务再融资（获得投资级评级或保险资金大规模入场），或微软/谷歌Q4财报显示Azure/GCP增速显著快于预期",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-15",
+          "event": "CoreWeave季度财报发布",
+          "what_to_watch": "RPO变化和债务再融资进展"
+        },
+        {
+          "date": "2027-01-25",
+          "event": "微软Q2财报(Azure增速)",
+          "what_to_watch": "Azure资本开支强度和Cloud毛利率"
+        },
+        {
+          "date": "2027-02-28",
+          "event": "Google Cloud FY2026业绩",
+          "what_to_watch": "云业务增速是否维持>30% YoY"
+        }
+      ],
+      "created_date": "2026-11-21",
+      "expiry_date": "2027-05-20",
+      "history": [
+        {
+          "date": "2026-11-21",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "fdedc18080c7",
+      "name": "NVIDIA治理危机错杀×估值修复",
+      "category": "D反转",
+      "signal_strength": "强",
+      "core_logic": "黄仁勋辞职后NVDA跌至P/E 10-12x创14年最低，但(Tiger Global逆势加仓7.2%至1200万股)+(ASML订单积压超出2028年产能上限)+Kress CFO出身预计改善利润率而非激进扩张。市场定价包含了极端治理失败情景（生态剥离+管制加码），但最可能的结果是平稳过渡。Satya Nadella公开表态支持Kress过渡。若Q4 guidance合理（>$120B），当前为近五年来最佳买点之一。",
+      "time_horizon": "2-4周（短期反弹机会）+ 3-6个月（治理过渡落地后的价值重估）",
+      "falsification_condition": "若新任CEO在3个月内启动ASML/Hugging Face生态剥离，或国会在丑闻背景下大幅加码对华出口管制立法",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-25",
+          "event": "加州AG调查进展",
+          "what_to_watch": "是否有新的刑事指控或和解信号"
+        },
+        {
+          "date": "2026-12-10",
+          "event": "NVIDIA董事会特别会议",
+          "what_to_watch": "Kress正式任命及战略方向声明"
+        },
+        {
+          "date": "2027-02-26",
+          "event": "NVIDIA Q4 FY2027财报",
+          "what_to_watch": "毛利率指引和数据中心收入增速"
+        }
+      ],
+      "created_date": "2026-11-21",
+      "expiry_date": "2027-05-20",
+      "history": [
+        {
+          "date": "2026-11-21",
+          "status": "新识别",
+          "evidence": "信号强度:强"
+        }
+      ]
+    },
+    {
+      "id": "4fd888c5185f",
+      "name": "黄金白银战术性回调后的再入场",
+      "category": "E防御",
+      "signal_strength": "中",
+      "core_logic": "金价$3,858较$4,607回撤16%是对鹰派Fed的反应，白银$47附近更是近三年新低区域。但底层逻辑未变：(1)波兰央行增至648吨向700吨目标推进+中国8月购金创纪录+荷兰转移储备至伦敦(2)挪威主权基金大幅削减美债持仓印证去美元化趋势(3)德银称量化抛压接近绝对耗尽(4)BTC $76K三资产共振印证debasement trade延续。这是战术性回调而非趋势反转。",
+      "time_horizon": "3-6个月",
+      "falsification_condition": "若美联储连续加息25bp+美元指数突破105+金价跌破$3,500+波兰/中国央行停止购金",
+      "verification_checkpoints": [
+        {
+          "date": "2026-12-01",
+          "event": "IMF第四季度各国官方储备变动",
+          "what_to_watch": "中国/印度/土耳其央行购金数据"
+        },
+        {
+          "date": "2026-12-12",
+          "event": "FOMC议息会议",
+          "what_to_watch": "联邦基金利率预期变化"
+        },
+        {
+          "date": "2026-12-31",
+          "event": "世界黄金协会年度购金报告",
+          "what_to_watch": "全年央行净购买量"
+        }
+      ],
+      "created_date": "2026-11-21",
+      "expiry_date": "2027-05-20",
+      "history": [
+        {
+          "date": "2026-11-21",
+          "status": "新识别",
+          "evidence": "信号强度:中"
+        }
+      ]
+    },
+    {
+      "id": "47252b2ca9c2",
+      "name": "柴油挤压×油运供给侧二元博弈",
+      "category": "B周期",
+      "signal_strength": "中",
+      "core_logic": "霍尔木兹通行量50%+沙特延布港停产+东西管道遇袭=结构性供给收缩。WTI暴跌6.5%至$85.72(EIA称Q3 Hormuz运输环比+400万桶/日)，IEA预测Q4供应过剩。但柴油裂解价差创四年新高+胡塞袭击沙特设施48小时4次印证真实风险。这是'预测过剩' vs '现实短缺'的时间差博弈。若美伊外交渠道开启，油价可能进一步下探；但若谈判停滞，柴油挤压逻辑仍然存在。",
+      "time_horizon": "1-3个月（取决于美伊谈判进展）",
+      "falsification_condition": "若美伊4周内达成协议重开霍尔木兹同时柴油裂解价差回落至$50/桶以下；或IEA 12月月报证实过剩格局确立且库存持续累积",
+      "verification_checkpoints": [
+        {
+          "date": "2026-11-28",
+          "event": "EIA原油库存报告",
+          "what_to_watch": "美国商业原油库存变化和进口量"
+        },
+        {
+          "date": "2026-12-11",
+          "event": "IEA月度石油市场报告",
+          "what_to_watch": "Q4供需平衡修正和霍尔木兹通行数据"
+        }
+      ],
+      "created_date": "2026-11-21",
+      "expiry_date": "2027-02-19",
+      "history": [
+        {
+          "date": "2026-11-21",
           "status": "新识别",
           "evidence": "信号强度:中"
         }
