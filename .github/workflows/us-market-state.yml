@@ -42,6 +42,8 @@ jobs:
       AI_BASE_URL: https://apihub.agnes-ai.com/v1
       AI_MODEL: agnes-2.5-flash
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      # 仓库变量 US_STATE_LIVE=true 时定时任务走正式推送；否则 shadow 干跑
+      US_STATE_LIVE: ${{ vars.US_STATE_LIVE }}
     defaults:
       run:
         working-directory: research/us_market_state
@@ -68,7 +70,7 @@ jobs:
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python run_weekly.py --dry-run
-          elif [ "${{ inputs.live }}" = "true" ]; then
+          elif [ "${{ inputs.live }}" = "true" ] || [ "$US_STATE_LIVE" = "true" ]; then
             if [ "${{ inputs.force }}" = "true" ]; then
               python run_weekly.py --force
             else
