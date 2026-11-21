@@ -14,6 +14,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 
@@ -31,6 +32,17 @@ QUERIES = [
     "Citi US equity strategist outlook",
     "chief economist US recession stock market outlook",
 ]
+
+BLOCKED_DOMAINS = (
+    "instagram.com", "facebook.com", "x.com", "twitter.com",
+    "tiktok.com", "threads.net", "reddit.com",
+)
+
+
+def _is_ok_url(url: str) -> bool:
+    host = urlparse(url).netloc.lower()
+    return bool(host) and not any(host.endswith(d) for d in BLOCKED_DOMAINS)
+
 
 SYSTEM_PROMPT = """你是信息整理员，不是分析师。
 只从给定材料中提取卖方/首席经济学家对美股的公开观点。
@@ -118,7 +130,7 @@ def _collect_sources() -> list[dict]:
     deduped: list[dict] = []
     for item in out:
         url = str(item.get("url", "")).strip()
-        if not url or url in seen:
+        if not url or url in seen or not _is_ok_url(url):
             continue
         seen.add(url)
         deduped.append(item)

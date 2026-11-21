@@ -187,6 +187,12 @@ def test_validate_voices_drops_unsourced():
     assert d.views[0].house == "高盛"
 
 
+def test_voices_blocked_domains():
+    assert not sellside_radar._is_ok_url("https://www.instagram.com/p/x")
+    assert not sellside_radar._is_ok_url("https://x.com/foo/status/1")
+    assert sellside_radar._is_ok_url("https://www.goldmansachs.com/insights/x")
+
+
 def test_validate_voices_caps_per_house():
     sources = [{"url": u} for u in ("https://a", "https://b", "https://c", "https://d")]
     data = {"views": [
