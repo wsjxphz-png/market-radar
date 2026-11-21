@@ -1,111 +1,116 @@
-name: 市场机会日报
+name: 美股状态日报
 
+# 取代原来的美股 AI 日报（main.py）。每个美股交易日收盘后推一张短卡：
+# 四个市场状态 + 七姐妹强弱 + 今天怎么做 + 关键价位。
+# 周末的完整体检仍由 us-market-state.yml 在周六推送。
 on:
   schedule:
-    # 北京时间 19:00 = UTC 11:00。注意：GitHub 对这个仓库的定时任务实测会晚
-    # 5~10 小时（2026-11 观测：UTC 11:00 的班次常在北京时间次日 00:00~05:15
-    # 才真正启动）。main.py 不再按“当前钟点”判断，而是推“最近一个已收盘
-    # 交易日”的日报，并在收盘 16 小时内送达；超过窗口自动跳过，不补发旧报告。
-    - cron: '0 11 * * *'
-    # 重试班次：已推送成功则按 data/last_daily_report.json 跳过，不会重复发
-    - cron: '10 11 * * *'
+    # 北京时间周二~周五 07:30 = UTC 周一~周四 23:30，覆盖周一~周四美股
+    - cron: '30 23 * * 1-4'
+    # 重试班次；当天已推则自动跳过
+    - cron: '0 0 * * 2-5'
   workflow_dispatch:
     inputs:
       force:
-        description: '跳过交易日/送达窗口检查，强制运行'
+        description: '忽略“当天已推/数据过旧”，强制运行'
+        type: boolean
+        default: false
+      dry_run:
+        description: '只生成不推送（本地式干跑）'
+        type: boolean
+        default: false
+      live:
+        description: '正式推送（默认是带【干跑】前缀的观察模式）'
         type: boolean
         default: false
 
-# 同一时间只跑一个，避免两个班次同时判断“未推送”而重复发送
+permissions:
+  contents: write
+
 concurrency:
-  group: daily-report
+  group: us-daily-state
   cancel-in-progress: false
 
 jobs:
-  daily-report:
+  daily:
     runs-on: ubuntu-latest
-    # 实测真实运行时 10.5~17.7 分钟（2026-09~11 记录），20 分钟余量太薄；
-    # 超时会静默丢掉当天日报，给到 30 分钟
     timeout-minutes: 30
     env:
-      # 关键：日志时间、日报标题、推送标记都按北京时间；服务器默认 UTC 会差 8 小时
       TZ: Asia/Shanghai
-    # O1：需要写回 active_theses.json / archive/（追踪/校准闭环持久化）
-    permissions:
-      contents: write
+      FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+      FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+      FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+    defaults:
+      run:
+        working-directory: research/us_market_state
 
     steps:
-      - name: 检出代码
-        id: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 设置 Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: 安装 Python 依赖
+      - name: 安装依赖
         run: pip install -r requirements.txt
 
-      - name: 生成市场机会日报
-        env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_BASE_URL: https://apihub.agnes-ai.com/v1
-          AI_MODEL: agnes-2.5-flash
-          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
-          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-        run: python main.py ${{ inputs.force && '--force' || '' }}
+      - name: 数据源冒烟测试
+        run: python smoke_test.py
 
-      # O1：追踪/校准闭环持久化 —— runner 每次全新检出，必须把本次更新的
-      # active_theses.json / archive/（到期验证、校准统计的数据源）提交回仓库，
-      # 否则 logic_tracker/到期验证/校准统计每次都是空跑。
-      # main.py 的 THESES_FILE/ARCHIVE_DIR 基于脚本所在目录（仓库根），路径一致。
-      - name: 持久化追踪数据（活跃判断/归档/校准留痕）
-        if: steps.checkout.outcome == 'success'
+      - name: 运行状态机测试
         run: |
-          mkdir -p archive/expired archive/falsified
-          git config user.name "market-radar-bot"
-          git config user.email "market-radar-bot@users.noreply.github.com"
-          # 降级日不生成 active_theses.json：单独 add 并容错，避免 pathspec
-          # "did not match any files" fatal 拖累 archive/ data/ 的持久化提交
-          # （git add --ignore-errors 不覆盖 pathspec 错误，实测仍 fatal 全中止）。
-          git add active_theses.json || true
-          git add archive/ data/
-          if git diff --cached --quiet; then
-            echo "无追踪数据变更，跳过提交"
+          pip install pytest
+          python -m pytest test_state.py -q
+
+      - name: 生成并推送日报
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python run_daily.py --dry-run
+          elif [ "${{ inputs.live }}" = "true" ]; then
+            if [ "${{ inputs.force }}" = "true" ]; then
+              python run_daily.py --force
+            else
+              python run_daily.py
+            fi
           else
-            git commit -m "data: 活跃判断追踪留痕 [skip ci]"
-            # 周期面板的 bot 也会提交 cache/ 文件；先 rebase 再推，避免被拒
-            git pull --rebase origin main || true
-            git push
+            python run_daily.py --shadow
           fi
 
-      - name: 失败通知
-        # 崩溃（未捕获异常/超时）不会走 main.py 里的告警卡，必须在这里补一条飞书消息，
-        # 否则 GitHub 上一个红叉等于没通知。
-        if: failure() && hashFiles('main.py') != ''
-        env:
-          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
-          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+      - name: 保存状态（去重 + 状态变化基线）
+        if: always()
         run: |
-          echo "::error::市场机会日报生成或数据持久化失败，请检查 GitHub Actions 日志。"
+          git config user.name "market-radar-bot"
+          git config user.email "market-radar-bot@users.noreply.github.com"
+          git add -f cache/last_daily_push.json 2>/dev/null || true
+          git add -f cache/last_state.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 美股状态日报留痕 [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: 失败通知（飞书）
+        if: failure()
+        run: |
           python - <<'PY' || true
           import os
-          import main
+          import push
           try:
+              creds = push.load_credentials()
               url = (f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', '')}"
                      f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}")
-              card = main.build_alert_card(
-                  "⚠️ 市场机会日报 · 运行失败",
-                  f"这次运行没有完整跑完：日报可能已经发出，也可能没有。请对照日志确认。\n\n日志：{url}")
-              main.send_feishu_card(card)
-              main.send_feishu_webhook(card)  # Bot 凭据本身出问题时，webhook 还有机会送达
+              push.send_text(
+                  f"⚠️ 美股状态日报这次没有完整跑完：可能已经发出，也可能没有。\n"
+                  f"请对照日志确认：{url}", creds)
           except Exception as exc:
               print("失败通知发送失败:", type(exc).__name__, exc)
           PY
+
+      - name: 上传日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-daily-state-${{ github.run_id }}
+          path: research/us_market_state/logs/
+          retention-days: 14
+          if-no-files-found: ignore

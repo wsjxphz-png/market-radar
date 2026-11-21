@@ -1,0 +1,5 @@
+cache/*.csv
+cache/*.json
+logs/
+results/
+.pytest_cache/

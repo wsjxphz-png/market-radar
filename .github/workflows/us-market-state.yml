@@ -1,0 +1,114 @@
+name: 美股状态周报
+
+# 每周六早上生成。美股周五收盘是北京时间周六凌晨，所以周六 09:00 能拿到周五数据。
+# GitHub 定时任务常延迟 5~10 小时；本次只推周报，晚一点不影响结论。
+on:
+  schedule:
+    - cron: '0 1 * * 6'   # 周六 09:00 北京时间
+    - cron: '10 1 * * 6'  # 重试；同一周已推则自动跳过
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '忽略“本周已推/数据过旧”，强制运行'
+        type: boolean
+        default: false
+      dry_run:
+        description: '只生成不推送（本地式干跑）'
+        type: boolean
+        default: false
+      live:
+        description: '正式推送（默认是带【干跑】前缀的观察模式）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: us-market-state
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: Asia/Shanghai
+      FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+      FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+      FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+    defaults:
+      run:
+        working-directory: research/us_market_state
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 数据源冒烟测试
+        run: python smoke_test.py
+
+      - name: 运行状态机测试
+        run: |
+          pip install pytest
+          python -m pytest test_state.py -q
+
+      - name: 生成并推送周报
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python run_weekly.py --dry-run
+          elif [ "${{ inputs.live }}" = "true" ]; then
+            if [ "${{ inputs.force }}" = "true" ]; then
+              python run_weekly.py --force
+            else
+              python run_weekly.py
+            fi
+          else
+            python run_weekly.py --shadow
+          fi
+
+      - name: 保存推送标记（避免同一周重复发）
+        if: always()
+        run: |
+          git config user.name "market-radar-bot"
+          git config user.email "market-radar-bot@users.noreply.github.com"
+          git add -f cache/last_weekly_push.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 美股状态周报推送标记 [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: 失败通知（飞书）
+        if: failure()
+        run: |
+          python - <<'PY' || true
+          import os
+          import push
+          try:
+              creds = push.load_credentials()
+              url = (f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', '')}"
+                     f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}")
+              push.send_text(
+                  f"⚠️ 美股状态周报这次没有完整跑完：可能已经发出，也可能没有。\n"
+                  f"请对照日志确认：{url}", creds)
+          except Exception as exc:
+              print("失败通知发送失败:", type(exc).__name__, exc)
+          PY
+
+      - name: 上传日志和回测结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-market-state-${{ github.run_id }}
+          path: |
+            research/us_market_state/logs/
+            research/us_market_state/results/
+          retention-days: 14
+          if-no-files-found: ignore
