@@ -41,7 +41,8 @@ SYSTEM_PROMPT = """你是信息整理员，不是分析师。
 4. point 不超过 40 个汉字；change 只能是：上调 / 下调 / 不变 / 未知。
 5. person 只填被报道的机构策略师/经济学家；不要填记者、作者；不确定就留空。
 6. 不要给买卖建议，不要预测涨跌。
-6. 如果材料里没有可用观点，views 输出空数组。
+7. 尽量覆盖不同机构；同一机构最多 2 条；优先选有明确目标价/立场变化的。
+8. 如果材料里没有可用观点，views 输出空数组。
 输出 JSON：
 {"views":[{"house":"","person":"","stance":"多/中/空/未知","point":"","change":"上调/下调/不变/未知","source":"https://..."}],"consensus":"","divergence":""}"""
 
@@ -256,7 +257,15 @@ def _validate(data: dict, sources: list[dict], as_of: str) -> Digest:
             point=point[:60], change=_norm_change(str(x.get("change", ""))),
             source=source,
         ))
-    views = views[:6]
+    # 同一机构最多 2 条，避免一张卡里全是同一家
+    capped: list[View] = []
+    per_house: dict[str, int] = {}
+    for v in views:
+        if per_house.get(v.house, 0) >= 2:
+            continue
+        capped.append(v)
+        per_house[v.house] = per_house.get(v.house, 0) + 1
+    views = capped[:6]
     if not views:
         return Digest(status="unavailable", reason="没有找到可引用的公开观点", as_of=as_of)
     return Digest(

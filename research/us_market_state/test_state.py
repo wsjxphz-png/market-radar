@@ -187,6 +187,19 @@ def test_validate_voices_drops_unsourced():
     assert d.views[0].house == "高盛"
 
 
+def test_validate_voices_caps_per_house():
+    sources = [{"url": u} for u in ("https://a", "https://b", "https://c", "https://d")]
+    data = {"views": [
+        {"house": "高盛", "point": "1", "source": "https://a"},
+        {"house": "高盛", "point": "2", "source": "https://b"},
+        {"house": "高盛", "point": "3", "source": "https://c"},
+        {"house": "美银", "point": "4", "source": "https://d"},
+    ]}
+    d = sellside_radar._validate(data, sources, "2026-11-22")
+    assert sum(1 for v in d.views if v.house == "高盛") == 2
+    assert any(v.house == "美银" for v in d.views)
+
+
 def _minimal_analysis() -> Analysis:
     s = MarketState(QQQ, 100, 95, 90, 80, -0.10, 4, 85)
     m = Mag7State("AAPL", "苹果", 100, 90, 5)
