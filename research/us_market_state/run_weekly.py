@@ -51,8 +51,6 @@ def main() -> int:
 
     card = render.card(a, weekly=True)
     text = card["content"]
-    if args.shadow:
-        text = "**【干跑】只观察，不执行实盘动作**\n\n" + text
     print(text)
 
     data_date = pd.Timestamp(a.data_date).date()

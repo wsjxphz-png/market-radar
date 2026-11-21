@@ -80,8 +80,6 @@ def main() -> int:
     text = card["content"]
     if changes:
         text = "**🔄 状态变化：**" + "；".join(changes) + "\n\n" + text
-    if args.shadow:
-        text = "**【干跑】只观察，不执行实盘动作**\n\n" + text
 
     data_date = pd.Timestamp(a.data_date).date()
     age = (date.today() - data_date).days
