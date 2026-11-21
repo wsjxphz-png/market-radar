@@ -17,6 +17,7 @@ import pandas as pd
 
 import push
 import render
+import sellside_radar
 import state
 from config import STAGE_LABELS
 
@@ -76,7 +77,9 @@ def main() -> int:
         return 1
 
     changes = _state_changes(a)
-    card = render.card(a, weekly=False)
+    digest = sellside_radar.fetch_digest(weekly=False)
+    log(f"市场声音: {digest.status} {digest.reason}".rstrip())
+    card = render.card(a, digest=digest, weekly=False)
     text = card["content"]
     if changes:
         text = "**🔄 状态变化：**" + "；".join(changes) + "\n\n" + text

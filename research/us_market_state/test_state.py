@@ -13,7 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 import data  # noqa: E402
 import push  # noqa: E402
 import render  # noqa: E402
+import sellside_radar  # noqa: E402
 from config import MARKETS, Market  # noqa: E402
+from sellside_radar import Digest, View  # noqa: E402
 from render import render_brief, render_text  # noqa: E402
 from state import (  # noqa: E402
     Analysis,
@@ -169,6 +171,43 @@ def test_card_has_title_template_and_markdown():
     assert c["template"] in ("red", "orange", "green", "grey")
     assert "**一句话：**" in c["content"]
     assert "**🧭 今天怎么做**" in c["content"]
+
+
+def test_validate_voices_drops_unsourced():
+    sources = [{"url": "https://example.com/a"}]
+    data = {"views": [
+        {"house": "高盛", "person": "Kostin", "stance": "多",
+         "point": "盈利支撑", "change": "上调", "source": "https://example.com/a"},
+        {"house": "美银", "person": "Hartnett", "stance": "空",
+         "point": "信用走阔", "change": "下调", "source": "https://fake.example/b"},
+    ], "consensus": "分歧较大", "divergence": ""}
+    d = sellside_radar._validate(data, sources, "2026-11-22")
+    assert d.status == "ok"
+    assert len(d.views) == 1
+    assert d.views[0].house == "高盛"
+
+
+def _minimal_analysis() -> Analysis:
+    s = MarketState(QQQ, 100, 95, 90, 80, -0.10, 4, 85)
+    m = Mag7State("AAPL", "苹果", 100, 90, 5)
+    return Analysis([s], [m], [], 1, -0.03, pd.Timestamp("2026-11-20"))
+
+
+def test_render_voices_block():
+    d = Digest(
+        views=[View("高盛", "Kostin", "多", "盈利支撑", "上调", "https://example.com/a")],
+        consensus="多数偏多，但对估值有分歧",
+        status="ok",
+    )
+    text = render.render_brief(_minimal_analysis(), digest=d)
+    assert "市场声音" in text and "高盛" in text
+    assert "https://example.com/a" in text
+
+
+def test_render_voices_unavailable():
+    d = Digest(status="unavailable", reason="未配置 AI_API_KEY")
+    text = render.render_brief(_minimal_analysis(), digest=d)
+    assert "AI 摘要暂不可用" in text
 
 
 def test_build_frame_has_indicators():

@@ -41,6 +41,10 @@ jobs:
       FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
       FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
       FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      AI_BASE_URL: https://apihub.agnes-ai.com/v1
+      AI_MODEL: agnes-2.5-flash
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
     defaults:
       run:
         working-directory: research/us_market_state

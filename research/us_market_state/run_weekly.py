@@ -19,6 +19,7 @@ import pandas as pd
 
 import push
 import render
+import sellside_radar
 import state
 
 BASE = Path(__file__).parent
@@ -49,7 +50,9 @@ def main() -> int:
         log(f"分析失败: {type(exc).__name__} {exc}")
         return 1
 
-    card = render.card(a, weekly=True)
+    digest = sellside_radar.fetch_digest(weekly=True)
+    log(f"市场声音: {digest.status} {digest.reason}".rstrip())
+    card = render.card(a, digest=digest, weekly=True)
     text = card["content"]
     print(text)
 

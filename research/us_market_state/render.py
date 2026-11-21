@@ -11,9 +11,11 @@ from __future__ import annotations
 import pandas as pd
 
 from config import DICTIONARY
+from sellside_radar import Digest
 from state import Analysis, Mag7State, MarketState
 
 SEP = "━━━━━━━━━━━━━━━"
+STANCE_ICON = {"多": "🟢", "空": "🔴", "中": "🟡", "未知": "⚪"}
 
 
 def _num(v: float) -> str:
@@ -252,7 +254,29 @@ def _risk_trend_block(a: Analysis, detailed: bool = False) -> list[str]:
     return lines
 
 
-def render_brief(a: Analysis) -> str:
+def _voices_block(digest: Digest | None, weekly: bool) -> list[str]:
+    if digest is None:
+        return []
+    if digest.status != "ok" or not digest.views:
+        return [f"**🗣️ 市场声音**：AI 摘要暂不可用（{digest.reason or '无可用观点'}）。状态判断不受影响。"]
+    lines = ["**🗣️ 市场声音（AI 摘要，不参与打分）**"]
+    limit = 6 if weekly else 4
+    for v in digest.views[:limit]:
+        who = v.house + (f" / {v.person}" if v.person else "")
+        change = f"；最近{v.change}" if v.change and v.change != "未知" else ""
+        lines.append(
+            f"- {STANCE_ICON.get(v.stance, '⚪')} **{who}**：{v.stance} — "
+            f"{v.point}{change}（[来源]({v.source})）"
+        )
+    if digest.consensus:
+        lines.append(f"**共识**：{digest.consensus}")
+    if digest.divergence:
+        lines.append(f"**分歧**：{digest.divergence}")
+    lines.append("AI 只做信息归纳，引用以原文为准；不参与状态/动作。")
+    return lines
+
+
+def render_brief(a: Analysis, digest: Digest | None = None) -> str:
     """每天收盘后的短卡：状态、依据、动作、关键价位，手机一屏左右。"""
     date_str = a.data_date.strftime("%Y.%m.%d")
     qqq = a.by_key.get("qqq")
@@ -287,6 +311,11 @@ def render_brief(a: Analysis) -> str:
     lines.append(f"👉 **这意味着：** {meaning}")
     lines.append(SEP)
     lines.extend(_risk_trend_block(a, detailed=False))
+
+    voices = _voices_block(digest, weekly=False)
+    if voices:
+        lines.append(SEP)
+        lines.extend(voices)
 
     strong = [x.symbol for x in a.mag7 if x.stage >= 5]
     pullback = [x.symbol for x in a.mag7 if x.stage == 4]
@@ -329,7 +358,7 @@ def render_brief(a: Analysis) -> str:
     return "\n".join(lines)
 
 
-def render_text(a: Analysis) -> str:
+def render_text(a: Analysis, digest: Digest | None = None) -> str:
     date_str = a.data_date.strftime("%Y.%m.%d")
     lines = [f"**数据日期**：{date_str}（美股最近一个交易日）"]
     if a.quality_warnings:
@@ -346,6 +375,10 @@ def render_text(a: Analysis) -> str:
     if a.weekly:
         lines.append(SEP)
         lines.extend(_weekly_block(a))
+    voices = _voices_block(digest, weekly=True)
+    if voices:
+        lines.append(SEP)
+        lines.extend(voices)
     lines.append(SEP)
     lines.append(_mag7_block(a))
     lines.append(SEP)
@@ -372,7 +405,7 @@ def render_text(a: Analysis) -> str:
     return "\n".join(lines)
 
 
-def card(a: Analysis, weekly: bool = False) -> dict:
+def card(a: Analysis, digest: Digest | None = None, weekly: bool = False) -> dict:
     """飞书 interactive 卡片：标题 + 颜色 + markdown 正文。"""
     kind = "周报" if weekly else "日报"
     date_str = a.data_date.strftime("%m.%d")
@@ -385,8 +418,9 @@ def card(a: Analysis, weekly: bool = False) -> dict:
         template = "orange"
     else:
         template = "red"
+    content = render_text(a, digest=digest) if weekly else render_brief(a, digest=digest)
     return {
         "title": f"美股状态{kind} · {date_str}",
-        "content": render_text(a) if weekly else render_brief(a),
+        "content": content,
         "template": template,
     }
