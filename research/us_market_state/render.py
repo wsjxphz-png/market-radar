@@ -262,7 +262,8 @@ def _voices_block(digest: Digest | None, weekly: bool) -> list[str]:
     lines = ["**🗣️ 市场声音（AI 摘要，不参与打分）**"]
     limit = 6 if weekly else 4
     for v in digest.views[:limit]:
-        who = v.house + (f" / {v.person}" if v.person else "")
+        # 只展示机构；人物容易把记者/作者误认成策略师，具体人物以来源原文为准
+        who = v.house
         change = f"；最近{v.change}" if v.change and v.change != "未知" else ""
         lines.append(
             f"- {STANCE_ICON.get(v.stance, '⚪')} **{who}**：{v.stance} — "

@@ -202,6 +202,7 @@ def test_render_voices_block():
     text = render.render_brief(_minimal_analysis(), digest=d)
     assert "市场声音" in text and "高盛" in text
     assert "https://example.com/a" in text
+    assert "Kostin" not in text  # 人物不展示，避免把记者误认成策略师
 
 
 def test_render_voices_unavailable():
