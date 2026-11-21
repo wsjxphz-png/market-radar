@@ -259,21 +259,22 @@ def _voices_block(digest: Digest | None, weekly: bool) -> list[str]:
         return []
     if digest.status != "ok" or not digest.views:
         return [f"**🗣️ 市场声音**：AI 摘要暂不可用（{digest.reason or '无可用观点'}）。状态判断不受影响。"]
-    lines = ["**🗣️ 市场声音（AI 摘要，不参与打分）**"]
+    lines = ["**🗣️ 市场声音（AI 摘要，按来源日期，不参与打分）**"]
     limit = 6 if weekly else 4
     for v in digest.views[:limit]:
         # 只展示机构；人物容易把记者/作者误认成策略师，具体人物以来源原文为准
         who = v.house
+        date_txt = f"（{v.published}）" if v.published and v.published != "日期未知" else "（日期未知）"
         change = f"；最近{v.change}" if v.change and v.change != "未知" else ""
         lines.append(
-            f"- {STANCE_ICON.get(v.stance, '⚪')} **{who}**：{v.stance} — "
+            f"- {STANCE_ICON.get(v.stance, '⚪')} **{who}**{date_txt}：{v.stance} — "
             f"{v.point}{change}（[来源]({v.source})）"
         )
     if digest.consensus:
         lines.append(f"**共识**：{digest.consensus}")
     if digest.divergence:
         lines.append(f"**分歧**：{digest.divergence}")
-    lines.append("AI 只做信息归纳，引用以原文为准；不参与状态/动作。")
+    lines.append("括号内是来源发布日期；不同日期的观点背景不同。AI 只做信息归纳，不参与状态/动作。")
     return lines
 
 

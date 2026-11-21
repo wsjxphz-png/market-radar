@@ -13,6 +13,7 @@ import os
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -67,6 +68,7 @@ class View:
     point: str
     change: str
     source: str
+    published: str = "日期未知"
 
 
 @dataclass
@@ -137,13 +139,27 @@ def _collect_sources() -> list[dict]:
     return deduped[:12]
 
 
+def _norm_date(raw: str) -> str:
+    raw = str(raw or "").strip()
+    if not raw:
+        return "日期未知"
+    m = re.search(r"\d{4}-\d{2}-\d{2}", raw)
+    if m:
+        return m.group(0)
+    try:
+        return parsedate_to_datetime(raw).date().isoformat()
+    except Exception:
+        return "日期未知"
+
+
 def _source_text(sources: list[dict]) -> str:
     blocks = []
     for i, s in enumerate(sources, 1):
         title = str(s.get("title", ""))[:120]
         url = str(s.get("url", ""))
+        published = _norm_date(str(s.get("published_date", "")))
         content = str(s.get("content", ""))[:700]
-        blocks.append(f"[{i}] {title}\n{url}\n{content}")
+        blocks.append(f"[{i}] {title}（{published}）\n{url}\n{content}")
     return "\n\n".join(blocks)
 
 
@@ -253,7 +269,11 @@ def _norm_change(raw: str) -> str:
 
 
 def _validate(data: dict, sources: list[dict], as_of: str) -> Digest:
-    allowed = {str(s.get("url", "")).strip() for s in sources if s.get("url")}
+    date_by_url = {
+        str(s.get("url", "")).strip(): _norm_date(str(s.get("published_date", "")))
+        for s in sources if s.get("url")
+    }
+    allowed = set(date_by_url)
     views: list[View] = []
     for x in data.get("views", []):
         if not isinstance(x, dict):
@@ -267,8 +287,14 @@ def _validate(data: dict, sources: list[dict], as_of: str) -> Digest:
             house=house[:30], person=str(x.get("person", "")).strip()[:30],
             stance=_norm_stance(str(x.get("stance", ""))),
             point=point[:60], change=_norm_change(str(x.get("change", ""))),
-            source=source,
+            source=source, published=date_by_url.get(source, "日期未知"),
         ))
+
+    # 最新观点排在前面；日期未知的放最后
+    views.sort(
+        key=lambda v: v.published if v.published != "日期未知" else "0000-00-00",
+        reverse=True,
+    )
     # 同一机构最多 2 条，避免一张卡里全是同一家
     capped: list[View] = []
     per_house: dict[str, int] = {}

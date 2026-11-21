@@ -212,14 +212,23 @@ def _minimal_analysis() -> Analysis:
     return Analysis([s], [m], [], 1, -0.03, pd.Timestamp("2026-11-20"))
 
 
+def test_validate_voices_uses_source_date():
+    sources = [{"url": "https://a", "published_date": "Thu, 20 Nov 2026 21:00:00 GMT"}]
+    data = {"views": [{"house": "高盛", "point": "x", "source": "https://a"}]}
+    d = sellside_radar._validate(data, sources, "2026-11-22")
+    assert d.views[0].published == "2026-11-20"
+
+
 def test_render_voices_block():
     d = Digest(
-        views=[View("高盛", "Kostin", "多", "盈利支撑", "上调", "https://example.com/a")],
+        views=[View("高盛", "Kostin", "多", "盈利支撑", "上调",
+                    "https://example.com/a", published="2026-11-20")],
         consensus="多数偏多，但对估值有分歧",
         status="ok",
     )
     text = render.render_brief(_minimal_analysis(), digest=d)
     assert "市场声音" in text and "高盛" in text
+    assert "2026-11-20" in text
     assert "https://example.com/a" in text
     assert "Kostin" not in text  # 人物不展示，避免把记者误认成策略师
 
