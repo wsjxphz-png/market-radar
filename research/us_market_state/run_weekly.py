@@ -77,7 +77,8 @@ def main() -> int:
         log(f"凭据读取失败: {type(exc).__name__} {exc}")
         return 1
 
-    title = ("【干跑】" if args.shadow else "") + card["title"]
+    title = card["title"]
+    log(f"卡片标题：{title}{'（干跑）' if args.shadow else ''}")
     if push.send_card(title, text, card["template"], creds):
         if not args.shadow:
             push.mark_pushed(week_key, kind="weekly")
