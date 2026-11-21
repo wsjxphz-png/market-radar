@@ -164,8 +164,8 @@ def test_card_has_title_template_and_markdown():
     m = Mag7State("AAPL", "苹果", 100, 90, 5)
     a = Analysis([s], [m], [], 1, -0.03, pd.Timestamp("2026-11-20"))
     c = render.card(a, weekly=False)
-    assert c["title"].startswith("市场状态日报")
-    assert "🇺🇸" not in c["title"] and "美股" not in c["title"]
+    assert c["title"].startswith("美股状态日报")
+    assert "🇺🇸" not in c["title"] and "US" not in c["title"]
     assert c["template"] in ("red", "orange", "green", "grey")
     assert "**一句话：**" in c["content"]
     assert "**🧭 今天怎么做**" in c["content"]

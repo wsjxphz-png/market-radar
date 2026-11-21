@@ -386,7 +386,7 @@ def card(a: Analysis, weekly: bool = False) -> dict:
     else:
         template = "red"
     return {
-        "title": f"市场状态{kind} · {date_str}",
+        "title": f"美股状态{kind} · {date_str}",
         "content": render_text(a) if weekly else render_brief(a),
         "template": template,
     }
