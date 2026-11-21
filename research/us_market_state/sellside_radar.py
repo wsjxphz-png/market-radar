@@ -145,17 +145,21 @@ def _call_agnes(source_text: str) -> dict | None:
         return None
     base = os.getenv("AI_BASE_URL", "https://apihub.agnes-ai.com/v1").rstrip("/")
     model = os.getenv("AI_MODEL", "agnes-2.5-flash")
-    body = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": "材料：\n\n" + source_text + "\n\n请只输出 JSON。"},
-        ],
-        "temperature": 0.1,
-        "max_tokens": 1200,
-        "response_format": {"type": "json_object"},
-    }
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": "材料：\n\n" + source_text + "\n\n请只输出 JSON。"},
+    ]
     for attempt in range(2):
+        body = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.1,
+            "max_tokens": 3000,
+        }
+        if attempt == 0:
+            body["response_format"] = {"type": "json_object"}
+        else:
+            messages[1]["content"] += "\n\n只输出 JSON，不要解释，不要 markdown 代码块。"
         try:
             r = requests.post(
                 f"{base}/chat/completions",
@@ -163,11 +167,43 @@ def _call_agnes(source_text: str) -> dict | None:
                 json=body,
                 timeout=180,
             )
-            r.raise_for_status()
-            content = r.json()["choices"][0]["message"]["content"]
-            return json.loads(_clean_json(content))
+            if r.status_code != 200:
+                print(f"[voices] Agnes HTTP {r.status_code}: {r.text[:300]}")
+                continue
+            try:
+                data = r.json()
+            except Exception:
+                print(f"[voices] Agnes 非 JSON 响应: {r.text[:300]}")
+                continue
+            choices = data.get("choices") or []
+            if not choices:
+                print(f"[voices] Agnes 无 choices: {str(data)[:300]}")
+                continue
+            choice = choices[0]
+            content = choice.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                content = "".join(str(x.get("text", "")) for x in content if isinstance(x, dict))
+            content = str(content).strip()
+            finish = choice.get("finish_reason")
+            usage = data.get("usage", {})
+            print(f"[voices] Agnes 第 {attempt + 1} 次: finish={finish} "
+                  f"completion={usage.get('completion_tokens')} chars={len(content)}")
+            if not content:
+                print(f"[voices] Agnes 空内容: {str(data)[:300]}")
+                continue
+            text = _clean_json(content)
+            try:
+                return json.loads(text)
+            except Exception:
+                print(f"[voices] Agnes 返回非 JSON: {content[:300]}")
+                m = re.search(r"\{.*\}", text, re.S)
+                if m:
+                    try:
+                        return json.loads(m.group(0))
+                    except Exception:
+                        pass
         except Exception as exc:
-            print(f"[voices] Agnes 摘要失败（第 {attempt + 1} 次）: {type(exc).__name__} {exc}")
+            print(f"[voices] Agnes 摘要异常（第 {attempt + 1} 次）: {type(exc).__name__} {exc}")
     return None
 
 
@@ -252,7 +288,7 @@ def fetch_digest(weekly: bool = False) -> Digest:
 
     data = _call_agnes(_source_text(sources))
     if data is None:
-        return Digest(status="unavailable", reason="AI 摘要暂不可用", as_of=today)
+        return Digest(status="unavailable", reason="Agnes 返回异常，本次跳过", as_of=today)
 
     digest = _validate(data, sources, today)
     if digest.status == "ok":
