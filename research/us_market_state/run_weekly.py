@@ -49,9 +49,10 @@ def main() -> int:
         log(f"分析失败: {type(exc).__name__} {exc}")
         return 1
 
-    text = render.render_text(a)
+    card = render.card(a, weekly=True)
+    text = card["content"]
     if args.shadow:
-        text = "【干跑】只观察，不执行实盘动作\n" + text
+        text = "**【干跑】只观察，不执行实盘动作**\n\n" + text
     print(text)
 
     data_date = pd.Timestamp(a.data_date).date()
@@ -76,7 +77,8 @@ def main() -> int:
         log(f"凭据读取失败: {type(exc).__name__} {exc}")
         return 1
 
-    if push.send_text(text, creds):
+    title = ("【干跑】" if args.shadow else "") + card["title"]
+    if push.send_card(title, text, card["template"], creds):
         if not args.shadow:
             push.mark_pushed(week_key, kind="weekly")
         log(f"推送完成，week_key={week_key}{'（干跑）' if args.shadow else ''}")

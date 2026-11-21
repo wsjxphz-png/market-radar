@@ -1,7 +1,7 @@
 name: 美股状态日报
 
-# 取代原来的美股 AI 日报（main.py）。每个美股交易日收盘后推一张短卡：
-# 四个市场状态 + 七姐妹强弱 + 今天怎么做 + 关键价位。
+# 旧美股 AI 日报已删除；这是唯一的美股日报。
+# 每个美股交易日收盘后推一张卡片：五个市场状态 + 广度/信用/波动 + 今天怎么做。
 # 周末的完整体检仍由 us-market-state.yml 在周六推送。
 on:
   schedule:
@@ -40,6 +40,7 @@ jobs:
       FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
       FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
       FEISHU_CHAT_ID: ${{ secrets.FEISHU_CHAT_ID }}
+      FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
     defaults:
       run:
         working-directory: research/us_market_state

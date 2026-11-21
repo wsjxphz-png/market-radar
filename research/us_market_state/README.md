@@ -12,8 +12,10 @@
 
 | 类型 | 时间 | 内容 | 工作流 |
 |---|---|---|---|
-| **日报短卡** | 美股收盘后（北京周二~周五 07:30） | 五个市场状态 + 广度/信用/波动 20 天变化 + 七姐妹强弱 + 今天怎么做 | `daily-report.yml` |
-| **周报全文** | 周六 09:00（覆盖周五美股） | 完整解释 + 小白词典 | `us-market-state.yml` |
+| **日报卡片** | 美股收盘后（北京周二~周五 07:30） | 五个市场 + 广度/信用/波动 + 七姐妹 + 今天怎么做 | `daily-report.yml` |
+| **周报卡片** | 周六 09:00（覆盖周五美股） | 完整解释 + 周线变化 + 小白词典 | `us-market-state.yml` |
+
+两种卡片都走 **内部群 Bot + 外部群 Webhook 双推**；标题/颜色按阶段变化（防守红、观察橙、修复绿、数据不足灰），正文用 markdown 加粗重点、分隔线分块。
 
 `daily-report.yml` 已从原来的 `main.py` 切换到 `run_daily.py`；旧的美股 AI 日报不再定时运行，`main.py` 保留作归档。A 股的 `cycle-panel.yml` 不受影响。
 
@@ -134,8 +136,8 @@ python -m pytest test_state.py -q  # 测试
 python backtest.py                 # 分市场回测
 ```
 
-飞书凭据：环境变量 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_CHAT_ID`，
-或 `~/.market-radar/feishu.env`（与 A 股周期面板共用）。
+飞书凭据：环境变量 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_CHAT_ID`（内部群）、
+`FEISHU_WEBHOOK_URL`（外部群，可选）；或 `~/.market-radar/feishu.env`（与 A 股周期面板共用）。
 
 ## 回测参考（月线 10 月均线规则）
 

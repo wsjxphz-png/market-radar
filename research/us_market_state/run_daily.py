@@ -76,16 +76,17 @@ def main() -> int:
         return 1
 
     changes = _state_changes(a)
-    text = render.render_brief(a)
+    card = render.card(a, weekly=False)
+    text = card["content"]
     if changes:
-        text = "🔄 状态变化：" + "；".join(changes) + "\n\n" + text
+        text = "**🔄 状态变化：**" + "；".join(changes) + "\n\n" + text
     if args.shadow:
-        text = "【干跑】只观察，不执行实盘动作\n" + text
+        text = "**【干跑】只观察，不执行实盘动作**\n\n" + text
 
     data_date = pd.Timestamp(a.data_date).date()
     age = (date.today() - data_date).days
     if age > 2:
-        text = f"⚠️ 数据只更新到 {data_date}，可能不是最新。\n\n" + text
+        text = f"⚠️ **数据只更新到 {data_date}，可能不是最新。**\n\n" + text
 
     print(text)
 
@@ -108,7 +109,8 @@ def main() -> int:
         log(f"凭据读取失败: {type(exc).__name__} {exc}")
         return 1
 
-    if push.send_text(text, creds):
+    title = ("【干跑】" if args.shadow else "") + card["title"]
+    if push.send_card(title, text, card["template"], creds):
         if not args.shadow:
             push.mark_pushed(day_key, kind="daily")
             _write_stage_map(a)

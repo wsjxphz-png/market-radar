@@ -1,6 +1,6 @@
-# 📊 A股周期面板 + 市场机会发现系统
+# 📊 A股周期面板 + 美股状态日报
 
-> 一套规则驱动的 A 股投资决策工具。每天收盘后推送一张看得懂的周期面板：估值、资金、广度、情绪、趋势五个角度，三个底走到哪一步，顶部风险亮了几项。
+> 两套规则驱动的系统：A 股看周期面板（估值、资金、广度、情绪、趋势，三个底走到哪一步）；美股看多市场状态日报（五个市场 + 七姐妹，风险在积累还是在释放，现在该怎么做）。
 
 ---
 
@@ -39,9 +39,12 @@
 📖 每日一得   — 按市场状态轮换的投资格言摘录
 ```
 
-### 🔍 市场机会发现 `main.py`
-**每天收盘后自动运行，飞书推送。** RSS + FRED + AKShare + Polymarket + Tavily 多源抓取 → AI 8 层分析 → 飞书。
-定时触发是 19:00，实际常在次日凌晨送达；日报按“最近一个已收盘交易日”生成，休市日不推、已推送不重复。
+### 🇺🇸 美股多市场状态日报 `research/us_market_state/`
+**美股每个交易日收盘后推送一张飞书卡片，默认干跑（标题带【干跑】）。**
+覆盖五个市场（SPY/QQQ/SOXQ/KWEB/FXI）+ 七姐妹逐只 + 广度/信用/波动 20 天变化 + 今天怎么做 + 关键价位。
+详见 `research/us_market_state/README.md`。
+
+**旧的美股 AI 日报（`main.py`）已删除**，不再有任何定时任务运行它；旧卡片不再产生。
 
 ### 📊 月度复盘 `backtest_review.py`
 **每月 1 号自动运行，飞书推送。** 不统计预测准确率——只检查五大模块纪律执行情况，违例标 ❌。
@@ -67,12 +70,13 @@
 
 | Workflow | 触发时间 | 内容 |
 |----------|---------|------|
-| `cycle-panel.yml` | 工作日 19:00 触发（19:10 重试） | 周期面板 → 飞书；只推最近一个已收盘交易日，超过 16 小时不补发 |
-| `daily-report.yml` | 每天 19:00 触发（19:10 重试） | RSS 市场机会发现 → 飞书；同样按最近一个已收盘交易日送达，已推送则跳过 |
+| `cycle-panel.yml` | 工作日 19:00（19:10 重试） | A 股周期面板 → 飞书；只推最近一个已收盘交易日 |
+| `daily-report.yml` | 北京周二~周五 07:30（08:00 重试） | 美股状态日报 → 内部群 + 外部群；默认【干跑】 |
+| `us-market-state.yml` | 周六 09:00 | 美股状态周报 → 内部群 + 外部群；默认【干跑】 |
 | `monthly-review.yml` | 每月 1 号 09:00 | 月度纪律复盘 → 飞书 |
-| `rally-health.yml` | 仅手动触发 | 旧全景仪表盘（定时已停用，由周期面板取代） |
+| `rally-health.yml` | 仅手动触发 | 旧 A 股全景仪表盘（定时已停用） |
 
-> ⚠️ GitHub 对该仓库的定时任务实测会延迟 5~10 小时（19:00 的班次常在北京时间次日凌晨才启动）。两个日报都按“数据日期”而不是“到达时刻”判断，所以凌晨送达的仍是上一交易日收盘后的内容；休市日及超过 16 小时的旧数据不补发。
+> ⚠️ GitHub 定时任务常延迟几分钟到几小时；美股系统按“数据日期”判断，卡片标题写的是数据日，不是送达时刻。周五美股由周六的周报覆盖。
 
 ---
 
@@ -80,25 +84,27 @@
 
 ```bash
 pip install -r requirements.txt
+pip install -r research/us_market_state/requirements.txt
 
-# 周期面板（当前每日推送）
+# 周期面板（A 股每日推送）
 cd research/cycle_timing
 python run_daily.py --no-push                 # 生成面板不推送
 python run_daily.py --force                   # 忽略交易日/时间限制，调试用
 python run_daily.py --skip-refresh --no-push  # 不联网，用缓存
 
-# 旧仪表盘（手动）
-python market_dashboard.py --dry-run          # 仅打印
-python market_dashboard.py --force --dry-run  # 跳过日期检查
+# 美股状态日报 / 周报（默认干跑）
+cd research/us_market_state
+python smoke_test.py                          # 先确认数据源
+python run_daily.py --dry-run                 # 只打印
+python run_daily.py --shadow                  # 推送带【干跑】前缀
+python run_weekly.py --dry-run                # 周报全文只打印
 
-# 市场机会发现
-python main.py --dry-run
+# 旧 A 股仪表盘（手动）
+python market_dashboard.py --dry-run
+python market_dashboard.py --force --dry-run
 
 # 月度复盘
 python backtest_review.py --days 30 --dry-run
-
-# 个股数据测试
-python stock_data.py
 ```
 
 ---
@@ -108,10 +114,10 @@ python stock_data.py
 | Secret | 用途 |
 |--------|------|
 | `AI_API_KEY` | AI 分析 + 决策审计（兼容旧名 `DEEPSEEK_API_KEY`） |
-| `FEISHU_APP_ID` | 飞书 Bot 推送 |
-| `FEISHU_APP_SECRET` | 飞书 Bot 推送 |
-| `FEISHU_CHAT_ID` | 飞书群聊 ID (可选) |
-| `FEISHU_WEBHOOK_URL` | 飞书 Webhook (可选) |
+| `FEISHU_APP_ID` | 飞书 Bot 推送（内部群） |
+| `FEISHU_APP_SECRET` | 飞书 Bot 推送（内部群） |
+| `FEISHU_CHAT_ID` | 飞书内部群聊 ID |
+| `FEISHU_WEBHOOK_URL` | 飞书外部群自定义机器人（两个群都推需要） |
 | `FRED_API_KEY` | 美国宏观数据 (可选) |
 | `TAVILY_API_KEY` | 实时搜索 (可选) |
 
@@ -119,11 +125,11 @@ python stock_data.py
 
 ## 设计原则
 
-- **规则驱动, 不是情绪驱动**。每次买卖前过一遍五大模块规则
-- **手册和代码一致**。入场三条件(金叉+放量+不追高) 由代码硬校验，不满足就降级
-- **每条建议附带依据**。不只说"买什么"，还说"为什么"
+- **规则驱动, 不是情绪驱动**。每次买卖前过一遍规则
+- **状态判断，不是顶底预测**。只回答“现在处于什么阶段、风险在积累还是释放”，不猜哪天涨跌
+- **每条判断都带依据和动作**。先说“是什么”，再说“这意味着什么”，最后说“现在怎么做”
+- **美股双群推送**。内部群走 Bot，外部群走 Webhook；卡片标题/颜色区分阶段
 - **复盘不看准确率, 看纪律执行**。违例标 ❌，无违例标 ✅
-- **系统帮你排除错误, 不帮你做决策**。告诉你什么时候不该买、哪些不该碰、什么仓位太危险
 
 ---
 
@@ -131,26 +137,29 @@ python stock_data.py
 
 ```
 market-radar/
-├── market_dashboard.py      # 全景仪表盘主控
-├── sector_monitor.py        # 23 板块技术分析
-├── stock_data.py            # 个股数据层 (adata/akshare)
-├── portfolio.py             # 100万模拟账户
-├── backtest_review.py       # 月度复盘 (纪律检查)
-├── main.py                  # RSS 市场机会发现
-├── research/cycle_timing/   # A股周期面板（当前每日主推送）
-│   ├── run_daily.py         # 交易日/收盘时间闸门 + 调度入口
-│   ├── panel_data.py        # 五维/三个底/顶部风险计算
-│   ├── push_feishu.py       # 白话推送
-│   └── test_panel.py        # 规则测试
-├── sources.json             # 信息源配置
+├── market_dashboard.py      # A股全景仪表盘（手动）
+├── sector_monitor.py        # A股板块技术分析
+├── stock_data.py            # A股个股数据层
+├── portfolio.py             # A股模拟账户
+├── backtest_review.py       # 月度复盘
+├── research/cycle_timing/   # A股周期面板
+├── research/us_market_state/ # 美股多市场状态日报/周报
+│   ├── run_daily.py         # 美股日报（短卡）
+│   ├── run_weekly.py        # 美股周报（全文）
+│   ├── state.py             # 状态机/风险趋势/动作
+│   ├── render.py            # 飞书卡片 markdown
+│   ├── push.py              # 内部群 Bot + 外部群 Webhook
+│   ├── smoke_test.py        # 数据源冒烟
+│   └── test_state.py        # 20 个测试
+├── sources.json             # LTC 等信息源（sources.json 仍被 ltc_news 使用）
 ├── requirements.txt
 ├── .github/workflows/
-│   ├── cycle-panel.yml      # 周期面板定时（工作日 19:00）
-│   ├── rally-health.yml     # 旧仪表盘（仅手动）
-│   ├── daily-report.yml     # 市场发现定时
-│   └── monthly-review.yml   # 月度复盘
+│   ├── cycle-panel.yml      # A股周期面板
+│   ├── daily-report.yml     # 美股状态日报（默认干跑）
+│   ├── us-market-state.yml  # 美股状态周报（默认干跑）
+│   ├── monthly-review.yml   # 月度复盘
+│   └── rally-health.yml     # 旧 A 股仪表盘（仅手动）
 └── docs/
-    └── superpowers/specs/   # 设计文档
 ```
 
 ---

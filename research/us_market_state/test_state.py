@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import data  # noqa: E402
 import push  # noqa: E402
+import render  # noqa: E402
 from config import MARKETS, Market  # noqa: E402
 from render import render_brief, render_text  # noqa: E402
 from state import (  # noqa: E402
@@ -156,6 +157,17 @@ def test_push_markers_are_separate(tmp_path, monkeypatch):
     assert push.already_pushed("2026-11-20", kind="daily")
     assert push.already_pushed("2026-W47", kind="weekly")
     assert not push.already_pushed("2026-W47", kind="daily")
+
+
+def test_card_has_title_template_and_markdown():
+    s = MarketState(QQQ, 100, 95, 90, 80, -0.10, 4, 85)
+    m = Mag7State("AAPL", "苹果", 100, 90, 5)
+    a = Analysis([s], [m], [], 1, -0.03, pd.Timestamp("2026-11-20"))
+    c = render.card(a, weekly=False)
+    assert "美股状态日报" in c["title"]
+    assert c["template"] in ("red", "orange", "green", "grey")
+    assert "**一句话：**" in c["content"]
+    assert "**🧭 今天怎么做**" in c["content"]
 
 
 def test_build_frame_has_indicators():
