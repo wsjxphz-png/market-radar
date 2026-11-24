@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""每周六推送 A股周期周报：完整解释 + 本周涨跌。
+"""手动推送 A股周期周报：完整解释 + 本周涨跌（定时已停用，不在日卡外额外推送）。
 
-    python run_weekly.py              # 正常跑（刷新数据 → 生成周报 → 推飞书）
+    python run_weekly.py              # 手动跑（刷新数据 → 生成周报 → 推飞书）
     python run_weekly.py --dry-run    # 只打印，不发飞书
     python run_weekly.py --force      # 忽略“本周已推送”标记
     python run_weekly.py --skip-refresh  # 不联网，直接用缓存生成
 
-与日卡的分工：日卡只留决策项（短卡），周报承载完整解释、五维、三个底、名词小抄。
-周报不写状态基线——基线由每日任务维护，避免周末把日卡的状态变化吞掉。
+与日卡的分工：日卡只留决策项（短卡），完整版每天在 results/panel_*.html；
+周报是同一个完整版加“本周涨跌”，只在需要时手动触发。
+周报不写状态基线——基线由每日任务维护，避免把日卡的状态变化吞掉。
 """
 from __future__ import annotations
 
