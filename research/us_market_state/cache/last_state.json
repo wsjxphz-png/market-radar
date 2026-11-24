@@ -1,11 +1,11 @@
 {
   "spy": {
-    "stage": 1,
-    "label": "下跌中"
+    "stage": 2,
+    "label": "深度下跌"
   },
   "qqq": {
-    "stage": 1,
-    "label": "下跌中"
+    "stage": 2,
+    "label": "深度下跌"
   },
   "soxq": {
     "stage": 2,
