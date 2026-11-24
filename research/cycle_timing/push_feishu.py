@@ -25,11 +25,6 @@ import requests
 BASE = Path(__file__).parent
 CACHE = BASE / "cache"
 MARK = CACHE / "last_push.json"
-WEEKLY_MARK = CACHE / "last_push_weekly.json"
-
-
-def _mark_path(kind: str):
-    return WEEKLY_MARK if kind == "weekly" else MARK
 CRED_PATH = Path.home() / ".market-radar" / "feishu.env"
 
 TONE = {
@@ -446,23 +441,6 @@ def build_short_message(pan) -> str:
     return "\n".join(L)
 
 
-def build_weekly_message(pan) -> str:
-    """周报：完整解释 + 本周涨跌，每周六推。"""
-    L = [f"【A股周期面板·周报】覆盖 {pan.date.date()} 收盘", "",
-         f"一句话：{_plain_headline(pan)}", ""]
-    L.append("■ 本周变化（近5个交易日）")
-    for i in pan.indices:
-        if pd.notna(i.chg5):
-            move = "涨" if i.chg5 >= 0 else "跌"
-            L.append(f"{i.name}：{move} {abs(i.chg5) * 100:.2f}%｜{i.state}")
-        else:
-            L.append(f"{i.name}：{i.state}")
-    L.append("")
-    L.extend(_long_body(pan))
-    L.append("参考信息，不是交易指令。")
-    return "\n".join(L)
-
-
 def build_message(pan) -> str:
     """日卡默认短卡；保留这个入口，测试和 --dry-run 都走这里。"""
     return build_short_message(pan)
@@ -505,18 +483,14 @@ def send_text(text: str, creds: dict[str, str]) -> bool:
     return False
 
 
-def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True,
-                   kind: str = "daily") -> bool:
+def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True) -> bool:
     """同一天、同一份面板只推一次。
     必须同时比对“运行日”：若今天的数据源没更新、面板日期还是昨天，
     不能因为昨天推过就静默跳过今天的推送。
-    若上次是刷新失败/数据滞后时推的（fresh=False），本次数据已新鲜则允许补发一次。
-    kind 区分日卡和周报（daily / weekly），两者互不覆盖。"""
+    若上次是刷新失败/数据滞后时推的（fresh=False），本次数据已新鲜则允许补发一次。"""
     try:
-        d = json.loads(_mark_path(kind).read_text(encoding="utf-8"))
+        d = json.loads(MARK.read_text(encoding="utf-8"))
         run_date = run_date or date.today()
-        if d.get("kind", "daily") != kind:
-            return False
         if (d.get("panel_date") != str(pd.Timestamp(panel_date).date())
                 or d.get("run_date") != str(run_date)):
             return False
@@ -525,35 +499,32 @@ def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True,
         return False
 
 
-def mark_pushed(panel_date, run_date: date | None = None, fresh: bool = True,
-                kind: str = "daily") -> None:
+def mark_pushed(panel_date, run_date: date | None = None, fresh: bool = True) -> None:
     MARK.parent.mkdir(exist_ok=True)
     MARK.write_text(json.dumps(
         {"panel_date": str(pd.Timestamp(panel_date).date()),
          "run_date": str(run_date or date.today()),
-         "kind": kind,
          "fresh": bool(fresh),
          "pushed_at": pd.Timestamp.now().isoformat(timespec="seconds")},
         ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def push_panel(pan, force: bool = False, dry_run: bool = False, fresh: bool = True,
-               run_date: date | None = None, kind: str = "daily") -> str:
+               run_date: date | None = None) -> str:
     """返回 sent / skipped / dry-run / failed，便于调用方写准确的日志。
     fresh=False 表示本次数据未更新（刷新失败或数据源滞后），用于让之后的新数据补发。
     run_date 是这次任务“负责的那一天”（最近一个已收盘交易日），默认当前日期。
-    用它而不是墙钟日期做去重键：23:55 推过、00:05 的重试班次不会重复发。
-    kind="weekly" 时发周报（完整解释 + 本周涨跌）。"""
+    用它而不是墙钟日期做去重键：23:55 推过、00:05 的重试班次不会重复发。"""
     if dry_run:
-        print(build_weekly_message(pan) if kind == "weekly" else build_message(pan))
+        print(build_message(pan))
         return "dry-run"
-    if not force and already_pushed(pan.date, run_date=run_date, fresh=fresh, kind=kind):
+    if not force and already_pushed(pan.date, run_date=run_date, fresh=fresh):
         print(f"面板 {pan.date.date()} 已推送过，跳过（--force 可强制重发）")
         return "skipped"
-    text = build_weekly_message(pan) if kind == "weekly" else build_message(pan)
+    text = build_message(pan)
     if not send_text(text, load_credentials()):
         return "failed"
-    mark_pushed(pan.date, run_date=run_date, fresh=fresh, kind=kind)
+    mark_pushed(pan.date, run_date=run_date, fresh=fresh)
     return "sent"
 
 

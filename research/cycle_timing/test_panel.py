@@ -218,18 +218,6 @@ def test_push_long_message_keeps_full_explanation():
         assert i.name in msg and push_feishu._index_meaning(i)
 
 
-def test_weekly_message_has_week_change_and_full_body():
-    import push_feishu
-    pan = p.build_panel()
-    msg = push_feishu.build_weekly_message(pan)
-    assert "周报" in msg
-    assert "本周变化" in msg
-    assert "五维体检" in msg
-    assert "名词小抄" in msg
-    for i in pan.indices:
-        assert i.name in msg
-
-
 def test_push_data_dates_come_from_health_not_hardcoded():
     import push_feishu
     pan = p.build_panel()
