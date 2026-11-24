@@ -187,23 +187,47 @@ def test_panel_smoke():
         ["政策底", "市场底", "盈利底"]
 
 
-def test_push_message_is_plain_and_not_stale():
+def test_push_short_message_keeps_decisions_not_jargon():
     import push_feishu
     pan = p.build_panel()
-    msg = push_feishu.build_message(pan)
+    msg = push_feishu.build_short_message(pan)
+    for key in ("一句话", "顶部风险", "三个底", "数据日期", "不是交易指令", "怎么做"):
+        assert key in msg
+    assert "nan" not in msg.lower()
+    assert "None" not in msg
+    # 短卡没有“下文”，不能出现指向长卡的尾注或内部记号
+    for jargon in ("top<0.4", "top≥0.6", "MA20", "pp", "T-", "净申赎", "分位", "底部分数",
+                   "具体含义见下文"):
+        assert jargon not in msg, f"短卡里还有黑话: {jargon}"
+    # 短卡必须能独立支撑决策：每个指数都有状态和动作
+    for i in pan.indices:
+        assert i.name in msg
+        assert push_feishu._plain_action(i) in msg
+
+
+def test_push_long_message_keeps_full_explanation():
+    import push_feishu
+    pan = p.build_panel()
+    msg = push_feishu.build_long_message(pan)
     for key in ("一句话", "顶部风险", "三个底", "五维体检", "数据日期", "名词小抄", "不是交易指令"):
         assert key in msg
     # 上涨阶段要有对称的顶部检查，不能只找底
     assert "风险条件亮了" in msg
     assert "已经进入顶部风险区" not in msg or any(i.state.startswith("顶部") for i in pan.indices)
-    assert "nan" not in msg.lower()
-    assert "None" not in msg
-    # 冒号后面不能出现只有内行才懂的缩写/记号
-    for jargon in ("top<0.4", "MA20", "pp", "T-", "净申赎", "分位", "底部分数"):
-        assert jargon not in msg, f"推送里还有黑话: {jargon}"
-    # 每个指数都要有一句“这意味着什么”，不能只有数字
     for i in pan.indices:
         assert i.name in msg and push_feishu._index_meaning(i)
+
+
+def test_weekly_message_has_week_change_and_full_body():
+    import push_feishu
+    pan = p.build_panel()
+    msg = push_feishu.build_weekly_message(pan)
+    assert "周报" in msg
+    assert "本周变化" in msg
+    assert "五维体检" in msg
+    assert "名词小抄" in msg
+    for i in pan.indices:
+        assert i.name in msg
 
 
 def test_push_data_dates_come_from_health_not_hardcoded():
@@ -494,13 +518,16 @@ def test_push_message_adapts_to_confirmed_market_bottom():
     pan.bottoms.market.status = "确认（趋势修复）"
     pan.bottoms.market.plain = (
         "市场底已经确认：价格连续5个交易日站在200日线上方，同时顶部风险很低。")
-    msg = push_feishu.build_message(pan)
+    msg = push_feishu.build_long_message(pan)
     assert "市场底：已确认，下跌趋势修复" in msg
     assert "市场底已经确认" in msg
     assert "现在只是观察区，不是买点" not in msg
     # 市场已修复后，政策底不再说“还没出现”，否则像还在等底
     assert "政策底：当前不适用" in msg
     assert "政策底：还没出现" not in msg
+    # 短卡也要给出确认后的下一步
+    short = push_feishu.build_short_message(pan)
+    assert "市场底已经确认" in short
 
 
 def test_headline_warns_when_top_risk_builds():

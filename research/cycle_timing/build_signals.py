@@ -51,6 +51,17 @@ def load_money():
     return df
 
 
+def load_credit_spread():
+    """信用利差：AAA 中短期票据 10Y − 国债 10Y（%）。60 日变化换算成 bp。"""
+    try:
+        df = read("credit_spread.csv")
+    except FileNotFoundError:
+        return pd.DataFrame(columns=["date", "spread", "spread_chg60"])
+    df = df.sort_values("date").reset_index(drop=True)
+    df["spread_chg60"] = (df["spread"] - df["spread"].shift(60)) * 100
+    return df
+
+
 def load_social():
     df = read("social_financing.csv")
     df["month"] = pd.to_datetime(df["month"])
@@ -172,6 +183,14 @@ def build_for_index(index_name, pe_name, breadth):
     social = load_social()
     df = merge_asof(df, social[["avail", "sz_yoy"]], "avail", ["sz_yoy"])
 
+    credit = load_credit_spread()
+    if len(credit):
+        df = merge_asof(df, credit[["date", "spread", "spread_chg60"]],
+                        "date", ["spread", "spread_chg60"])
+    else:
+        df["spread"] = float("nan")
+        df["spread_chg60"] = float("nan")
+
     margin = load_margin()
     df = merge_asof(df, margin[["avail", "balance", "margin_20d_chg", "margin_pct"]],
                     "avail", ["balance", "margin_20d_chg", "margin_pct"])
@@ -209,6 +228,7 @@ def build_for_index(index_name, pe_name, breadth):
         if pd.notna(r["sz_yoy"]):
             credit_t.append(r["sz_yoy"] < 0)
             credit_b.append(r["sz_yoy"] > 0)
+        # 信用利差只展示、不参与打分（回测方向不稳定，见 download_data.update_credit_spread）
         if credit_t:
             t.append(any(credit_t))
             b.append(any(credit_b))

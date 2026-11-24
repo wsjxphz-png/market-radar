@@ -301,6 +301,49 @@ def update_social():
         print(f"  social financing unavailable: {type(e).__name__}")
 
 
+def update_credit_spread():
+    """中债 AAA 中短期票据 10Y − 国债 10Y 信用利差（日频）。
+
+    社融数据源 2026-04 起停更，信用维度改用它做逐日替代。
+    中债接口单次查询跨度必须小于一年，按季度分片；首次拉 2021 起，
+    之后只补最后 120 天，避免每天全量重抓。
+    """
+    path = CACHE / "credit_spread.csv"
+    old = pd.read_csv(path, parse_dates=["date"]) if path.exists() else pd.DataFrame()
+    start = pd.Timestamp("2021-01-01")
+    if not old.empty:
+        start = max(start, old["date"].max() - pd.Timedelta(days=120))
+    end = pd.Timestamp.now().normalize()
+    frames = []
+    q = start.to_period("Q")
+    while q.start_time <= end:
+        s = max(q.start_time, start).strftime("%Y%m%d")
+        e = min(q.end_time, end).strftime("%Y%m%d")
+        try:
+            d = ak.bond_china_yield(start_date=s, end_date=e)
+            if len(d):
+                frames.append(d)
+        except Exception as exc:
+            print(f"  credit spread {s}-{e}: {type(exc).__name__}")
+        q += 1
+    if not frames:
+        print("  credit spread unavailable")
+        return
+    raw = pd.concat(frames, ignore_index=True)
+    raw["日期"] = pd.to_datetime(raw["日期"])
+    piv = raw.pivot_table(index="日期", columns="曲线名称", values="10年", aggfunc="last")
+    aaa = "中债中短期票据收益率曲线(AAA)"
+    gov = "中债国债收益率曲线"
+    if aaa not in piv.columns or gov not in piv.columns:
+        print("  credit spread: missing curves")
+        return
+    new = pd.DataFrame({"date": pd.to_datetime(piv.index),
+                        "spread": piv[aaa] - piv[gov]}).dropna()
+    out = (pd.concat([old, new]).drop_duplicates("date", keep="last")
+           .sort_values("date").reset_index(drop=True))
+    _replace(path, out)
+
+
 def update_margin():
     frames = []
     for fn, label in [(ak.macro_china_market_margin_sh, "sh"),
@@ -370,6 +413,8 @@ def update():
     update_money()
     print("update social")
     update_social()
+    print("update credit spread")
+    update_credit_spread()
     print("update margin")
     update_margin()
     print("update QVIX")

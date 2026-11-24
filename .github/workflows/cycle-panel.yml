@@ -49,13 +49,17 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: 缓存键（同一天内复用，避免重试浪费；跨天新建）
+        id: cachekey
+        run: echo "key=cycle-timing-$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
       - name: 缓存行情数据（避免每次重抓全部历史）
         uses: actions/cache@v4
         with:
           path: |
             research/cycle_timing/cache
             research/cycle_timing/signals
-          key: cycle-timing-${{ github.run_id }}
+          key: ${{ steps.cachekey.outputs.key }}
           restore-keys: |
             cycle-timing-
 

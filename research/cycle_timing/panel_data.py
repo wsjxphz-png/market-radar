@@ -63,6 +63,9 @@ def attach_credit_ok(s: pd.DataFrame, max_bdays: int = 45) -> pd.DataFrame:
     """逐日判断：当时能拿到的最新社融，是否仍在有效期内。
 
     这样历史区间按“当时的可得数据”计算，而不是用今天的停更状态回改历史。
+    注意：信用利差（credit_spread.csv）只做展示，不参与打分——
+    回测显示其 60 日走阔后未来收益反而更高（方向与“信用收紧”先验相反），
+    独立事件仅 10 个、t=1.25，证据不足以进入信号。
     """
     social = pd.read_csv(CACHE / "social_financing.csv", parse_dates=["month"])
     months = social["month"].sort_values().values.astype("datetime64[D]")
@@ -354,6 +357,8 @@ class IndexPanel:
     top_zone: dict[str, Any]
     bottom_zone: dict[str, Any]
     above200_5: bool
+    # 周报用：近 5 个交易日涨跌（不做进日卡，避免和 chg1 混淆）
+    chg5: float = float("nan")
 
 
 def classify(close: float, ma200: float, top: float, bottom: float) -> tuple[str, str]:
@@ -411,9 +416,12 @@ def build_index_panel(key: str, name: str, s: pd.DataFrame, stale: set[str]) -> 
     elif state.startswith("底部"):
         zone_days_now = zone_days(sa, "bottom_adj", 0.8 if bottom_adj >= 0.8 else 0.6)
 
+    chg5 = float(r["close"] / s["close"].iloc[-6] - 1) if len(s) > 5 else float("nan")
+
     return IndexPanel(
         key=key, name=name, date=r["date"], close=float(r["close"]),
         chg1=float(r["ret_1d"]) if pd.notna(r["ret_1d"]) else float("nan"),
+        chg5=chg5,
         ma20=float(r["ma20"]), ma50=float(r["ma50"]), ma200=float(r["ma200"]),
         above200=bool(r["close"] > r["ma200"]),
         ma50_above200=bool(r["ma50"] > r["ma200"]),
@@ -513,10 +521,14 @@ def build_dimensions(s: pd.DataFrame, stale: set[str], social_date, margin_date)
                 else "资金活化改善" if pd.notna(r["gap"]) else "资金活化未知")
     bond_chg = (fmt(r["cn_10y_chg60"] * 100, "+.0f") + "bp"
                 if pd.notna(r["cn_10y_chg60"]) else "—")
+    spread_v = r.get("spread", float("nan"))
+    spread_chg = r.get("spread_chg60", float("nan"))
+    spread_txt = (f"信用利差 {fmt(spread_v, '.2f')}%（60日 {fmt(spread_chg, '+.0f')}bp）"
+                  if pd.notna(spread_v) else "信用利差 —")
     if "credit" in stale:
         tone = "watch"
         summary = (f"社融数据源过期/停更（截止 {social_date}），信用维度不参与打分；"
-                   f"M1−M2 {gap_txt}（{gap_read}），10Y {fmt(r['cn_10y'], '.2f')}%（60日 {bond_chg}）。")
+                   f"{spread_txt}，M1−M2 {gap_txt}（{gap_read}），10Y {fmt(r['cn_10y'], '.2f')}%（60日 {bond_chg}）。")
     elif (pd.notna(r["gap_chg3"]) and r["gap_chg3"] > 0) or (pd.notna(r["sz_yoy"]) and r["sz_yoy"] > 0):
         tone, summary = "ok", "信用条件边际改善：资金活化或社融扩张至少一项为正。"
     else:
@@ -535,15 +547,21 @@ def build_dimensions(s: pd.DataFrame, stale: set[str], social_date, margin_date)
                   f"{'下降' if pd.notna(r['cn_10y_chg60']) and r['cn_10y_chg60'] < 0 else '上升'}了 "
                   f"{fmt(abs(r['cn_10y_chg60']), '.2f') if pd.notna(r['cn_10y_chg60']) else '—'} 个百分点；"
                   "利率低对股票估值是支撑，但也可能说明经济预期偏弱。")
+    spread_plain = ""
+    if pd.notna(spread_v) and pd.notna(spread_chg):
+        spread_plain = (f"信用利差（AAA 中票比国债多出的收益率）现在是 {fmt(spread_v, '.2f')}%，"
+                        f"最近60个交易日{'走阔' if spread_chg > 0 else '收窄'}了 "
+                        f"{fmt(abs(spread_chg), '.0f')} 个基点。这一项目前只作参考、不参与打分——"
+                        "历史回测里它对后续涨跌的指向不稳定，不能当买卖依据。")
     if "credit" in stale:
         plain = (f"信用数据（社融）只更新到 {social_date}，已经很久没更新，这次判断不使用它。"
-                 + gap_plain + bond_plain)
+                 + spread_plain + gap_plain + bond_plain)
     elif tone == "ok":
         plain = ("资金和信用条件在改善：要么企业活期存款在变多（钱变活了），要么企业融资（社融）同比转正，"
-                 "说明钱开始愿意进入实体经济，对股票是支撑。" + gap_plain + bond_plain)
+                 "说明钱开始愿意进入实体经济，对股票是支撑。" + spread_plain + gap_plain + bond_plain)
     else:
         plain = ("资金和信用条件偏紧：钱没有明显变活，企业借钱扩张的意愿也弱，"
-                 "央行放的宽松资金还没真正流到实体经济。" + gap_plain + bond_plain)
+                 "央行放的宽松资金还没真正流到实体经济。" + spread_plain + gap_plain + bond_plain)
     dims.append(Dimension("流动性/信用", tone, summary, [
         DimItem("M1−M2 剪刀差", gap_txt,
                 f"3个月变化 {fmt(r['gap_chg3'], '+.1f')}pp",
@@ -551,6 +569,10 @@ def build_dimensions(s: pd.DataFrame, stale: set[str], social_date, margin_date)
         DimItem("社融3M同比", fmt(r["sz_yoy"], "+.1%"),
                 f"数据截止 {social_date}（{'已停更，不参与' if 'credit' in stale else '可用'}）",
                 "社融扩张=实体信用需求回升；收缩=宽货币未转化为宽信用。"),
+        DimItem("信用利差(AAA-国债)", fmt(spread_v, ".2f") + "%",
+                f"60日 {fmt(spread_chg, '+.0f')}bp｜仅展示，不参与打分",
+                "AAA 中票收益率减国债收益率，反映市场对企业的风险补偿要求。"
+                "回测显示它对后续涨跌指向不稳定，所以只展示、不进信号。"),
         DimItem("10Y国债", fmt(r["cn_10y"], ".2f") + "%", f"60日 {bond_chg}",
                 "利率上行压低估值分母；利率下行抬升估值分母，但衰退式下行无效。"),
     ], plain))
@@ -562,7 +584,10 @@ def build_dimensions(s: pd.DataFrame, stale: set[str], social_date, margin_date)
         tone, summary = "risk", "指数可能还没跌，但内部已经恶化，是顶部背离的典型形态。"
     elif bottom.get("广度"):
         tone = "bottom"
-        if pd.notna(r["breadth_ma200"]) and r["breadth_ma200"] < 0.25:
+        if pd.notna(r["breadth_ma200"]) and r["breadth_ma200"] < 0.10:
+            summary = ("行业广度处于历史极端低位（低于10%），市场内部极度虚弱；"
+                       "这是底部区域的必要条件，不是充分条件。")
+        elif pd.notna(r["breadth_ma200"]) and r["breadth_ma200"] < 0.25:
             summary = "行业广度极低，市场处于洗盘/熊市内部；这是底部区域的必要条件，不是充分条件。"
         else:
             summary = "广度从低位回升超过10pp，内部在修复；还需要趋势确认。"
@@ -574,9 +599,13 @@ def build_dimensions(s: pd.DataFrame, stale: set[str], social_date, margin_date)
     bdir = ("多" if pd.notna(r["breadth_ma200_chg20"]) and r["breadth_ma200_chg20"] > 0
             else "少")
     if bottom.get("广度"):
+        extreme = ("这个比例低于10%，属于历史极端区域（过去十年里大约每十天才有一天这么低），"
+                   "说明市场内部已经极度虚弱。"
+                   if pd.notna(r["breadth_ma200"]) and r["breadth_ma200"] < 0.10 else "")
         plain = (f"市场内部很弱：只有 {breadth_txt} 的行业，价格在200日线上方"
                  "（200日线≈过去一年的平均成本），"
                  f"比20个交易日前{bdir}了 {bchg_abs} 个百分点，说明绝大多数行业还在下跌。"
+                 + extreme +
                  "这是底部区域常见的特征，但不代表马上见底；只有从低位明显回升（超过10个百分点），才算真正在修复。")
     elif top.get("广度"):
         plain = ("指数可能还没跌，但多数行业已经走弱——这是顶部常见的“背离”信号："
@@ -1121,6 +1150,13 @@ def build_health(panel_date: pd.Timestamp) -> list[SourceHealth]:
         s = df.loc[pd.to_numeric(df["amount"], errors="coerce").notna(), "date"]
         return pd.to_datetime(s).max() if len(s) else None
 
+    def last_safe(path, col):
+        """数据源文件还没生成（首次运行）时返回 None，不让整个面板崩掉。"""
+        try:
+            return last(path, col)
+        except Exception:
+            return None
+
     items = [
         ("指数行情", last(CACHE / "index_hs300.csv", "date"), 3),
         ("成交额(沪深300)", last_amount(CACHE / "index_hs300.csv"), 3),
@@ -1128,6 +1164,7 @@ def build_health(panel_date: pd.Timestamp) -> list[SourceHealth]:
         ("10Y国债", last(CACHE / "bond_10y.csv", "date"), 3),
         ("M1/M2", last(CACHE / "money_supply.csv", "month"), 45),
         ("社融", last(CACHE / "social_financing.csv", "month"), 45),
+        ("信用利差", last_safe(CACHE / "credit_spread.csv", "date"), 5),
         ("两融", last(CACHE / "margin.csv", "date"), 3),
         ("QVIX", last(CACHE / "qvix.csv", "date"), 3),
         ("行业广度", last(SIG / "breadth.csv", "date"), 3),
@@ -1139,6 +1176,9 @@ def build_health(panel_date: pd.Timestamp) -> list[SourceHealth]:
         b = bdays_between(d, panel_date) if d is not None else None
         if b is None:
             status, note = "unknown", "无数据"
+        elif d is not None and pd.Timestamp(d) > pd.Timestamp(panel_date):
+            # 数据源比面板行情还新（例如日频信用利差比指数早更新）：用最新值，别说成“同一天”
+            status, note = "ok", "比行情新，已用最新值"
         elif b <= max_ok:
             status, note = "ok", f"T-{b}" if b else "当日"
         elif b <= max_ok * 2:

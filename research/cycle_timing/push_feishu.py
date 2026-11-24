@@ -25,6 +25,11 @@ import requests
 BASE = Path(__file__).parent
 CACHE = BASE / "cache"
 MARK = CACHE / "last_push.json"
+WEEKLY_MARK = CACHE / "last_push_weekly.json"
+
+
+def _mark_path(kind: str):
+    return WEEKLY_MARK if kind == "weekly" else MARK
 CRED_PATH = Path.home() / ".market-radar" / "feishu.env"
 
 TONE = {
@@ -173,6 +178,21 @@ def _etf_read(e) -> str:
     return "".join(out)
 
 
+def _plain_action(i) -> str:
+    """把内部动作口径翻成人话，短卡里不能出现 top<0.4 这类记号。"""
+    a = getattr(i, "action", "") or ""
+    if a.startswith("退出/防守"):
+        return "退出/防守：顶部风险条件已经亮到 3 项，规则上减仓。"
+    if a.startswith("底部观察"):
+        return ("底部观察：等连续5个交易日站上200日线，"
+                "并且顶部风险降到 2 项以下，才考虑加仓。")
+    if a.startswith("防守"):
+        return "防守：跌破200日线，趋势没修复，先不买。"
+    if a.startswith("持有"):
+        return "持有：趋势向上，顶部风险没到 3 项。"
+    return a
+
+
 def _top_verdict(i, lit: int, total: int) -> str:
     if i.state.startswith("顶部"):
         return "已经进入顶部风险区，规则上减仓/防守。"
@@ -244,12 +264,9 @@ def _plain_headline(pan) -> str:
     return "现在没有明显的顶部或底部信号，按趋势规则持有或防守。"
 
 
-def build_message(pan) -> str:
+def _long_body(pan) -> list[str]:
+    """完整版内容（周报和人工查阅用）；日卡走 build_short_message。"""
     L: list[str] = []
-    L.append(f"【A股周期面板】{pan.date.date()} 收盘")
-    L.append("")
-    L.append(f"一句话：{_plain_headline(pan)}")
-    L.append("")
 
     L.append("■ 今日变化（和上次比）")
     if not pan.alerts:
@@ -308,23 +325,8 @@ def build_message(pan) -> str:
         L.append(d.plain or d.summary)
     L.append("")
 
-    below = [i.name for i in pan.indices if pd.isna(i.ma200) or i.close < i.ma200]
-    strong = [i.name for i in pan.indices if "强" in i.state]
     L.append("■ 接下来盯什么")
-    if pan.bottoms.market.status.startswith("确认"):
-        L.append("1. 市场底已经确认：接下来重点是顶部风险（见上方“顶部风险”），"
-                 "连续5个交易日跌破200日线就回到防守。")
-    else:
-        txt = (f"1. 市场底确认：{'、'.join(below) or '主要指数'}需要连续5个交易日站上200日线；"
-               "顶部风险分数低于0.4（0到1，越低越安全）才适合加仓，分数高说明涨得太急，先别追。")
-        if strong:
-            txt += f"{'、'.join(strong)}已经进入强观察区，也在等这一项。"
-        L.append(txt)
-    if pd.notna(e.total_d5) and e.total_d5 > 0:
-        L.append("2. 托底能不能持续：最近5个交易日是净买入，接下来看这个方向能不能延续。")
-    else:
-        L.append("2. 托底能不能恢复：看宽基ETF最近5个交易日能不能重新变成净买入。")
-    L.append("3. 企业盈利：看沪深300成分股的整体盈利同比能不能止跌回升（这个数据每月更新一次）。")
+    L.extend(_watch_lines(pan))
     L.append("")
 
     L.append("■ 名词小抄（看不懂时对照）")
@@ -343,6 +345,34 @@ def build_message(pan) -> str:
         L.append(f"· {line}")
     L.append("")
 
+    L.append(_data_dates_line(pan))
+    return L
+
+
+def _watch_lines(pan) -> list[str]:
+    """短卡、长卡、周报共用：接下来盯什么。"""
+    out: list[str] = []
+    below = [i.name for i in pan.indices if pd.isna(i.ma200) or i.close < i.ma200]
+    strong = [i.name for i in pan.indices if "强" in i.state]
+    e = pan.etf
+    if pan.bottoms.market.status.startswith("确认"):
+        out.append("1. 市场底已经确认：接下来重点是顶部风险（见上方“顶部风险”），"
+                   "连续5个交易日跌破200日线就回到防守。")
+    else:
+        txt = (f"1. 市场底确认：{'、'.join(below) or '主要指数'}需要连续5个交易日站上200日线；"
+               "顶部风险分数低于0.4（0到1，越低越安全）才适合加仓，分数高说明涨得太急，先别追。")
+        if strong:
+            txt += f"{'、'.join(strong)}已经进入强观察区，也在等这一项。"
+        out.append(txt)
+    if pd.notna(e.total_d5) and e.total_d5 > 0:
+        out.append("2. 托底能不能持续：最近5个交易日是净买入，接下来看这个方向能不能延续。")
+    else:
+        out.append("2. 托底能不能恢复：看宽基ETF最近5个交易日能不能重新变成净买入。")
+    out.append("3. 企业盈利：看沪深300成分股的整体盈利同比能不能止跌回升（这个数据每月更新一次）。")
+    return out
+
+
+def _data_dates_line(pan) -> str:
     hd = {h.name: h for h in pan.health}
 
     def _src(name: str) -> str:
@@ -353,11 +383,89 @@ def build_message(pan) -> str:
         note = _note_plain(h)
         return f"{_date(h.date)}（{note}）" if note else _date(h.date)
 
-    L.append("数据日期："
-             f"指数 {_src('指数行情')}；PE估值 {_src('PE估值')}；"
-             f"ETF份额 {_src('ETF份额')}；两融 {_src('两融')}；社融 {_src('社融')}。")
+    return ("数据日期："
+            f"指数 {_src('指数行情')}；PE估值 {_src('PE估值')}；"
+            f"ETF份额 {_src('ETF份额')}；两融 {_src('两融')}；"
+            f"社融 {_src('社融')}；信用利差 {_src('信用利差')}。")
+
+
+def build_long_message(pan) -> str:
+    """完整版（周报正文、排查用）。"""
+    L = [f"【A股周期面板】{pan.date.date()} 收盘", "",
+         f"一句话：{_plain_headline(pan)}", ""]
+    L.extend(_long_body(pan))
     L.append("参考信息，不是交易指令。")
     return "\n".join(L)
+
+
+def build_short_message(pan) -> str:
+    """每日短卡：只留决策项，30 秒看完；完整解释在周报和网页面板。"""
+    L: list[str] = [f"【A股周期面板】{pan.date.date()} 收盘", "",
+                    f"一句话：{_plain_headline(pan)}", ""]
+
+    L.append("■ 今天变了什么")
+    if not pan.alerts:
+        L.append("· 无")
+    else:
+        for a in pan.alerts[:4]:
+            # 短卡没有“下文”，去掉指向长卡的尾注
+            L.append(f"· {_plain_alert(a).replace('（具体含义见下文）', '')}")
+        if len(pan.alerts) > 4:
+            L.append(f"· 另有 {len(pan.alerts) - 4} 条变化，见网页面板")
+    L.append("")
+
+    L.append("■ 指数状态")
+    for i in pan.indices:
+        move = "涨" if i.chg1 >= 0 else "跌"
+        L.append(f"{i.name}：{i.close:,.2f}（{move} {abs(i.chg1) * 100:.2f}%）｜{i.state}")
+        L.append(f"  怎么做：{_plain_action(i)}")
+    L.append("")
+
+    L.append("■ 顶部风险")
+    rows = []
+    for i in pan.indices:
+        flags = getattr(i, "top_flags", {}) or {}
+        rows.append(f"{i.name} {sum(1 for v in flags.values() if v)}/{len(flags)}"
+                    if flags else f"{i.name} 数据不足")
+    L.append("；".join(rows))
+    L.append("单个指数亮到 2 项开始谨慎（不加仓）；亮到 3 项、"
+             "且价格在200日线上方 = 顶部风险区，规则上减仓/防守。")
+    L.append("")
+
+    L.append("■ 三个底")
+    L.append("｜".join(f"{b.name} {_bottom_state_plain(b)}"
+                      for b in (pan.bottoms.policy, pan.bottoms.market, pan.bottoms.earnings)))
+    L.append(f"现在走到哪一步：{pan.bottoms.phase}")
+    L.append("")
+
+    L.append("■ 接下来盯什么")
+    L.extend(_watch_lines(pan))
+    L.append("")
+    L.append(_data_dates_line(pan))
+    L.append("完整解释见周报和网页面板。参考信息，不是交易指令。")
+    return "\n".join(L)
+
+
+def build_weekly_message(pan) -> str:
+    """周报：完整解释 + 本周涨跌，每周六推。"""
+    L = [f"【A股周期面板·周报】覆盖 {pan.date.date()} 收盘", "",
+         f"一句话：{_plain_headline(pan)}", ""]
+    L.append("■ 本周变化（近5个交易日）")
+    for i in pan.indices:
+        if pd.notna(i.chg5):
+            move = "涨" if i.chg5 >= 0 else "跌"
+            L.append(f"{i.name}：{move} {abs(i.chg5) * 100:.2f}%｜{i.state}")
+        else:
+            L.append(f"{i.name}：{i.state}")
+    L.append("")
+    L.extend(_long_body(pan))
+    L.append("参考信息，不是交易指令。")
+    return "\n".join(L)
+
+
+def build_message(pan) -> str:
+    """日卡默认短卡；保留这个入口，测试和 --dry-run 都走这里。"""
+    return build_short_message(pan)
 
 
 def send_text(text: str, creds: dict[str, str]) -> bool:
@@ -397,14 +505,18 @@ def send_text(text: str, creds: dict[str, str]) -> bool:
     return False
 
 
-def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True) -> bool:
+def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True,
+                   kind: str = "daily") -> bool:
     """同一天、同一份面板只推一次。
     必须同时比对“运行日”：若今天的数据源没更新、面板日期还是昨天，
     不能因为昨天推过就静默跳过今天的推送。
-    若上次是刷新失败/数据滞后时推的（fresh=False），本次数据已新鲜则允许补发一次。"""
+    若上次是刷新失败/数据滞后时推的（fresh=False），本次数据已新鲜则允许补发一次。
+    kind 区分日卡和周报（daily / weekly），两者互不覆盖。"""
     try:
-        d = json.loads(MARK.read_text(encoding="utf-8"))
+        d = json.loads(_mark_path(kind).read_text(encoding="utf-8"))
         run_date = run_date or date.today()
+        if d.get("kind", "daily") != kind:
+            return False
         if (d.get("panel_date") != str(pd.Timestamp(panel_date).date())
                 or d.get("run_date") != str(run_date)):
             return False
@@ -413,32 +525,35 @@ def already_pushed(panel_date, run_date: date | None = None, fresh: bool = True)
         return False
 
 
-def mark_pushed(panel_date, run_date: date | None = None, fresh: bool = True) -> None:
+def mark_pushed(panel_date, run_date: date | None = None, fresh: bool = True,
+                kind: str = "daily") -> None:
     MARK.parent.mkdir(exist_ok=True)
     MARK.write_text(json.dumps(
         {"panel_date": str(pd.Timestamp(panel_date).date()),
          "run_date": str(run_date or date.today()),
+         "kind": kind,
          "fresh": bool(fresh),
          "pushed_at": pd.Timestamp.now().isoformat(timespec="seconds")},
         ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def push_panel(pan, force: bool = False, dry_run: bool = False, fresh: bool = True,
-               run_date: date | None = None) -> str:
+               run_date: date | None = None, kind: str = "daily") -> str:
     """返回 sent / skipped / dry-run / failed，便于调用方写准确的日志。
     fresh=False 表示本次数据未更新（刷新失败或数据源滞后），用于让之后的新数据补发。
     run_date 是这次任务“负责的那一天”（最近一个已收盘交易日），默认当前日期。
-    用它而不是墙钟日期做去重键：23:55 推过、00:05 的重试班次不会重复发。"""
+    用它而不是墙钟日期做去重键：23:55 推过、00:05 的重试班次不会重复发。
+    kind="weekly" 时发周报（完整解释 + 本周涨跌）。"""
     if dry_run:
-        print(build_message(pan))
+        print(build_weekly_message(pan) if kind == "weekly" else build_message(pan))
         return "dry-run"
-    if not force and already_pushed(pan.date, run_date=run_date, fresh=fresh):
+    if not force and already_pushed(pan.date, run_date=run_date, fresh=fresh, kind=kind):
         print(f"面板 {pan.date.date()} 已推送过，跳过（--force 可强制重发）")
         return "skipped"
-    text = build_message(pan)
+    text = build_weekly_message(pan) if kind == "weekly" else build_message(pan)
     if not send_text(text, load_credentials()):
         return "failed"
-    mark_pushed(pan.date, run_date=run_date, fresh=fresh)
+    mark_pushed(pan.date, run_date=run_date, fresh=fresh, kind=kind)
     return "sent"
 
 
