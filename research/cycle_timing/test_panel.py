@@ -560,8 +560,17 @@ def test_failure_message_sent():
 def test_failure_message_unconfirmed():
     import notify_failure
     msg = notify_failure.build_message(
-        {"panel_date": "2026-11-26"}, date(2026, 11, 27), "URL")
-    assert "未确认" in msg and "2026-11-26" in msg and "2026-11-27" in msg
+        {"panel_date": "2026-11-26", "pushed_at": "2026-11-26T19:05:00"},
+        date(2026, 11, 27), "URL", today="2026-11-27")
+    assert "未发出新面板" in msg and "2026-11-26" in msg and "2026-11-27" in msg
+
+
+def test_failure_message_stale_panel_pushed_today():
+    import notify_failure
+    msg = notify_failure.build_message(
+        {"panel_date": "2026-11-26", "pushed_at": "2026-11-27T23:55:00"},
+        date(2026, 11, 27), "URL", today="2026-11-27")
+    assert "旧面板" in msg and "2026-11-26" in msg
 
 
 def test_failure_message_no_record():

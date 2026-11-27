@@ -103,6 +103,7 @@ def _adjust_splits(df: pd.DataFrame) -> pd.DataFrame:
 _SPECIAL_CLOSURES = frozenset({
     date(2001, 9, 11), date(2001, 9, 12), date(2001, 9, 13), date(2001, 9, 14),
     date(2004, 6, 11),                        # 里根国葬
+    date(2007, 1, 2),                         # 福特国葬
     date(2012, 10, 29), date(2012, 10, 30),   # 飓风桑迪
     date(2018, 12, 5),                        # 老布什国葬
     date(2025, 1, 9),                         # 卡特国葬
@@ -135,12 +136,13 @@ def _us_market_holidays(year: int) -> dict[date, str]:
         _nth_weekday(year, 2, 0, 3): "总统日",
         easter(year) - timedelta(days=2): "耶稣受难日",
         _last_weekday(year, 5, 0): "阵亡将士纪念日",
-        _observed(date(year, 6, 19)): "六月节",
         _observed(date(year, 7, 4)): "独立日",
         _nth_weekday(year, 9, 0, 1): "劳动节",
         _nth_weekday(year, 11, 3, 4): "感恩节",
         _observed(date(year, 12, 25)): "圣诞节",
     }
+    if year >= 2022:  # NYSE 自 2022 年起六月节休市
+        days[_observed(date(year, 6, 19))] = "六月节"
     # 若次年元旦在周六，按补休规则当年 12/31 也休市
     next_new_year = _observed(date(year + 1, 1, 1))
     if next_new_year.year == year:
@@ -162,29 +164,36 @@ def _is_us_trading_day(d: date) -> bool:
     return d.weekday() < 5 and _us_holiday_name(d) is None
 
 
-def _last_session_date(today: date | None = None) -> date:
+def _now_et() -> pd.Timestamp:
+    return pd.Timestamp.now(tz="America/New_York")
+
+
+def _last_session_date(today: date | None = None,
+                       now_et: pd.Timestamp | None = None) -> date:
     """按“周一至周五都有盘”的日历，现在应该已经收盘的那一天（不扣节假日）。
 
-    用来判断“本该有的这一场”是不是休市。传 today（测试用）时按该日早上处理。
+    用来判断“本该有的这一场”是不是休市。传 today（测试用）时按该日早上处理；
+    now_et 用于测试时注入固定的纽约时刻。
     """
-    if today is None:
-        now_et = pd.Timestamp.now(tz="America/New_York")
-        d = now_et.date()
-        if not (now_et.hour > 16 or (now_et.hour == 16 and now_et.minute >= 30)):
-            d -= timedelta(days=1)
-    else:
+    if today is not None:
         d = today - timedelta(days=1)
+    else:
+        now = now_et if now_et is not None else _now_et()
+        d = now.date()
+        if not (now.hour > 16 or (now.hour == 16 and now.minute >= 30)):
+            d -= timedelta(days=1)
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     return d
 
 
-def _expected_us_date(today: date | None = None) -> pd.Timestamp:
+def _expected_us_date(today: date | None = None,
+                      now_et: pd.Timestamp | None = None) -> pd.Timestamp:
     """现在应该已经收盘、可以拿到数据的最新美股交易日（跳过休市日）。
 
     不传 today 时看纽约时间；传 today（测试用）时按“该日早上、前一交易日已收盘”处理。
     """
-    d = _last_session_date(today)
+    d = _last_session_date(today, now_et=now_et)
     for _ in range(14):
         if _is_us_trading_day(d):
             return pd.Timestamp(d)

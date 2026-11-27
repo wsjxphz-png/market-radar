@@ -154,6 +154,22 @@ def test_holiday_name_and_last_session():
     assert data._last_session_date(date(2026, 11, 30)) == date(2026, 11, 27)  # 周一早上 -> 上周五
 
 
+def test_last_session_date_et_clock():
+    et = lambda s: pd.Timestamp(s, tz="America/New_York")
+    assert data._last_session_date(now_et=et("2026-11-27 16:29")) == date(2026, 11, 26)
+    assert data._last_session_date(now_et=et("2026-11-27 16:30")) == date(2026, 11, 27)
+    assert data._last_session_date(now_et=et("2026-11-28 09:00")) == date(2026, 11, 27)
+    assert data._last_session_date(now_et=et("2026-11-26 09:00")) == date(2026, 11, 25)
+
+
+def test_expected_us_date_et_clock():
+    et = lambda s: pd.Timestamp(s, tz="America/New_York")
+    # 16:29 ET 时周四感恩节那场已结束但不算收盘，应回到周三
+    assert data._expected_us_date(now_et=et("2026-11-27 16:29")) == pd.Timestamp("2026-11-25")
+    # 16:30 ET 后周五半日市算已收盘
+    assert data._expected_us_date(now_et=et("2026-11-27 16:30")) == pd.Timestamp("2026-11-27")
+
+
 def test_split_adjustment_removes_fake_gap():
     dates = pd.date_range("2024-01-01", periods=5, freq="D")
     raw = pd.DataFrame({
@@ -236,6 +252,34 @@ def test_failure_message_for_holiday_notice():
     assert "已发出（休市提示）" in msg
 
 
+def test_failure_message_marker_proves_sent_today():
+    """重试班次在生成前失败、本班次没有 status 时，早班次的推送标记能证明已发出。"""
+    import notify_failure
+    marker = {"key": "2026-11-25", "pushed_at": "2026-11-27"}
+    msg = notify_failure.build_message("daily", {}, "数据源冒烟测试", "URL",
+                                       today="2026-11-27", marker=marker)
+    assert "已发出" in msg and "2026-11-25" in msg
+
+
+def test_marker_sent_today_reads_committed_marker(tmp_path, monkeypatch):
+    import notify_failure
+    (tmp_path / "last_daily_push.json").write_text(
+        json.dumps({"key": "2026-11-25", "pushed_at": "2026-11-27"}), encoding="utf-8")
+    monkeypatch.setattr(notify_failure, "CACHE", tmp_path)
+    m = notify_failure._marker_sent_today("daily", "2026-11-27")
+    assert m and m["key"] == "2026-11-25"
+    assert notify_failure._marker_sent_today("daily", "2026-11-28") is None
+
+
+def test_failure_message_marks_shadow():
+    import notify_failure
+    status = {"kind": "daily", "date": "2026-11-27", "pushed": True,
+              "day_key": "2026-11-25", "mode": "shadow"}
+    msg = notify_failure.build_message("daily", status, "保存状态", "URL",
+                                       today="2026-11-27")
+    assert "【干跑】" in msg
+
+
 def test_failure_message_says_not_sent_with_reason():
     import notify_failure
     status = {"kind": "daily", "date": "2026-11-27", "pushed": False,
@@ -262,7 +306,8 @@ def test_run_daily_skips_generation_when_already_pushed(tmp_path, monkeypatch):
     """重试班次：当天已推过就不再调 AI/搜索，也不因数据日旧而报错。"""
     import run_daily
     monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
-    monkeypatch.setattr(run_daily.data, "_last_session_date", lambda today=None: date(2026, 11, 20))
+    monkeypatch.setattr(run_daily.data, "_last_session_date",
+                        lambda today=None, now_et=None: date(2026, 11, 20))
     monkeypatch.setattr(run_daily.data, "_us_holiday_name", lambda d: None)
     monkeypatch.setattr(run_daily.state, "analyze", lambda force=False: _minimal_analysis())
     monkeypatch.setattr(run_daily.push, "already_pushed", lambda key, kind: True)
