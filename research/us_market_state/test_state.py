@@ -2,6 +2,7 @@
 """状态机与白话渲染的最小测试。"""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -126,6 +127,26 @@ def test_expected_us_date():
     assert data._expected_us_date(date(2026, 11, 24)) == pd.Timestamp("2026-11-23")  # 周二
 
 
+def test_expected_us_date_skips_market_holidays():
+    # 感恩节（2026-11-26 周四）休市：11-27 早上应看到 11-25 的收盘，而不是死等 11-26
+    assert data._expected_us_date(date(2026, 11, 27)) == pd.Timestamp("2026-11-25")
+    # 圣诞节（2026-12-25 周五）休市：周六周报应看到 12-24 的收盘
+    assert data._expected_us_date(date(2026, 12, 26)) == pd.Timestamp("2026-12-24")
+    # 马丁·路德·金日（2026-01-19 周一）休市：周二应看到上周五
+    assert data._expected_us_date(date(2026, 1, 20)) == pd.Timestamp("2026-01-16")
+
+
+def test_us_market_holidays():
+    assert not data._is_us_trading_day(date(2026, 11, 26))  # 感恩节
+    assert not data._is_us_trading_day(date(2026, 4, 3))    # 耶稣受难日（复活节 4/5）
+    assert not data._is_us_trading_day(date(2026, 7, 3))    # 独立日 7/4 周六 -> 7/3 补休
+    assert not data._is_us_trading_day(date(2021, 12, 31))  # 2022 元旦周六 -> 前一年 12/31 补休
+    assert not data._is_us_trading_day(date(2022, 12, 26))  # 圣诞 12/25 周日 -> 12/26 补休
+    assert not data._is_us_trading_day(date(2026, 6, 19))   # 六月节
+    assert data._is_us_trading_day(date(2026, 11, 25))      # 普通交易日
+    assert data._is_us_trading_day(date(2026, 11, 27))      # 感恩节次日的半日市照常交易
+
+
 def test_split_adjustment_removes_fake_gap():
     dates = pd.date_range("2024-01-01", periods=5, freq="D")
     raw = pd.DataFrame({
@@ -159,6 +180,68 @@ def test_push_markers_are_separate(tmp_path, monkeypatch):
     assert push.already_pushed("2026-11-20", kind="daily")
     assert push.already_pushed("2026-W47", kind="weekly")
     assert not push.already_pushed("2026-W47", kind="daily")
+
+
+def test_run_daily_records_status(tmp_path, monkeypatch):
+    import run_daily
+    monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    run_daily._record_status("live", pushed=True, day_key="2026-11-25", reason="推送成功")
+    d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert d["kind"] == "daily" and d["pushed"] is True
+    assert d["day_key"] == "2026-11-25" and d["reason"] == "推送成功"
+
+
+def test_run_weekly_records_status(tmp_path, monkeypatch):
+    import run_weekly
+    monkeypatch.setattr(run_weekly, "STATUS_FILE", tmp_path / "status.json")
+    run_weekly._record_status("live", pushed=False, week_key="2026-W47", reason="飞书推送失败")
+    d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert d["kind"] == "weekly" and d["pushed"] is False
+    assert d["day_key"] == "2026-W47" and d["reason"] == "飞书推送失败"
+
+
+def test_failure_message_says_sent_when_pushed():
+    import notify_failure
+    status = {"kind": "daily", "date": "2026-11-27", "pushed": True,
+              "day_key": "2026-11-25", "reason": "推送成功"}
+    msg = notify_failure.build_message("daily", status, "保存状态", "URL", today="2026-11-27")
+    assert "已发出" in msg and "数据日 2026-11-25" in msg and "保存状态" in msg
+
+
+def test_failure_message_says_not_sent_with_reason():
+    import notify_failure
+    status = {"kind": "daily", "date": "2026-11-27", "pushed": False,
+              "day_key": "2026-11-25", "reason": "飞书推送失败"}
+    msg = notify_failure.build_message("daily", status, "生成并推送日报", "URL",
+                                       today="2026-11-27")
+    assert "未发出" in msg and "飞书推送失败" in msg
+
+
+def test_failure_message_says_never_started():
+    import notify_failure
+    msg = notify_failure.build_message("daily", {}, "数据源冒烟测试", "URL",
+                                       today="2026-11-27")
+    assert "没有生成" in msg and "数据源冒烟测试" in msg
+
+
+def test_failed_steps():
+    import notify_failure
+    env = {"SMOKE_OUTCOME": "success", "REPORT_OUTCOME": "failure"}
+    assert notify_failure.failed_steps(env, "daily") == "生成并推送日报"
+
+
+def test_run_daily_skips_generation_when_already_pushed(tmp_path, monkeypatch):
+    """重试班次：当天已推过就不再调 AI/搜索，也不因数据日旧而报错。"""
+    import run_daily
+    monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    monkeypatch.setattr(run_daily.state, "analyze", lambda force=False: _minimal_analysis())
+    monkeypatch.setattr(run_daily.push, "already_pushed", lambda key, kind: True)
+    monkeypatch.setattr(run_daily.sellside_radar, "fetch_digest",
+                        lambda weekly: (_ for _ in ()).throw(AssertionError("不该调用")))
+    monkeypatch.setattr(sys, "argv", ["run_daily.py"])
+    assert run_daily.main() == 0
+    d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert d["pushed"] is True and d["reason"] == "当天已推送，跳过"
 
 
 def test_card_has_title_template_and_markdown():

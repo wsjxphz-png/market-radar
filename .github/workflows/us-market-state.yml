@@ -56,17 +56,21 @@ jobs:
           python-version: '3.12'
 
       - name: 安装依赖
+        id: deps
         run: pip install -r requirements.txt
 
       - name: 数据源冒烟测试
+        id: smoke
         run: python smoke_test.py
 
       - name: 运行状态机测试
+        id: tests
         run: |
           pip install pytest
           python -m pytest test_state.py -q
 
       - name: 生成并推送周报
+        id: report
         run: |
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             python run_weekly.py --dry-run
@@ -81,6 +85,7 @@ jobs:
           fi
 
       - name: 保存推送标记（避免同一周重复发）
+        id: save
         if: always()
         run: |
           git config user.name "market-radar-bot"
@@ -94,20 +99,13 @@ jobs:
 
       - name: 失败通知（飞书）
         if: failure()
-        run: |
-          python - <<'PY' || true
-          import os
-          import push
-          try:
-              creds = push.load_credentials()
-              url = (f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', '')}"
-                     f"/actions/runs/{os.environ.get('GITHUB_RUN_ID', '')}")
-              push.send_text(
-                  f"⚠️ 美股状态周报这次没有完整跑完：可能已经发出，也可能没有。\n"
-                  f"请对照日志确认：{url}", creds)
-          except Exception as exc:
-              print("失败通知发送失败:", type(exc).__name__, exc)
-          PY
+        env:
+          DEPS_OUTCOME: ${{ steps.deps.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+          REPORT_OUTCOME: ${{ steps.report.outcome }}
+          SAVE_OUTCOME: ${{ steps.save.outcome }}
+        run: python notify_failure.py --kind weekly || true
 
       - name: 上传日志和回测结果
         if: always()

@@ -10,11 +10,12 @@ from __future__ import annotations
 import io
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
 import requests
+from dateutil.easter import easter
 
 BASE = Path(__file__).parent
 CACHE = BASE / "cache"
@@ -95,16 +96,82 @@ def _adjust_splits(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# --- NYSE 交易日历 ---------------------------------------------------------
+# 只用来回答“现在该拿到哪天的收盘”。半日市（如感恩节次日）照常算交易日。
+
+# 常规规则之外的临时休市（国葬、飓风等，发生频率很低）
+_SPECIAL_CLOSURES = frozenset({
+    date(2001, 9, 11), date(2001, 9, 12), date(2001, 9, 13), date(2001, 9, 14),
+    date(2004, 6, 11),                        # 里根国葬
+    date(2012, 10, 29), date(2012, 10, 30),   # 飓风桑迪
+    date(2018, 12, 5),                        # 老布什国葬
+    date(2025, 1, 9),                         # 卡特国葬
+})
+
+
+def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
+    first = date(year, month, 1)
+    return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
+
+
+def _last_weekday(year: int, month: int, weekday: int) -> date:
+    last = date(year, 12, 31) if month == 12 else date(year, month + 1, 1) - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() - weekday) % 7)
+
+
+def _observed(d: date) -> date:
+    """NYSE 补休规则：周六休市提前到周五，周日休市顺延到周一。"""
+    if d.weekday() == 5:
+        return d - timedelta(days=1)
+    if d.weekday() == 6:
+        return d + timedelta(days=1)
+    return d
+
+
+def _us_market_holidays(year: int) -> set[date]:
+    days = {
+        _observed(date(year, 1, 1)),            # 元旦
+        _nth_weekday(year, 1, 0, 3),            # 马丁·路德·金日
+        _nth_weekday(year, 2, 0, 3),            # 总统日
+        easter(year) - timedelta(days=2),       # 耶稣受难日
+        _last_weekday(year, 5, 0),              # 阵亡将士纪念日
+        _observed(date(year, 6, 19)),           # 六月节
+        _observed(date(year, 7, 4)),            # 独立日
+        _nth_weekday(year, 9, 0, 1),            # 劳动节
+        _nth_weekday(year, 11, 3, 4),           # 感恩节
+        _observed(date(year, 12, 25)),          # 圣诞节
+    }
+    # 若次年元旦在周六，按补休规则当年 12/31 也休市
+    next_new_year = _observed(date(year + 1, 1, 1))
+    if next_new_year.year == year:
+        days.add(next_new_year)
+    return days
+
+
+def _is_us_trading_day(d: date) -> bool:
+    return (d.weekday() < 5
+            and d not in _us_market_holidays(d.year)
+            and d not in _SPECIAL_CLOSURES)
+
+
 def _expected_us_date(today: date | None = None) -> pd.Timestamp:
-    """今天早上应该已经拿到的最新美股交易日（近似处理周末；节假日会多抓一次）。"""
-    ts = pd.Timestamp(today or date.today())
-    if ts.weekday() == 0:       # 周一 -> 上周五
-        return ts - pd.Timedelta(days=3)
-    if ts.weekday() == 5:       # 周六 -> 周五
-        return ts - pd.Timedelta(days=1)
-    if ts.weekday() == 6:       # 周日 -> 周五
-        return ts - pd.Timedelta(days=2)
-    return ts - pd.Timedelta(days=1)
+    """现在应该已经收盘、可以拿到数据的最新美股交易日。
+
+    不传 today 时看纽约时间：当天若还没到收盘（16:30 ET），最新可得的是上一交易日；
+    传 today（测试用）时按“该日早上、前一交易日已收盘”处理。
+    """
+    if today is None:
+        now_et = pd.Timestamp.now(tz="America/New_York")
+        d = now_et.date()
+        if not (now_et.hour > 16 or (now_et.hour == 16 and now_et.minute >= 30)):
+            d -= timedelta(days=1)
+    else:
+        d = today - timedelta(days=1)
+    for _ in range(14):
+        if _is_us_trading_day(d):
+            return pd.Timestamp(d)
+        d -= timedelta(days=1)
+    raise RuntimeError("连续 14 天找不到美股交易日，交易日历异常")
 
 
 def _is_fresh(series: pd.Series | None) -> bool:
