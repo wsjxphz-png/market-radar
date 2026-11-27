@@ -180,6 +180,19 @@ def test_actions_stage0_no_nan():
     assert "数据不足" in text
 
 
+def test_send_treats_webhook_failure_as_delivered(monkeypatch):
+    """内部群成功、外部群失败时不再重试，避免内部群重复推送。"""
+    monkeypatch.setattr(push, "_post_bot", lambda payload, creds: True)
+    monkeypatch.setattr(push, "_post_webhook", lambda payload, creds: False)
+    assert push._send({}, {}, {}) is True
+
+
+def test_send_fails_when_bot_fails(monkeypatch):
+    monkeypatch.setattr(push, "_post_bot", lambda payload, creds: False)
+    monkeypatch.setattr(push, "_post_webhook", lambda payload, creds: True)
+    assert push._send({}, {}, {}) is False
+
+
 def test_push_markers_are_separate(tmp_path, monkeypatch):
     monkeypatch.setattr(push, "CACHE", tmp_path)
     push.mark_pushed("2026-11-20", kind="daily")
@@ -276,8 +289,8 @@ def test_run_daily_sends_holiday_notice(tmp_path, monkeypatch):
                         lambda key, kind: marked.update({"key": key, "kind": kind}))
     monkeypatch.setattr(sys, "argv", ["run_daily.py"])
     assert run_daily.main() == 0
-    assert "美股休市" in sent["text"] and "感恩节" in sent["text"]
-    assert "没有新行情" in sent["text"]
+    assert "今天美股不开盘" in sent["text"] and "11月26日" in sent["text"]
+    assert "感恩节" in sent["text"] and "没有新行情" in sent["text"]
     assert marked == {"key": "closed-2026-11-26", "kind": "notice"}
     d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert d["pushed"] is True and "休市" in d["reason"]
@@ -296,6 +309,39 @@ def test_run_daily_holiday_notice_dedup(tmp_path, monkeypatch):
     assert run_daily.main() == 0
     d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert d["pushed"] is True and "跳过重复" in d["reason"]
+
+
+def test_holiday_check_writes_github_output(tmp_path, monkeypatch):
+    import holiday_check
+    monkeypatch.setattr(holiday_check.data, "_last_session_date", lambda: date(2026, 11, 26))
+    monkeypatch.setattr(holiday_check.data, "_us_holiday_name", lambda d: "感恩节")
+    out = tmp_path / "gh_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+    assert holiday_check.main() == 0
+    assert "closed=true" in out.read_text(encoding="utf-8")
+
+
+def test_run_daily_shadow_card_is_prefixed(tmp_path, monkeypatch):
+    import run_daily
+    monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    monkeypatch.setattr(run_daily.data, "_last_session_date", lambda today=None: date(2026, 11, 20))
+    monkeypatch.setattr(run_daily.data, "_us_holiday_name", lambda d: None)
+    monkeypatch.setattr(run_daily.data, "_expected_us_date",
+                        lambda today=None: pd.Timestamp("2026-11-20"))
+    monkeypatch.setattr(run_daily.state, "analyze", lambda force=False: _minimal_analysis())
+    monkeypatch.setattr(run_daily.sellside_radar, "fetch_digest",
+                        lambda weekly: Digest(status="unavailable", reason=""))
+    monkeypatch.setattr(run_daily.push, "load_credentials", lambda: {})
+    captured = {}
+    monkeypatch.setattr(run_daily.push, "send_card",
+                        lambda title, text, template, creds:
+                        captured.update(title=title, text=text) or True)
+    monkeypatch.setattr(run_daily.push, "mark_pushed",
+                        lambda key, kind: (_ for _ in ()).throw(AssertionError("干跑不写标记")))
+    monkeypatch.setattr(sys, "argv", ["run_daily.py", "--shadow"])
+    assert run_daily.main() == 0
+    assert captured["title"].startswith("【干跑】")
+    assert captured["text"].startswith("【干跑】")
 
 
 def test_card_has_title_template_and_markdown():

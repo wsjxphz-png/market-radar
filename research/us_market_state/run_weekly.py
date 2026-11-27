@@ -113,7 +113,10 @@ def main() -> int:
         return 1
 
     title = card["title"]
-    log(f"卡片标题：{title}{'（干跑）' if args.shadow else ''}")
+    if args.shadow:
+        title = "【干跑】" + title
+        text = "【干跑】" + text
+    log(f"卡片标题：{title}")
     if push.send_card(title, text, card["template"], creds):
         if not args.shadow:
             push.mark_pushed(week_key, kind="weekly")

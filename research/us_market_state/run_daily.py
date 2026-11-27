@@ -95,7 +95,8 @@ def main() -> int:
     session_date = data._last_session_date()
     holiday = data._us_holiday_name(session_date)
     if holiday and not args.force:
-        notice = f"美股休市（{holiday}），这次没有新行情；下一交易日见。"
+        notice = (f"今天美股不开盘（{session_date.month}月{session_date.day}日，"
+                  f"{holiday}），这次没有新行情；下一交易日见。")
         notice_key = f"closed-{session_date.isoformat()}"
         if (not args.shadow and not (args.dry_run or args.no_push)
                 and push.already_pushed(notice_key, kind="notice")):
@@ -179,7 +180,10 @@ def main() -> int:
         return 1
 
     title = card["title"]
-    log(f"卡片标题：{title}{'（干跑）' if args.shadow else ''}")
+    if args.shadow:
+        title = "【干跑】" + title
+        text = "【干跑】" + text
+    log(f"卡片标题：{title}")
     if push.send_card(title, text, card["template"], creds):
         if not args.shadow:
             push.mark_pushed(day_key, kind="daily")

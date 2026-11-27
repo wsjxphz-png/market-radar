@@ -24,6 +24,7 @@ KIND_LABELS = {"daily": "日报", "weekly": "周报"}
 STEP_NAMES = {
     "daily": {
         "DEPS_OUTCOME": "安装依赖",
+        "CALENDAR_OUTCOME": "休市检查",
         "SMOKE_OUTCOME": "数据源冒烟测试",
         "TESTS_OUTCOME": "状态机测试",
         "REPORT_OUTCOME": "生成并推送日报",

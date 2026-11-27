@@ -98,9 +98,16 @@ def _post_webhook(payload: dict, creds: dict[str, str]) -> bool:
 
 
 def _send(bot_payload: dict, hook_payload: dict, creds: dict[str, str]) -> bool:
+    """内部群是主通道：它成功就按“已送达”处理。
+
+    外部群 Webhook 是可选的第二通道；它失败时只记日志，不返回失败——
+    否则 run_daily 不写去重标记，重试班次会把同一条消息在内部群里再发一遍。
+    """
     ok_bot = _post_bot(bot_payload, creds)
     ok_hook = _post_webhook(hook_payload, creds)
-    return ok_bot and ok_hook
+    if ok_bot and not ok_hook:
+        print("[push] 外部群 Webhook 失败；内部群已送达，按成功处理，避免重复推送")
+    return ok_bot
 
 
 def send_card(title: str, content: str, template: str, creds: dict[str, str]) -> bool:

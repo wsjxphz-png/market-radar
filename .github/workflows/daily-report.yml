@@ -62,8 +62,13 @@ jobs:
         id: deps
         run: pip install -r requirements.txt
 
+      - name: 休市检查
+        id: calendar
+        run: python holiday_check.py
+
       - name: 数据源冒烟测试
         id: smoke
+        if: steps.calendar.outputs.closed != 'true'
         run: python smoke_test.py
 
       - name: 运行状态机测试
@@ -106,6 +111,7 @@ jobs:
         if: failure()
         env:
           DEPS_OUTCOME: ${{ steps.deps.outcome }}
+          CALENDAR_OUTCOME: ${{ steps.calendar.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           TESTS_OUTCOME: ${{ steps.tests.outcome }}
           REPORT_OUTCOME: ${{ steps.report.outcome }}
