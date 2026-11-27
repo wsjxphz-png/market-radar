@@ -11,9 +11,15 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import urllib.request
 from datetime import date, datetime
 from pathlib import Path
+
+try:  # Windows 控制台默认 GBK，避免 emoji 让通知在打印阶段崩掉
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 BASE = Path(__file__).parent
 MARK = BASE / "cache" / "last_push.json"
