@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -547,3 +548,23 @@ def test_push_failure_leaves_no_marker(tmp_path, monkeypatch):
     assert push_feishu.push_panel(P) == "sent"
     assert push_feishu.already_pushed(P.date)
     assert push_feishu.push_panel(P) == "skipped"
+
+
+def test_failure_message_sent():
+    import notify_failure
+    msg = notify_failure.build_message(
+        {"panel_date": "2026-11-27"}, date(2026, 11, 27), "URL")
+    assert "已发出" in msg and "2026-11-27" in msg
+
+
+def test_failure_message_unconfirmed():
+    import notify_failure
+    msg = notify_failure.build_message(
+        {"panel_date": "2026-11-26"}, date(2026, 11, 27), "URL")
+    assert "未确认" in msg and "2026-11-26" in msg and "2026-11-27" in msg
+
+
+def test_failure_message_no_record():
+    import notify_failure
+    msg = notify_failure.build_message({}, date(2026, 11, 27), "URL")
+    assert "未发出" in msg
