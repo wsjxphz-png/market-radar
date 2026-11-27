@@ -128,37 +128,44 @@ def _observed(d: date) -> date:
     return d
 
 
-def _us_market_holidays(year: int) -> set[date]:
+def _us_market_holidays(year: int) -> dict[date, str]:
     days = {
-        _observed(date(year, 1, 1)),            # 元旦
-        _nth_weekday(year, 1, 0, 3),            # 马丁·路德·金日
-        _nth_weekday(year, 2, 0, 3),            # 总统日
-        easter(year) - timedelta(days=2),       # 耶稣受难日
-        _last_weekday(year, 5, 0),              # 阵亡将士纪念日
-        _observed(date(year, 6, 19)),           # 六月节
-        _observed(date(year, 7, 4)),            # 独立日
-        _nth_weekday(year, 9, 0, 1),            # 劳动节
-        _nth_weekday(year, 11, 3, 4),           # 感恩节
-        _observed(date(year, 12, 25)),          # 圣诞节
+        _observed(date(year, 1, 1)): "元旦",
+        _nth_weekday(year, 1, 0, 3): "马丁·路德·金日",
+        _nth_weekday(year, 2, 0, 3): "总统日",
+        easter(year) - timedelta(days=2): "耶稣受难日",
+        _last_weekday(year, 5, 0): "阵亡将士纪念日",
+        _observed(date(year, 6, 19)): "六月节",
+        _observed(date(year, 7, 4)): "独立日",
+        _nth_weekday(year, 9, 0, 1): "劳动节",
+        _nth_weekday(year, 11, 3, 4): "感恩节",
+        _observed(date(year, 12, 25)): "圣诞节",
     }
     # 若次年元旦在周六，按补休规则当年 12/31 也休市
     next_new_year = _observed(date(year + 1, 1, 1))
     if next_new_year.year == year:
-        days.add(next_new_year)
+        days[next_new_year] = "元旦"
     return days
 
 
+def _us_holiday_name(d: date) -> str | None:
+    """该日若是美股休市日，返回节日名；周末和交易日返回 None。"""
+    if d.weekday() >= 5:
+        return None
+    name = _us_market_holidays(d.year).get(d)
+    if name:
+        return name
+    return "临时休市" if d in _SPECIAL_CLOSURES else None
+
+
 def _is_us_trading_day(d: date) -> bool:
-    return (d.weekday() < 5
-            and d not in _us_market_holidays(d.year)
-            and d not in _SPECIAL_CLOSURES)
+    return d.weekday() < 5 and _us_holiday_name(d) is None
 
 
-def _expected_us_date(today: date | None = None) -> pd.Timestamp:
-    """现在应该已经收盘、可以拿到数据的最新美股交易日。
+def _last_session_date(today: date | None = None) -> date:
+    """按“周一至周五都有盘”的日历，现在应该已经收盘的那一天（不扣节假日）。
 
-    不传 today 时看纽约时间：当天若还没到收盘（16:30 ET），最新可得的是上一交易日；
-    传 today（测试用）时按“该日早上、前一交易日已收盘”处理。
+    用来判断“本该有的这一场”是不是休市。传 today（测试用）时按该日早上处理。
     """
     if today is None:
         now_et = pd.Timestamp.now(tz="America/New_York")
@@ -167,6 +174,17 @@ def _expected_us_date(today: date | None = None) -> pd.Timestamp:
             d -= timedelta(days=1)
     else:
         d = today - timedelta(days=1)
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    return d
+
+
+def _expected_us_date(today: date | None = None) -> pd.Timestamp:
+    """现在应该已经收盘、可以拿到数据的最新美股交易日（跳过休市日）。
+
+    不传 today 时看纽约时间；传 today（测试用）时按“该日早上、前一交易日已收盘”处理。
+    """
+    d = _last_session_date(today)
     for _ in range(14):
         if _is_us_trading_day(d):
             return pd.Timestamp(d)

@@ -94,6 +94,7 @@ jobs:
           git config user.name "market-radar-bot"
           git config user.email "market-radar-bot@users.noreply.github.com"
           git add -f cache/last_daily_push.json 2>/dev/null || true
+          git add -f cache/last_notice_push.json 2>/dev/null || true
           git add -f cache/last_state.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "chore: 美股状态日报留痕 [skip ci]"

@@ -90,6 +90,42 @@ def main() -> int:
 
     mode = "shadow" if args.shadow else ("dry-run" if (args.dry_run or args.no_push) else "live")
     log("开始生成美股状态日报")
+
+    # 美股休市：不发整卡，只发一句提示（按休市日期去重，重试班次不重复发）
+    session_date = data._last_session_date()
+    holiday = data._us_holiday_name(session_date)
+    if holiday and not args.force:
+        notice = f"美股休市（{holiday}），这次没有新行情；下一交易日见。"
+        notice_key = f"closed-{session_date.isoformat()}"
+        if (not args.shadow and not (args.dry_run or args.no_push)
+                and push.already_pushed(notice_key, kind="notice")):
+            log(f"{notice_key} 休市提示已发过，跳过")
+            _record_status(mode, pushed=True, reason="休市提示已发出，跳过重复")
+            return 0
+        print(notice)
+        if args.dry_run or args.no_push:
+            log("dry-run/no-push：休市提示不推送")
+            _record_status(mode, pushed=False,
+                           reason=f"美股休市（{holiday}），dry-run 未推送")
+            return 0
+        try:
+            creds = push.load_credentials()
+        except Exception as exc:
+            log(f"凭据读取失败: {type(exc).__name__} {exc}")
+            _record_status(mode, pushed=False, reason="飞书凭据缺失")
+            return 1
+        text = f"【干跑】{notice}" if args.shadow else notice
+        if push.send_text(text, creds):
+            if not args.shadow:
+                push.mark_pushed(notice_key, kind="notice")
+            _record_status(mode, pushed=True,
+                           reason=f"美股休市（{holiday}），已发休市提示")
+            log(f"休市提示已发送（{holiday}）")
+            return 0
+        log("休市提示发送失败，不写标记，下次会重试")
+        _record_status(mode, pushed=False, reason="休市提示发送失败")
+        return 1
+
     try:
         a = state.analyze(force=args.force)
     except Exception as exc:

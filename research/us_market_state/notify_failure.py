@@ -51,8 +51,10 @@ def build_message(kind: str, status: dict, failed: str, url: str,
     today = today or date.today().isoformat()
     if status.get("kind") == kind and status.get("date") == today:
         if status.get("pushed"):
-            when = ("数据日" if kind == "daily" else "数据周") + f" {status.get('day_key')}"
-            return (f"⚠️ 美股状态{label}已发出（{when}），"
+            day_key = status.get("day_key")
+            when = (f"（{'数据日' if kind == 'daily' else '数据周'} {day_key}）"
+                    if day_key else "（休市提示）")
+            return (f"⚠️ 美股状态{label}已发出{when}，"
                     f"但「{failed}」失败，卡片不用补看。\n{url}")
         return (f"⚠️ 美股状态{label}未发出：{status.get('reason') or '未知原因'}"
                 f"（失败步骤：{failed}）。\n{url}")

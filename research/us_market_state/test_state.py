@@ -147,6 +147,13 @@ def test_us_market_holidays():
     assert data._is_us_trading_day(date(2026, 11, 27))      # 感恩节次日的半日市照常交易
 
 
+def test_holiday_name_and_last_session():
+    assert data._us_holiday_name(date(2026, 11, 26)) == "感恩节"
+    assert data._us_holiday_name(date(2026, 11, 25)) is None
+    assert data._last_session_date(date(2026, 11, 27)) == date(2026, 11, 26)
+    assert data._last_session_date(date(2026, 11, 30)) == date(2026, 11, 27)  # 周一早上 -> 上周五
+
+
 def test_split_adjustment_removes_fake_gap():
     dates = pd.date_range("2024-01-01", periods=5, freq="D")
     raw = pd.DataFrame({
@@ -208,6 +215,14 @@ def test_failure_message_says_sent_when_pushed():
     assert "已发出" in msg and "数据日 2026-11-25" in msg and "保存状态" in msg
 
 
+def test_failure_message_for_holiday_notice():
+    import notify_failure
+    status = {"kind": "daily", "date": "2026-11-27", "pushed": True,
+              "day_key": None, "reason": "美股休市（感恩节），已发休市提示"}
+    msg = notify_failure.build_message("daily", status, "保存状态", "URL", today="2026-11-27")
+    assert "已发出（休市提示）" in msg
+
+
 def test_failure_message_says_not_sent_with_reason():
     import notify_failure
     status = {"kind": "daily", "date": "2026-11-27", "pushed": False,
@@ -234,6 +249,8 @@ def test_run_daily_skips_generation_when_already_pushed(tmp_path, monkeypatch):
     """重试班次：当天已推过就不再调 AI/搜索，也不因数据日旧而报错。"""
     import run_daily
     monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    monkeypatch.setattr(run_daily.data, "_last_session_date", lambda today=None: date(2026, 11, 20))
+    monkeypatch.setattr(run_daily.data, "_us_holiday_name", lambda d: None)
     monkeypatch.setattr(run_daily.state, "analyze", lambda force=False: _minimal_analysis())
     monkeypatch.setattr(run_daily.push, "already_pushed", lambda key, kind: True)
     monkeypatch.setattr(run_daily.sellside_radar, "fetch_digest",
@@ -242,6 +259,43 @@ def test_run_daily_skips_generation_when_already_pushed(tmp_path, monkeypatch):
     assert run_daily.main() == 0
     d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert d["pushed"] is True and d["reason"] == "当天已推送，跳过"
+
+
+def test_run_daily_sends_holiday_notice(tmp_path, monkeypatch):
+    """休市日不发整卡，只发一句“美股休市（节日）”。"""
+    import run_daily
+    monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    monkeypatch.setattr(run_daily.data, "_last_session_date", lambda: date(2026, 11, 26))
+    monkeypatch.setattr(run_daily.data, "_us_holiday_name", lambda d: "感恩节")
+    monkeypatch.setattr(run_daily.push, "already_pushed", lambda key, kind: False)
+    monkeypatch.setattr(run_daily.push, "load_credentials", lambda: {})
+    sent, marked = {}, {}
+    monkeypatch.setattr(run_daily.push, "send_text",
+                        lambda text, creds: sent.setdefault("text", text) == text)
+    monkeypatch.setattr(run_daily.push, "mark_pushed",
+                        lambda key, kind: marked.update({"key": key, "kind": kind}))
+    monkeypatch.setattr(sys, "argv", ["run_daily.py"])
+    assert run_daily.main() == 0
+    assert "美股休市" in sent["text"] and "感恩节" in sent["text"]
+    assert "没有新行情" in sent["text"]
+    assert marked == {"key": "closed-2026-11-26", "kind": "notice"}
+    d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert d["pushed"] is True and "休市" in d["reason"]
+
+
+def test_run_daily_holiday_notice_dedup(tmp_path, monkeypatch):
+    """重试班次不重复发休市提示。"""
+    import run_daily
+    monkeypatch.setattr(run_daily, "STATUS_FILE", tmp_path / "status.json")
+    monkeypatch.setattr(run_daily.data, "_last_session_date", lambda: date(2026, 11, 26))
+    monkeypatch.setattr(run_daily.data, "_us_holiday_name", lambda d: "感恩节")
+    monkeypatch.setattr(run_daily.push, "already_pushed", lambda key, kind: True)
+    monkeypatch.setattr(run_daily.push, "send_text",
+                        lambda text, creds: (_ for _ in ()).throw(AssertionError("不该重发")))
+    monkeypatch.setattr(sys, "argv", ["run_daily.py"])
+    assert run_daily.main() == 0
+    d = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert d["pushed"] is True and "跳过重复" in d["reason"]
 
 
 def test_card_has_title_template_and_markdown():
